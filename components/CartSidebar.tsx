@@ -1,0 +1,648 @@
+/**
+ * NEW FILE: Cart Sidebar - Sliding Cart Panel
+ * 
+ * Purpose: Provides a slide-out cart view allowing users to review items,
+ * adjust quantities, and proceed to checkout without leaving current page.
+ * 
+ * UX: Smooth slide animation, backdrop overlay, and persistent cart state.
+ */
+
+'use client';
+
+import React from 'react';
+import { X, Plus, Minus, Trash2, ShoppingBag, ArrowRight } from 'lucide-react';
+import { useCart } from '@/context/CartContext';
+import { restaurantInfo } from '@/data/menuData';
+
+interface CartSidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onCheckout: () => void;
+}
+
+const CartSidebar: React.FC<CartSidebarProps> = ({ isOpen, onClose, onCheckout }) => {
+  const { cart, updateQuantity, removeItem, itemCount } = useCart();
+  
+  const handleCheckout = () => {
+    if (cart.items.length > 0) {
+      onCheckout();
+      onClose();
+    }
+  };
+  
+  return (
+    <>
+      {/* Backdrop Overlay */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 animate-fade-in"
+          onClick={onClose}
+        />
+      )}
+      
+      {/* Cart Sidebar Panel */}
+      <div
+        className={`fixed top-0 right-0 h-full w-full md:w-[480px] bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-out ${
+          isOpen ? 'translate-x-0' : 'translate-x-full'
+        }`}
+      >
+        <div className="flex flex-col h-full">
+          {/* Header - Premium Design */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '24px',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+            background: 'linear-gradient(135deg, #f97316 0%, #ea580c 50%, #dc2626 100%)',
+            color: 'white',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '12px',
+                background: 'rgba(255, 255, 255, 0.2)',
+                backdropFilter: 'blur(10px)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+              }}>
+                <ShoppingBag size={24} strokeWidth={2.5} />
+              </div>
+              <div>
+                <h2 style={{
+                  fontSize: '1.5rem',
+                  fontWeight: 800,
+                  marginBottom: '4px',
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif',
+                  letterSpacing: '-0.02em',
+                  lineHeight: '1.2'
+                }}>
+                  Your Cart
+                </h2>
+                <p style={{
+                  fontSize: '0.875rem',
+                  color: 'rgba(255, 255, 255, 0.9)',
+                  fontWeight: 500,
+                  lineHeight: '1.4'
+                }}>
+                  {itemCount} {itemCount === 1 ? 'item' : 'items'}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              style={{
+                width: '40px',
+                height: '40px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '10px',
+                background: 'rgba(255, 255, 255, 0.15)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                color: 'white',
+                transition: 'all 0.2s',
+                cursor: 'pointer'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.25)';
+                e.currentTarget.style.transform = 'scale(1.1)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+                e.currentTarget.style.transform = 'scale(1)';
+              }}
+              aria-label="Close cart"
+            >
+              <X size={20} strokeWidth={2.5} />
+            </button>
+          </div>
+          
+          {/* Cart Items - Scrollable */}
+          <div className="flex-1 overflow-y-auto custom-scrollbar" style={{ padding: '24px' }}>
+            {cart.items.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-center" style={{ padding: '48px 24px' }}>
+                <div style={{
+                  width: '120px',
+                  height: '120px',
+                  background: 'linear-gradient(135deg, #f97316, #ea580c)',
+                  borderRadius: '9999px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: '24px',
+                  boxShadow: '0 8px 24px rgba(249, 115, 22, 0.3)'
+                }}>
+                  <ShoppingBag size={48} style={{ color: 'white' }} strokeWidth={2} />
+                </div>
+                <h3 style={{
+                  fontSize: '1.5rem',
+                  fontWeight: 700,
+                  color: '#1F2937',
+                  marginBottom: '12px',
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif'
+                }}>
+                  Your cart is empty
+                </h3>
+                <p style={{
+                  fontSize: '1rem',
+                  color: '#6B7280',
+                  marginBottom: '32px',
+                  lineHeight: '1.6'
+                }}>
+                  Add some delicious items to get started!
+                </p>
+                <button
+                  onClick={onClose}
+                  style={{
+                    padding: '14px 32px',
+                    background: 'linear-gradient(to right, #f97316, #ea580c)',
+                    color: 'white',
+                    borderRadius: '12px',
+                    fontWeight: 600,
+                    fontSize: '1rem',
+                    border: 'none',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(249, 115, 22, 0.4)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(249, 115, 22, 0.3)';
+                  }}
+                >
+                  Browse Menu
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {cart.items.map((item) => (
+                  <div
+                    key={item.id}
+                    style={{
+                      background: 'white',
+                      borderRadius: '16px',
+                      padding: '16px',
+                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04)',
+                      border: '1px solid rgba(0, 0, 0, 0.05)',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06)';
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04)';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }}
+                  >
+                    <div style={{ display: 'flex', gap: '16px' }}>
+                      {/* Item Image - Consistent Circular */}
+                      <div style={{
+                        width: '80px',
+                        height: '80px',
+                        borderRadius: '9999px',
+                        overflow: 'hidden',
+                        flexShrink: 0,
+                        background: 'linear-gradient(135deg, #f97316, #ea580c)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 4px 12px rgba(249, 115, 22, 0.2)'
+                      }}>
+                        <img
+                          src={item.menuItem.image}
+                          alt={item.menuItem.name}
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            display: 'block'
+                          }}
+                          onError={(e) => {
+                            const target = e.currentTarget;
+                            target.style.display = 'none';
+                            const parent = target.parentElement;
+                            if (parent) {
+                              parent.innerHTML = `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 24px;">${item.menuItem.name.charAt(0)}</div>`;
+                            }
+                          }}
+                        />
+                      </div>
+                      
+                      {/* Item Details */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', marginBottom: '8px' }}>
+                          <h3 style={{
+                            fontSize: '1rem',
+                            fontWeight: 700,
+                            color: '#1F2937',
+                            lineHeight: '1.4',
+                            fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif',
+                            letterSpacing: '-0.01em',
+                            flex: 1
+                          }}>
+                            {item.menuItem.name}
+                          </h3>
+                          <button
+                            onClick={() => removeItem(item.id)}
+                            style={{
+                              width: '32px',
+                              height: '32px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              borderRadius: '8px',
+                              background: 'rgba(239, 68, 68, 0.1)',
+                              color: '#EF4444',
+                              border: 'none',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s',
+                              flexShrink: 0
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)';
+                              e.currentTarget.style.transform = 'scale(1.1)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+                              e.currentTarget.style.transform = 'scale(1)';
+                            }}
+                            aria-label="Remove item"
+                          >
+                            <Trash2 size={16} strokeWidth={2.5} />
+                          </button>
+                        </div>
+                        
+                        {/* Customizations */}
+                        {item.customizations && Object.keys(item.customizations).length > 0 && (
+                          <div style={{
+                            fontSize: '0.75rem',
+                            color: '#6B7280',
+                            marginBottom: '8px',
+                            lineHeight: '1.5'
+                          }}>
+                            {Object.entries(item.customizations).map(([key, value]) => (
+                              <div key={key} style={{ marginBottom: '2px' }}>
+                                {key}: <span style={{ fontWeight: 600 }}>{value}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        
+                        {/* Special Instructions */}
+                        {item.specialInstructions && (
+                          <p style={{
+                            fontSize: '0.75rem',
+                            color: '#9CA3AF',
+                            marginBottom: '8px',
+                            fontStyle: 'italic',
+                            lineHeight: '1.5'
+                          }}>
+                            Note: {item.specialInstructions}
+                          </p>
+                        )}
+                        
+                        {/* Quantity Controls and Price */}
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          marginTop: '12px'
+                        }}>
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            background: '#F9FAFB',
+                            borderRadius: '12px',
+                            padding: '4px'
+                          }}>
+                            <button
+                              onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                              style={{
+                                width: '32px',
+                                height: '32px',
+                                borderRadius: '8px',
+                                background: 'white',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                border: '1px solid #E5E7EB',
+                                transition: 'all 0.2s',
+                                cursor: 'pointer',
+                                color: '#374151'
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = '#F3F4F6';
+                                e.currentTarget.style.borderColor = '#D1D5DB';
+                                e.currentTarget.style.transform = 'scale(1.05)';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'white';
+                                e.currentTarget.style.borderColor = '#E5E7EB';
+                                e.currentTarget.style.transform = 'scale(1)';
+                              }}
+                              aria-label="Decrease quantity"
+                            >
+                              <Minus size={14} strokeWidth={3} />
+                            </button>
+                            <span style={{
+                              width: '40px',
+                              textAlign: 'center',
+                              fontWeight: 700,
+                              fontSize: '1rem',
+                              color: '#1F2937'
+                            }}>
+                              {item.quantity}
+                            </span>
+                            <button
+                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                              style={{
+                                width: '32px',
+                                height: '32px',
+                                borderRadius: '8px',
+                                background: 'linear-gradient(135deg, #f97316, #ea580c)',
+                                color: 'white',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                transition: 'all 0.2s',
+                                border: 'none',
+                                cursor: 'pointer',
+                                boxShadow: '0 2px 4px rgba(249, 115, 22, 0.3)'
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = 'linear-gradient(135deg, #ea580c, #dc2626)';
+                                e.currentTarget.style.transform = 'scale(1.1)';
+                                e.currentTarget.style.boxShadow = '0 4px 8px rgba(249, 115, 22, 0.4)';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'linear-gradient(135deg, #f97316, #ea580c)';
+                                e.currentTarget.style.transform = 'scale(1)';
+                                e.currentTarget.style.boxShadow = '0 2px 4px rgba(249, 115, 22, 0.3)';
+                              }}
+                              aria-label="Increase quantity"
+                            >
+                              <Plus size={14} strokeWidth={3} />
+                            </button>
+                          </div>
+                          
+                          <span style={{
+                            fontWeight: 700,
+                            fontSize: '1.125rem',
+                            color: '#f97316',
+                            fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif'
+                          }}>
+                            ₹{Math.round(item.subtotal)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          
+          {/* Footer - Order Summary and Checkout */}
+          {cart.items.length > 0 && (
+            <div style={{
+              borderTop: '1px solid rgba(0, 0, 0, 0.08)',
+              padding: '24px',
+              background: 'linear-gradient(to bottom, #FFFFFF, #F9FAFB)'
+            }}>
+              {/* Delivery Notice - Premium Design */}
+              {cart.subtotal < restaurantInfo.settings.freeDeliveryOver && (
+                <div style={{
+                  marginBottom: '20px',
+                  padding: '14px 16px',
+                  background: 'linear-gradient(135deg, #DBEAFE, #E0F2FE)',
+                  border: '1px solid rgba(59, 130, 246, 0.2)',
+                  borderRadius: '12px',
+                  boxShadow: '0 2px 8px rgba(59, 130, 246, 0.1)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px'
+                }}>
+                  <div style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '9999px',
+                    background: 'linear-gradient(135deg, #3B82F6, #2563EB)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    <span style={{ color: 'white', fontSize: '18px', fontWeight: 700 }}>!</span>
+                  </div>
+                  <p style={{
+                    fontSize: '0.875rem',
+                    color: '#1E40AF',
+                    fontWeight: 600,
+                    lineHeight: '1.5',
+                    margin: 0
+                  }}>
+                    Add <span style={{ fontWeight: 700 }}>₹{Math.round(restaurantInfo.settings.freeDeliveryOver - cart.subtotal)}</span> more for free delivery!
+                  </p>
+                </div>
+              )}
+              
+              {/* Price Breakdown - Premium Typography */}
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+                marginBottom: '24px',
+                padding: '20px',
+                background: 'white',
+                borderRadius: '16px',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+                border: '1px solid rgba(0, 0, 0, 0.05)'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  fontSize: '0.9375rem',
+                  color: '#4B5563',
+                  lineHeight: '1.5'
+                }}>
+                  <span style={{ fontWeight: 500 }}>Subtotal</span>
+                  <span style={{
+                    fontWeight: 700,
+                    color: '#1F2937',
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif'
+                  }}>
+                    ₹{Math.round(cart.subtotal)}
+                  </span>
+                </div>
+                
+                {cart.discount && cart.discount > 0 && (
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    fontSize: '0.9375rem',
+                    color: '#10B981',
+                    lineHeight: '1.5'
+                  }}>
+                    <span style={{ fontWeight: 500 }}>Discount</span>
+                    <span style={{
+                      fontWeight: 700,
+                      fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif'
+                    }}>
+                      -₹{Math.round(cart.discount)}
+                    </span>
+                  </div>
+                )}
+                
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  fontSize: '0.9375rem',
+                  color: '#4B5563',
+                  lineHeight: '1.5'
+                }}>
+                  <span style={{ fontWeight: 500 }}>Delivery Fee</span>
+                  <span style={{
+                    fontWeight: 700,
+                    color: cart.deliveryFee === 0 ? '#10B981' : '#1F2937',
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif'
+                  }}>
+                    {cart.deliveryFee === 0 ? 'FREE' : `₹${Math.round(cart.deliveryFee)}`}
+                  </span>
+                </div>
+                
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  fontSize: '0.9375rem',
+                  color: '#4B5563',
+                  lineHeight: '1.5'
+                }}>
+                  <span style={{ fontWeight: 500 }}>Tax (GST 5%)</span>
+                  <span style={{
+                    fontWeight: 700,
+                    color: '#1F2937',
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif'
+                  }}>
+                    ₹{Math.round(cart.tax)}
+                  </span>
+                </div>
+                
+                <div style={{
+                  paddingTop: '16px',
+                  borderTop: '2px solid #E5E7EB',
+                  marginTop: '4px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}>
+                  <span style={{
+                    fontSize: '1.125rem',
+                    fontWeight: 700,
+                    color: '#1F2937',
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif',
+                    letterSpacing: '-0.01em'
+                  }}>
+                    Total
+                  </span>
+                  <span style={{
+                    fontSize: '1.5rem',
+                    fontWeight: 800,
+                    color: '#f97316',
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif',
+                    letterSpacing: '-0.02em'
+                  }}>
+                    ₹{Math.round(cart.total)}
+                  </span>
+                </div>
+              </div>
+              
+              {/* Checkout Button - Premium Design */}
+              <button
+                onClick={handleCheckout}
+                style={{
+                  width: '100%',
+                  background: 'linear-gradient(135deg, #f97316 0%, #ea580c 50%, #dc2626 100%)',
+                  color: 'white',
+                  padding: '18px 32px',
+                  borderRadius: '14px',
+                  fontWeight: 700,
+                  fontSize: '1.0625rem',
+                  transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                  boxShadow: '0 8px 24px rgba(249, 115, 22, 0.4), 0 4px 8px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '10px',
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif',
+                  letterSpacing: '-0.01em'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 12px 32px rgba(249, 115, 22, 0.5), 0 6px 12px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.2)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 8px 24px rgba(249, 115, 22, 0.4), 0 4px 8px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2)';
+                }}
+              >
+                Proceed to Checkout
+                <ArrowRight size={20} strokeWidth={2.5} style={{ transition: 'transform 0.25s' }} />
+              </button>
+              
+              {/* Continue Shopping - Refined Secondary Button */}
+              <button
+                onClick={onClose}
+                style={{
+                  width: '100%',
+                  marginTop: '14px',
+                  textAlign: 'center',
+                  color: '#6B7280',
+                  fontWeight: 600,
+                  padding: '12px',
+                  transition: 'all 0.2s',
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '0.9375rem',
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif',
+                  borderRadius: '10px'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = '#1F2937';
+                  e.currentTarget.style.background = 'rgba(0, 0, 0, 0.03)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = '#6B7280';
+                  e.currentTarget.style.background = 'transparent';
+                }}
+              >
+                Continue Shopping
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+};
+
+export default CartSidebar;
+

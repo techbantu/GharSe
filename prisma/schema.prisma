@@ -1,0 +1,263 @@
+/**
+ * NEW FILE: Prisma Database Schema - Complete Data Model
+ * 
+ * Purpose: Defines the database structure for Bantu's Kitchen
+ * Includes: Menu items, orders, customers, receipts, and admin management
+ * 
+ * Database: PostgreSQL (production-ready, ACID compliant)
+ * ORM: Prisma (type-safe, auto-generated client)
+ */
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ===== MENU MANAGEMENT =====
+
+model MenuItem {
+  id              String   @id @default(cuid())
+  name            String
+  description     String
+  price           Float
+  originalPrice   Float?
+  category        String
+  image           String?
+  imagePublicId   String?  // Cloudinary public ID for deletion
+  isVegetarian    Boolean  @default(false)
+  isVegan         Boolean  @default(false)
+  isGlutenFree    Boolean  @default(false)
+  spicyLevel      Int      @default(0)
+  preparationTime Int      @default(30)
+  isAvailable     Boolean  @default(true)  // Whether item is on menu (not about stock)
+  isPopular       Boolean  @default(false)
+  calories        Int?
+  servingSize     String?
+  ingredients     String?  // JSON array string for SQLite compatibility
+  allergens       String?  // JSON array string for SQLite compatibility
+  
+  // INVENTORY MANAGEMENT (NEW!)
+  inventoryEnabled Boolean @default(false)  // Whether to track inventory
+  inventory        Int?                    // Current stock count (null = unlimited)
+  outOfStockMessage String?                // Funny message when out of stock
+  
+  // IMAGE POSITIONING (NEW!)
+  imagePosition    String?                 // JSON string: {x, y, scale} for precise image positioning
+  
+  // Tracking
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  createdBy       String?  // Admin user ID
+  
+  // Relations
+  orderItems      OrderItem[]
+  
+  @@index([category])
+  @@index([isAvailable])
+  @@index([isPopular])
+  @@index([inventoryEnabled])
+}
+
+// ===== ORDER MANAGEMENT =====
+
+model Order {
+  id              String      @id @default(cuid())
+  orderNumber     String      @unique // Human-readable order number (e.g., "BK-2024-001")
+  
+  // Customer Info
+  customerName    String
+  customerEmail   String
+  customerPhone   String
+  
+  // Delivery Info
+  deliveryAddress String
+  deliveryCity    String
+  deliveryZip     String
+  deliveryNotes   String?
+  
+  // Order Details
+  items           OrderItem[]
+  subtotal        Float
+  tax             Float
+  deliveryFee     Float
+  discount        Float       @default(0)
+  total           Float
+  
+  // Status Tracking
+  status          OrderStatus @default(PENDING)
+  paymentStatus   PaymentStatus @default(PENDING)
+  paymentMethod   String?     // "cash", "card", "online"
+  
+  // Timestamps
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  confirmedAt     DateTime?
+  preparingAt     DateTime?
+  readyAt         DateTime?
+  deliveredAt     DateTime?
+  cancelledAt     DateTime?
+  
+  // Estimated times
+  estimatedPrepTime Int       @default(30) // minutes
+  estimatedDelivery DateTime?
+  
+  // Receipt
+  receipt         Receipt?
+  
+  @@index([orderNumber])
+  @@index([customerPhone])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id          String   @id @default(cuid())
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId     String
+  
+  menuItem    MenuItem @relation(fields: [menuItemId], references: [id])
+  menuItemId  String
+  
+  quantity    Int
+  price       Float    // Price at time of order (for historical accuracy)
+  subtotal    Float    // quantity * price
+  
+  specialInstructions String?
+  
+  @@index([orderId])
+  @@index([menuItemId])
+}
+
+enum OrderStatus {
+  PENDING       // Just received
+  CONFIRMED     // Restaurant confirmed
+  PREPARING     // Being cooked
+  READY         // Ready for pickup/delivery
+  OUT_FOR_DELIVERY // On the way
+  DELIVERED     // Completed
+  CANCELLED     // Cancelled by customer or restaurant
+}
+
+enum PaymentStatus {
+  PENDING       // Not paid yet
+  PAID          // Payment received
+  FAILED        // Payment failed
+  REFUNDED      // Money returned
+}
+
+// ===== RECEIPT GENERATION =====
+
+model Receipt {
+  id              String   @id @default(cuid())
+  receiptNumber   String   @unique // Human-readable (e.g., "RCP-2024-001")
+  
+  order           Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId         String   @unique
+  
+  // Receipt Data (snapshot at time of generation)
+  receiptData     Json     // Complete order details as JSON
+  
+  // PDF Storage
+  pdfUrl          String?  // URL to stored PDF
+  pdfPublicId     String?  // Cloud storage ID
+  
+  // Timestamps
+  generatedAt     DateTime @default(now())
+  emailedAt       DateTime?
+  
+  @@index([receiptNumber])
+  @@index([orderId])
+}
+
+// ===== ADMIN MANAGEMENT =====
+
+model Admin {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String
+  passwordHash  String
+  role          AdminRole @default(STAFF)
+  
+  isActive      Boolean  @default(true)
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  lastLoginAt   DateTime?
+  
+  @@index([email])
+}
+
+enum AdminRole {
+  OWNER         // Full access
+  MANAGER       // Can manage menu and orders
+  STAFF         // Can view and update orders only
+}
+
+// ===== ANALYTICS & INSIGHTS =====
+
+model DailySales {
+  id            String   @id @default(cuid())
+  date          DateTime @unique
+  
+  totalOrders   Int      @default(0)
+  totalRevenue  Float    @default(0)
+  totalTax      Float    @default(0)
+  totalDeliveryFees Float @default(0)
+  
+  averageOrderValue Float @default(0)
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@index([date])
+}
+
+// ===== CUSTOMER DATABASE =====
+
+model Customer {
+  id            String   @id @default(cuid())
+  name          String
+  email         String   @unique
+  phone         String   @unique
+  
+  // Saved addresses
+  addresses     CustomerAddress[]
+  
+  // Loyalty
+  totalOrders   Int      @default(0)
+  totalSpent    Float    @default(0)
+  loyaltyPoints Int      @default(0)
+  
+  // Preferences
+  dietaryPreferences String? // JSON array string for SQLite compatibility
+  favoriteItems      String? // JSON array string for SQLite compatibility
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  lastOrderAt   DateTime?
+  
+  @@index([email])
+  @@index([phone])
+}
+
+model CustomerAddress {
+  id          String   @id @default(cuid())
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerId  String
+  
+  label       String   // "Home", "Work", etc.
+  address     String
+  city        String
+  zipCode     String
+  isDefault   Boolean  @default(false)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([customerId])
+}
+
