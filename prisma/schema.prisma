@@ -178,7 +178,7 @@ model MenuItem {
 
 model Order {
   id          String @id @default(cuid())
-  orderNumber String @unique // Human-readable order number (e.g., "BK-2024-001")
+  orderNumber String @unique // Human-readable order number - CRITICAL: Must be unique to prevent duplicates
 
   // MULTI-CHEF SUPPORT
   chefId        String? // Optional: null for default restaurant
@@ -399,7 +399,7 @@ model Payment {
   paymentGateway       String // "stripe", "razorpay", "cash", "cod"
   paymentMethodDetails String? // Specific method: "paytm", "form-b", "google-pay", "phonepe", "card", "netbanking", etc.
   paymentIntentId      String? // Stripe payment intent ID or Razorpay order ID
-  transactionId        String? // Actual transaction ID from gateway
+  transactionId        String? @unique // CRITICAL FIX: Unique constraint prevents duplicate payment processing from race conditions
   gatewayResponse      String? // JSON response from payment gateway
 
   // Amount Details
@@ -426,12 +426,18 @@ model Payment {
 
   @@index([orderId])
   @@index([paymentIntentId])
-  @@index([transactionId])
+  // @@index([transactionId]) // REMOVED: Now using @@unique constraint instead
   @@index([status])
   @@index([createdAt])
   @@index([payoutStatus])
   @@index([status, createdAt]) // Fast payment status queries
   @@index([paymentGateway, status]) // Gateway-specific queries
+
+  /**
+   * DATA INTEGRITY CONSTRAINTS (Added during comprehensive bug audit)
+   * - transactionId is unique to prevent duplicate payment processing
+   * - This prevents race conditions when multiple webhooks arrive simultaneously
+   */
 }
 
 // ===== ANALYTICS & INSIGHTS =====
@@ -575,7 +581,7 @@ model NotificationLog {
 
 model Coupon {
   id   String @id @default(cuid())
-  code String @unique // "WELCOME20", "RAVI-FEAST" (auto-generated for referrals)
+  code String @unique // "WELCOME20", "RAVI-FEAST" - CRITICAL: Unique to prevent duplicate coupons
 
   // Type & Ownership
   type      String // "MERCHANT" (admin-created) or "REFERRAL" (user-generated)
@@ -590,7 +596,7 @@ model Coupon {
   // Usage Limits
   maxUsageTotal   Int? // Total uses allowed (null = unlimited)
   maxUsagePerUser Int  @default(1) // Uses per user (default: 1)
-  usageCount      Int  @default(0) // Current usage count
+  usageCount      Int  @default(0) // WARNING: Race condition possible - should use atomic increment
 
   // Validity
   validFrom  DateTime  @default(now())

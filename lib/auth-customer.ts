@@ -20,7 +20,20 @@ import { Customer } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { logger } from '@/lib/logger';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'change-this-in-production-use-env-variable';
+/**
+ * CRITICAL SECURITY: JWT Secret must be set in environment variables
+ * Never use default secrets in production - this would allow anyone to forge tokens
+ * The application will fail fast if JWT_SECRET is not configured
+ */
+if (!process.env.JWT_SECRET) {
+  throw new Error(
+    'CRITICAL SECURITY ERROR: JWT_SECRET environment variable is not set. ' +
+    'This is required for authentication. Please add JWT_SECRET to your .env file. ' +
+    'Generate a secure secret using: openssl rand -base64 64'
+  );
+}
+
+const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
 export interface AuthTokenPayload {

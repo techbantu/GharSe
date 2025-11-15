@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     }
 
     const decoded = verifyToken(token);
-    
+
     if (!decoded) {
       return NextResponse.json(
         { success: false, error: 'Invalid token' },
@@ -37,7 +37,12 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const customerId = decoded.userId;
+    /**
+     * CRITICAL FIX: JWT token contains 'customerId' not 'userId'
+     * This was causing authentication bypass and accessing wrong wallet data
+     * See AuthTokenPayload interface in lib/auth-customer.ts for correct field names
+     */
+    const customerId = decoded.customerId;
 
     // Get wallet balance
     const balance = await getWalletBalance(customerId);
