@@ -129,6 +129,7 @@ export interface Order {
     tax: number;
     deliveryFee: number;
     discount?: number;
+    tip?: number;
     total: number;
     promoCode?: string;
   };
@@ -146,6 +147,10 @@ export interface Order {
   deliveryAddress?: Address;
   contactPreference: ContactMethod[];
   notifications: OrderNotification[];
+  // Grace period tracking (NEW!)
+  modificationCount?: number; // How many times order was modified
+  gracePeriodExpiresAt?: Date; // When modification window closes
+  lastModifiedAt?: Date; // Last modification timestamp
 }
 
 /**
@@ -155,7 +160,8 @@ export interface Order {
  * Alternative: pending → confirmed → preparing → ready → picked-up
  */
 export type OrderStatus =
-  | 'pending' // Initial state, awaiting confirmation
+  | 'pending-confirmation' // Grace period - customer can still modify (0-8 min)
+  | 'pending' // Initial state, awaiting admin confirmation (visible to kitchen)
   | 'confirmed' // Order accepted, payment verified
   | 'preparing' // Cooking in progress
   | 'ready' // Food prepared, awaiting pickup/delivery
@@ -210,9 +216,15 @@ export type PaymentMethod =
   | 'cash-on-delivery'
   | 'card'
   | 'upi' // Indian payment system
+  | 'paytm'
+  | 'razorpay'
+  | 'stripe'
+  | 'google-pay'
+  | 'phonepe'
+  | 'form-b'
+  | 'netbanking'
   | 'paypal'
-  | 'apple-pay'
-  | 'google-pay';
+  | 'apple-pay';
 
 /**
  * PaymentStatus - Payment transaction states

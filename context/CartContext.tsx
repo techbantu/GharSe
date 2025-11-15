@@ -10,7 +10,7 @@
 
 'use client';
 
-import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useState, ReactNode } from 'react';
 import { Cart, CartItem, MenuItem } from '@/types';
 import { restaurantInfo } from '@/data/menuData';
 
@@ -101,6 +101,12 @@ const cartReducer = (state: Cart, action: CartAction): Cart => {
   switch (action.type) {
     case 'ADD_ITEM': {
       const { menuItem, quantity, customizations, specialInstructions } = action.payload;
+      console.log('[CartReducer] Processing ADD_ITEM:', {
+        itemName: menuItem.name,
+        quantity,
+        price: menuItem.price,
+        currentStateItems: state.items.length
+      });
       
       // Check if identical item (same customizations) already exists
       const existingItemIndex = state.items.findIndex(
@@ -113,13 +119,38 @@ const cartReducer = (state: Cart, action: CartAction): Cart => {
       
       if (existingItemIndex >= 0) {
         // Update quantity of existing item
-        newItems = state.items.map((item, index) =>
-          index === existingItemIndex
-            ? { ...item, quantity: item.quantity + quantity, subtotal: (item.quantity + quantity) * menuItem.price }
-            : item
-        );
+        const updatedQuantity = state.items[existingItemIndex].quantity + quantity;
+        console.log('[CartReducer] Item exists in cart, updating quantity:', {
+          existingQuantity: state.items[existingItemIndex].quantity,
+          addingQuantity: quantity,
+          newQuantity: updatedQuantity
+        });
+        
+        // If quantity becomes zero or negative, remove the item
+        if (updatedQuantity <= 0) {
+          console.warn('[CartReducer] Updated quantity <= 0, removing item');
+          newItems = state.items.filter((item, index) => index !== existingItemIndex);
+        } else {
+          newItems = state.items.map((item, index) =>
+            index === existingItemIndex
+              ? { ...item, quantity: updatedQuantity, subtotal: updatedQuantity * menuItem.price }
+              : item
+          );
+        }
       } else {
-        // Add new cart item
+        // Add new cart item (only if quantity is positive)
+        console.log('[CartReducer] Adding new item to cart:', {
+          quantity,
+          price: menuItem.price,
+          willAdd: quantity > 0
+        });
+        
+        if (quantity <= 0) {
+          // Don't add items with zero or negative quantity
+          console.error('[CartReducer] REJECTED: Quantity is <= 0:', quantity);
+          return state;
+        }
+        
         const newItem: CartItem = {
           id: `cart-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           menuItem,
@@ -128,10 +159,22 @@ const cartReducer = (state: Cart, action: CartAction): Cart => {
           specialInstructions,
           subtotal: menuItem.price * quantity,
         };
+        console.log('[CartReducer] Created new cart item:', {
+          cartItemId: newItem.id,
+          quantity: newItem.quantity,
+          subtotal: newItem.subtotal
+        });
         newItems = [...state.items, newItem];
       }
       
-      return calculateTotals(newItems, state.promoCode, state.discount);
+      const newState = calculateTotals(newItems, state.promoCode, state.discount);
+      console.log('[CartReducer] ADD_ITEM complete:', {
+        newItemsCount: newItems.length,
+        newStateItemsCount: newState.items.length,
+        subtotal: newState.subtotal,
+        total: newState.total
+      });
+      return newState;
     }
     
     case 'REMOVE_ITEM': {
@@ -190,9 +233,30 @@ const cartReducer = (state: Cart, action: CartAction): Cart => {
  */
 export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [cart, dispatch] = useReducer(cartReducer, initialCart);
+  const [isMounted, setIsMounted] = useState(false);
+  const [sessionId, setSessionId] = useState<string>('');
   
-  // Load cart from localStorage on mount
+  // Mark as mounted (client-side only)
   useEffect(() => {
+    setIsMounted(true);
+    
+    // Generate or retrieve session ID
+    const generateSessionId = () => {
+      let storedSessionId = localStorage.getItem('bantu_session_id');
+      if (!storedSessionId) {
+        storedSessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+        localStorage.setItem('bantu_session_id', storedSessionId);
+      }
+      return storedSessionId;
+    };
+    
+    setSessionId(generateSessionId());
+  }, []);
+  
+  // Load cart from localStorage on mount (client-side only)
+  useEffect(() => {
+    if (!isMounted) return;
+    
     const savedCart = localStorage.getItem('bantusKitchenCart');
     if (savedCart) {
       try {
@@ -202,12 +266,57 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         console.error('Failed to load cart from localStorage:', error);
       }
     }
-  }, []);
+  }, [isMounted]);
   
-  // Save cart to localStorage whenever it changes
+  // Save cart to localStorage whenever it changes (client-side only)
   useEffect(() => {
+    if (!isMounted) return;
+    
     localStorage.setItem('bantusKitchenCart', JSON.stringify(cart));
-  }, [cart]);
+  }, [cart, isMounted]);
+  
+  // Sync cart to backend for inventory tracking (GENIUS URGENCY SYSTEM)
+  useEffect(() => {
+    if (!isMounted || !sessionId) return;
+    
+    const syncCartToBackend = async () => {
+      try {
+        // Only sync if cart has items
+        if (cart.items.length === 0) {
+          // Release all reservations if cart is empty
+          await fetch('/api/cart/track', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId }),
+          });
+          return;
+        }
+        
+        // Track cart items on backend for urgency calculations
+        await fetch('/api/cart/track', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId,
+            items: cart.items.map(item => ({
+              itemId: item.menuItem.id,
+              quantity: item.quantity,
+            })),
+          }),
+        });
+        
+        console.log('[Cart Sync] Cart synced to backend for urgency tracking');
+      } catch (error) {
+        console.error('[Cart Sync] Failed to sync cart to backend:', error);
+        // Don't block user experience if sync fails
+      }
+    };
+    
+    // Debounce sync to avoid too many requests
+    const timeoutId = setTimeout(syncCartToBackend, 500);
+    
+    return () => clearTimeout(timeoutId);
+  }, [cart.items, isMounted, sessionId]);
   
   // Cart API methods
   const addItem = (
@@ -216,7 +325,17 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     customizations?: Record<string, string>,
     specialInstructions?: string
   ) => {
+    console.log('[CartContext] addItem called:', {
+      itemName: menuItem.name,
+      itemId: menuItem.id,
+      quantity,
+      price: menuItem.price,
+      customizations,
+      specialInstructions,
+      currentCartSize: cart.items.length
+    });
     dispatch({ type: 'ADD_ITEM', payload: { menuItem, quantity, customizations, specialInstructions } });
+    console.log('[CartContext] ADD_ITEM dispatched');
   };
   
   const removeItem = (id: string) => {

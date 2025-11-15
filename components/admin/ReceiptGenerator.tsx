@@ -210,7 +210,12 @@ const ReceiptGenerator: React.FC<ReceiptGeneratorProps> = ({ order, onClose }) =
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-semibold text-gray-700">Payment Method:</p>
-                <p className="text-gray-900 capitalize">{order.paymentMethod?.replace('-', ' ')}</p>
+                <p className="text-gray-900 capitalize">
+                  {order.paymentMethod 
+                    ? order.paymentMethod.replace(/-/g, ' ').replace(/_/g, ' ')
+                    : 'Cash on Delivery'}
+                  {order.tip > 0 && <span className="text-green-600 ml-2">💝 ₹{order.tip}</span>}
+                </p>
               </div>
               <div className="text-right">
                 <p className="font-semibold text-gray-700">Payment Status:</p>

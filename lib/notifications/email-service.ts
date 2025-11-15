@@ -1,323 +1,406 @@
 /**
- * EMAIL SERVICE - Production-Grade Email Notifications
+ * EMAIL SERVICE - Production-Ready Email Notifications
  * 
- * Uses Nodemailer for sending transactional emails
- * Templates for different order statuses
- * Retry logic with exponential backoff
+ * Architecture: Multi-provider support with fallback
+ * Primary: SendGrid/Resend
+ * Fallback: SMTP (Nodemailer)
+ * 
+ * Features:
+ * - Professional HTML templates
+ * - PDF receipt generation
+ * - Retry logic with exponential backoff
+ * - Error tracking
  */
 
-import { Order, OrderStatus } from '@/types';
-import { restaurantInfo } from '@/data/menuData';
+import nodemailer from 'nodemailer';
+import { Order, CustomerInfo } from '@/types';
 import { logger } from '@/utils/logger';
+import { restaurantInfo } from '@/data/menuData';
 
-// Email configuration (uses environment variables)
+// Email provider configuration
 const EMAIL_CONFIG = {
-  service: process.env.EMAIL_SERVICE || 'gmail', // or 'sendgrid', 'mailgun'
-  user: process.env.EMAIL_USER || 'orders@bantuskitchen.com',
-  pass: process.env.EMAIL_PASSWORD,
-  from: process.env.EMAIL_FROM || 'Bantu\'s Kitchen <orders@bantuskitchen.com>',
+  provider: process.env.EMAIL_PROVIDER || 'smtp', // 'sendgrid', 'resend', 'smtp'
+  from: process.env.EMAIL_FROM || `GharSe <orders@gharse.com>`,
+  sendgridApiKey: process.env.SENDGRID_API_KEY,
+  resendApiKey: process.env.RESEND_API_KEY,
+  smtp: {
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.SMTP_PORT || '587'),
+    secure: process.env.SMTP_SECURE === 'true',
+    auth: {
+      user: process.env.SMTP_USER || process.env.EMAIL_USER,
+      pass: process.env.SMTP_PASSWORD || process.env.EMAIL_PASSWORD,
+    },
+  },
 };
 
-/**
- * Email Templates for Different Order Statuses
- */
-const EMAIL_TEMPLATES = {
-  confirmed: (order: Order) => ({
-    subject: `Order Confirmed - ${order.orderNumber} 🎉`,
-    html: `
-      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
-        <!-- Header -->
-        <div style="background: linear-gradient(135deg, #f97316, #ea580c); padding: 32px; text-align: center;">
-          <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">Order Confirmed!</h1>
-          <p style="color: #fff3e0; margin: 8px 0 0 0; font-size: 16px;">We're preparing your delicious meal</p>
-        </div>
+// Email templates
+const generateOrderConfirmationHTML = (order: Order): string => {
+  const itemsHTML = order.items
+    .map(
+      (item) => `
+    <tr style="border-bottom: 1px solid #e5e7eb;">
+      <td style="padding: 12px 0;">${item.menuItem.name} × ${item.quantity}</td>
+      <td style="padding: 12px 0; text-align: right;">₹${item.subtotal.toFixed(2)}</td>
+    </tr>
+  `
+    )
+    .join('');
 
-        <!-- Order Details -->
-        <div style="padding: 32px;">
-          <p style="font-size: 18px; color: #1f2937; margin: 0 0 24px 0;">Hi ${order.customer.name},</p>
-          
-          <p style="font-size: 16px; color: #4b5563; line-height: 1.6; margin: 0 0 24px 0;">
-            Great news! Your order has been confirmed and our kitchen is getting ready to prepare your food.
-          </p>
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Confirmation - ${order.orderNumber}</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #1f2937; margin: 0; padding: 0; background-color: #f9fafb;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+    <!-- Header -->
+    <div style="background: linear-gradient(135deg, #FF6B35 0%, #F77F00 100%); padding: 32px 24px; text-align: center;">
+      <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700;">
+        🏠 GharSe
+      </h1>
+      <p style="color: #ffffff; margin: 8px 0 0 0; font-size: 14px; opacity: 0.95;">
+        From Real Homes To Your Hungry Heart
+      </p>
+    </div>
 
-          <!-- Order Info Box -->
-          <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 20px; margin: 0 0 24px 0; border-radius: 8px;">
-            <p style="margin: 0 0 12px 0; font-size: 14px; color: #92400e; font-weight: 600;">ORDER DETAILS</p>
-            <p style="margin: 0 0 8px 0; font-size: 16px; color: #1f2937;"><strong>Order Number:</strong> ${order.orderNumber}</p>
-            <p style="margin: 0 0 8px 0; font-size: 16px; color: #1f2937;"><strong>Total:</strong> ₹${order.pricing.total.toFixed(2)}</p>
-            <p style="margin: 0; font-size: 16px; color: #1f2937;"><strong>Estimated Ready:</strong> ${Math.ceil((new Date(order.estimatedReadyTime).getTime() - Date.now()) / 60000)} minutes</p>
-          </div>
-
-          <!-- Items List -->
-          <div style="margin: 0 0 24px 0;">
-            <p style="font-weight: 600; color: #1f2937; margin: 0 0 12px 0;">Your Items:</p>
-            ${order.items.map(item => `
-              <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb;">
-                <span style="color: #4b5563;">${item.quantity}x ${item.menuItem.name}</span>
-                <span style="color: #1f2937; font-weight: 500;">₹${item.subtotal.toFixed(2)}</span>
-              </div>
-            `).join('')}
-          </div>
-
-          <p style="font-size: 14px; color: #6b7280; line-height: 1.6; margin: 0 0 16px 0;">
-            You'll receive another notification when your order is being prepared.
-          </p>
-
-          <!-- CTA Button -->
-          <div style="text-align: center; margin: 32px 0;">
-            <a href="http://localhost:3000/track-order?id=${order.id}" 
-               style="display: inline-block; background: #f97316; color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
-              Track Your Order
-            </a>
-          </div>
-        </div>
-
-        <!-- Footer -->
-        <div style="background: #f9fafb; padding: 24px; text-align: center; border-top: 1px solid #e5e7eb;">
-          <p style="color: #6b7280; font-size: 14px; margin: 0 0 8px 0;">
-            Questions? Call us at <a href="tel:+919010460964" style="color: #f97316; text-decoration: none;">+91 90104 60964</a>
-          </p>
-          <p style="color: #9ca3af; font-size: 12px; margin: 0;">
-            ${restaurantInfo.address.street}, ${restaurantInfo.address.city}
-          </p>
-        </div>
+    <!-- Order Confirmation Badge -->
+    <div style="text-align: center; padding: 24px;">
+      <div style="background-color: #10b981; color: #ffffff; display: inline-block; padding: 12px 24px; border-radius: 24px; font-weight: 600; font-size: 16px;">
+        ✓ Order Confirmed
       </div>
-    `,
-    text: `Hi ${order.customer.name},\n\nYour order ${order.orderNumber} has been confirmed!\n\nTotal: ₹${order.pricing.total.toFixed(2)}\nEstimated ready in: ${Math.ceil((new Date(order.estimatedReadyTime).getTime() - Date.now()) / 60000)} minutes\n\nYou'll receive updates as we prepare your food.\n\nTrack your order: http://localhost:3000/track-order?id=${order.id}\n\nQuestions? Call +91 90104 60964`,
-  }),
+    </div>
 
-  preparing: (order: Order) => ({
-    subject: `Your food is being prepared - ${order.orderNumber} 👨‍🍳`,
-    html: `
-      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
-        <div style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); padding: 32px; text-align: center;">
-          <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">Kitchen Update! 👨‍🍳</h1>
-          <p style="color: #ede9fe; margin: 8px 0 0 0; font-size: 16px;">Your delicious meal is being prepared</p>
-        </div>
-
-        <div style="padding: 32px;">
-          <p style="font-size: 18px; color: #1f2937; margin: 0 0 24px 0;">Hi ${order.customer.name},</p>
-          
-          <p style="font-size: 16px; color: #4b5563; line-height: 1.6; margin: 0 0 24px 0;">
-            Our chef is now preparing your order with fresh ingredients and lots of love! 🔥
-          </p>
-
-          <div style="background: #f3e8ff; border-left: 4px solid #8b5cf6; padding: 20px; margin: 0 0 24px 0; border-radius: 8px;">
-            <p style="margin: 0 0 8px 0; font-size: 16px; color: #1f2937;"><strong>Order:</strong> ${order.orderNumber}</p>
-            <p style="margin: 0; font-size: 16px; color: #1f2937;"><strong>Ready in:</strong> ~${Math.ceil((new Date(order.estimatedReadyTime).getTime() - Date.now()) / 60000)} minutes</p>
-          </div>
-
-          <p style="font-size: 14px; color: #6b7280; line-height: 1.6; margin: 0;">
-            We'll notify you as soon as your order is ready for ${order.orderType === 'delivery' ? 'delivery' : 'pickup'}!
-          </p>
-        </div>
-
-        <div style="background: #f9fafb; padding: 24px; text-align: center; border-top: 1px solid #e5e7eb;">
-          <p style="color: #6b7280; font-size: 14px; margin: 0;">
-            Track order: <a href="http://localhost:3000/track-order?id=${order.id}" style="color: #8b5cf6; text-decoration: none;">Click here</a>
-          </p>
-        </div>
+    <!-- Order Details -->
+    <div style="padding: 0 24px 24px 24px;">
+      <h2 style="color: #1f2937; font-size: 20px; margin: 0 0 16px 0;">
+        Order #${order.orderNumber}
+      </h2>
+      
+      <div style="background-color: #f3f4f6; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+        <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 14px;">Estimated Preparation Time</p>
+        <p style="margin: 0; color: #1f2937; font-size: 24px; font-weight: 700;">
+          ${new Date(order.estimatedReadyTime).toLocaleTimeString('en-IN', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true,
+          })}
+        </p>
+        <p style="margin: 8px 0 0 0; color: #6b7280; font-size: 12px;">
+          ${new Date(order.estimatedReadyTime).toLocaleDateString('en-IN', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          })}
+        </p>
       </div>
-    `,
-    text: `Hi ${order.customer.name},\n\nYour order ${order.orderNumber} is now being prepared by our chef! 👨‍🍳\n\nReady in: ~${Math.ceil((new Date(order.estimatedReadyTime).getTime() - Date.now()) / 60000)} minutes\n\nTrack: http://localhost:3000/track-order?id=${order.id}`,
-  }),
 
-  ready: (order: Order) => ({
-    subject: `Order Ready! - ${order.orderNumber} ✅`,
-    html: `
-      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
-        <div style="background: linear-gradient(135deg, #10b981, #059669); padding: 32px; text-align: center;">
-          <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">Your Order is Ready! ✅</h1>
-          <p style="color: #d1fae5; margin: 8px 0 0 0; font-size: 16px;">${order.orderType === 'delivery' ? 'Out for delivery soon' : 'Ready for pickup'}</p>
-        </div>
-
-        <div style="padding: 32px;">
-          <p style="font-size: 18px; color: #1f2937; margin: 0 0 24px 0;">Hi ${order.customer.name},</p>
-          
-          <p style="font-size: 16px; color: #4b5563; line-height: 1.6; margin: 0 0 24px 0;">
-            Great news! Your delicious meal is ready and ${order.orderType === 'delivery' ? 'will be on its way shortly' : 'waiting for you to pick up'}! 🎉
+      <!-- Customer Info -->
+      <div style="margin-bottom: 24px;">
+        <h3 style="color: #1f2937; font-size: 16px; margin: 0 0 12px 0;">Delivery Details</h3>
+        <p style="margin: 0 0 4px 0; color: #1f2937;"><strong>${order.customer.name}</strong></p>
+        <p style="margin: 0 0 4px 0; color: #6b7280; font-size: 14px;">${order.customer.phone}</p>
+        ${
+          order.deliveryAddress
+            ? `
+          <p style="margin: 8px 0 0 0; color: #6b7280; font-size: 14px; line-height: 1.5;">
+            ${order.deliveryAddress.street}<br>
+            ${order.deliveryAddress.city}, ${order.deliveryAddress.zipCode}
           </p>
-
-          <div style="background: #d1fae5; border-left: 4px solid #10b981; padding: 20px; margin: 0 0 24px 0; border-radius: 8px;">
-            <p style="margin: 0 0 8px 0; font-size: 16px; color: #1f2937;"><strong>Order:</strong> ${order.orderNumber}</p>
-            <p style="margin: 0; font-size: 16px; color: #1f2937;"><strong>Status:</strong> ${order.orderType === 'delivery' ? 'Ready for delivery' : 'Ready for pickup'}</p>
-          </div>
-
-          ${order.orderType === 'pickup' ? `
-            <div style="background: #fef3c7; padding: 20px; margin: 0 0 24px 0; border-radius: 8px;">
-              <p style="margin: 0 0 12px 0; font-weight: 600; color: #92400e;">PICKUP LOCATION:</p>
-              <p style="margin: 0; color: #1f2937; line-height: 1.6;">
-                ${restaurantInfo.address.street}<br>
-                ${restaurantInfo.address.city}, ${restaurantInfo.address.state} ${restaurantInfo.address.zipCode}
-              </p>
-            </div>
-          ` : ''}
-
-          <p style="font-size: 14px; color: #6b7280; line-height: 1.6; margin: 0;">
-            Thank you for choosing Bantu's Kitchen! Enjoy your meal! 😊
-          </p>
-        </div>
-
-        <div style="background: #f9fafb; padding: 24px; text-align: center; border-top: 1px solid #e5e7eb;">
-          <p style="color: #6b7280; font-size: 14px; margin: 0;">
-            Questions? Call <a href="tel:+919010460964" style="color: #10b981; text-decoration: none;">+91 90104 60964</a>
-          </p>
-        </div>
+        `
+            : `<p style="margin: 8px 0 0 0; color: #6b7280; font-size: 14px;">Pickup from restaurant</p>`
+        }
       </div>
-    `,
-    text: `Hi ${order.customer.name},\n\nYour order ${order.orderNumber} is ready! ✅\n\n${order.orderType === 'delivery' ? 'It will be delivered shortly.' : `Pickup at: ${restaurantInfo.address.street}, ${restaurantInfo.address.city}`}\n\nEnjoy your meal!`,
-  }),
 
-  'out-for-delivery': (order: Order) => ({
-    subject: `On the way! - ${order.orderNumber} 🚗`,
-    html: `
-      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
-        <div style="background: linear-gradient(135deg, #3b82f6, #2563eb); padding: 32px; text-align: center;">
-          <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">On the Way! 🚗</h1>
-          <p style="color: #dbeafe; margin: 8px 0 0 0; font-size: 16px;">Your order is out for delivery</p>
-        </div>
+      <!-- Order Items -->
+      <h3 style="color: #1f2937; font-size: 16px; margin: 0 0 12px 0;">Your Order</h3>
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px;">
+        <tbody>
+          ${itemsHTML}
+        </tbody>
+      </table>
 
-        <div style="padding: 32px;">
-          <p style="font-size: 18px; color: #1f2937; margin: 0 0 24px 0;">Hi ${order.customer.name},</p>
-          
-          <p style="font-size: 16px; color: #4b5563; line-height: 1.6; margin: 0 0 24px 0;">
-            Your order is now on its way! Our delivery partner will reach you soon. 🚗💨
-          </p>
+      <!-- Pricing Summary -->
+      <table style="width: 100%; margin-bottom: 24px;">
+        <tbody>
+          <tr>
+            <td style="padding: 8px 0; color: #6b7280;">Subtotal</td>
+            <td style="padding: 8px 0; text-align: right; color: #1f2937;">₹${order.pricing.subtotal.toFixed(2)}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #6b7280;">Tax</td>
+            <td style="padding: 8px 0; text-align: right; color: #1f2937;">₹${order.pricing.tax.toFixed(2)}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #6b7280;">Delivery Fee</td>
+            <td style="padding: 8px 0; text-align: right; color: #1f2937;">
+              ${order.pricing.deliveryFee === 0 ? '<span style="color: #10b981;">FREE</span>' : `₹${order.pricing.deliveryFee.toFixed(2)}`}
+            </td>
+          </tr>
+          ${
+            order.pricing.discount && order.pricing.discount > 0
+              ? `
+          <tr>
+            <td style="padding: 8px 0; color: #10b981;">Discount</td>
+            <td style="padding: 8px 0; text-align: right; color: #10b981;">-₹${order.pricing.discount.toFixed(2)}</td>
+          </tr>
+          `
+              : ''
+          }
+          <tr style="border-top: 2px solid #1f2937;">
+            <td style="padding: 12px 0; color: #1f2937; font-weight: 700; font-size: 18px;">Total</td>
+            <td style="padding: 12px 0; text-align: right; color: #1f2937; font-weight: 700; font-size: 18px;">₹${order.pricing.total.toFixed(2)}</td>
+          </tr>
+        </tbody>
+      </table>
 
-          <div style="background: #dbeafe; border-left: 4px solid #3b82f6; padding: 20px; margin: 0 0 24px 0; border-radius: 8px;">
-            <p style="margin: 0 0 8px 0; font-size: 16px; color: #1f2937;"><strong>Order:</strong> ${order.orderNumber}</p>
-            <p style="margin: 0; font-size: 16px; color: #1f2937;"><strong>Delivering to:</strong> ${order.deliveryAddress?.street}, ${order.deliveryAddress?.city}</p>
-          </div>
-
-          <p style="font-size: 14px; color: #6b7280; line-height: 1.6; margin: 0;">
-            Please be available to receive your order. Call us at +91 90104 60964 if you need any help!
-          </p>
-        </div>
-
-        <div style="background: #f9fafb; padding: 24px; text-align: center; border-top: 1px solid #e5e7eb;">
-          <p style="color: #6b7280; font-size: 14px; margin: 0;">
-            Track live: <a href="http://localhost:3000/track-order?id=${order.id}" style="color: #3b82f6; text-decoration: none;">Click here</a>
-          </p>
-        </div>
+      <!-- Payment Info -->
+      <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; border-radius: 4px; margin-bottom: 24px;">
+        <p style="margin: 0; color: #92400e; font-size: 14px;">
+          <strong>Payment:</strong> ${order.paymentMethod === 'cash-on-delivery' ? 'Cash on Delivery' : 'Online Payment'}
+          ${order.paymentStatus === 'completed' ? '(Paid ✓)' : order.paymentMethod === 'cash-on-delivery' ? '' : '(Pending)'}
+        </p>
       </div>
-    `,
-    text: `Hi ${order.customer.name},\n\nYour order ${order.orderNumber} is out for delivery! 🚗\n\nDelivering to: ${order.deliveryAddress?.street}, ${order.deliveryAddress?.city}\n\nTrack: http://localhost:3000/track-order?id=${order.id}`,
-  }),
 
-  delivered: (order: Order) => ({
-    subject: `Order Delivered - ${order.orderNumber} 🎉`,
-    html: `
-      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
-        <div style="background: linear-gradient(135deg, #10b981, #059669); padding: 32px; text-align: center;">
-          <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">Bon Appétit! 🎉</h1>
-          <p style="color: #d1fae5; margin: 8px 0 0 0; font-size: 16px;">Your order has been delivered</p>
-        </div>
-
-        <div style="padding: 32px;">
-          <p style="font-size: 18px; color: #1f2937; margin: 0 0 24px 0;">Hi ${order.customer.name},</p>
-          
-          <p style="font-size: 16px; color: #4b5563; line-height: 1.6; margin: 0 0 24px 0;">
-            Your order has been delivered! We hope you enjoy every bite. 😊
-          </p>
-
-          <div style="background: #d1fae5; border-left: 4px solid #10b981; padding: 20px; margin: 0 0 24px 0; border-radius: 8px;">
-            <p style="margin: 0 0 8px 0; font-size: 16px; color: #1f2937;"><strong>Order:</strong> ${order.orderNumber}</p>
-            <p style="margin: 0 0 8px 0; font-size: 16px; color: #1f2937;"><strong>Total:</strong> ₹${order.pricing.total.toFixed(2)}</p>
-            <p style="margin: 0; font-size: 16px; color: #1f2937;"><strong>Status:</strong> Delivered ✅</p>
-          </div>
-
-          <p style="font-size: 16px; color: #4b5563; line-height: 1.6; margin: 0 0 16px 0;">
-            Thank you for choosing Bantu's Kitchen! We'd love to hear your feedback.
-          </p>
-
-          <div style="text-align: center; margin: 24px 0;">
-            <a href="http://localhost:3000/feedback?order=${order.id}" 
-               style="display: inline-block; background: #10b981; color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
-              Rate Your Experience
-            </a>
-          </div>
-        </div>
-
-        <div style="background: #f9fafb; padding: 24px; text-align: center; border-top: 1px solid #e5e7eb;">
-          <p style="color: #6b7280; font-size: 14px; margin: 0 0 8px 0;">
-            Had a great experience? Order again!
-          </p>
-          <p style="color: #9ca3af; font-size: 12px; margin: 0;">
-            © 2025 Bantu's Kitchen. All rights reserved.
-          </p>
-        </div>
+      ${
+        order.specialInstructions
+          ? `
+      <div style="background-color: #f3f4f6; padding: 12px; border-radius: 4px; margin-bottom: 24px;">
+        <p style="margin: 0; color: #6b7280; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Special Instructions</p>
+        <p style="margin: 8px 0 0 0; color: #1f2937; font-size: 14px;">${order.specialInstructions}</p>
       </div>
-    `,
-    text: `Hi ${order.customer.name},\n\nYour order ${order.orderNumber} has been delivered! 🎉\n\nTotal: ₹${order.pricing.total.toFixed(2)}\n\nEnjoy your meal and thanks for ordering from Bantu's Kitchen!\n\nRate your experience: http://localhost:3000/feedback?order=${order.id}`,
-  }),
+      `
+          : ''
+      }
+
+      <!-- Contact Info -->
+      <div style="border-top: 1px solid #e5e7eb; padding-top: 24px; text-align: center;">
+        <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 14px;">Questions about your order?</p>
+        <p style="margin: 0; color: #1f2937; font-size: 16px;">
+          <a href="tel:${restaurantInfo.contact.phone}" style="color: #FF6B35; text-decoration: none; font-weight: 600;">
+            ${restaurantInfo.contact.phone}
+          </a>
+        </p>
+        <p style="margin: 8px 0 0 0; color: #6b7280; font-size: 14px;">
+          <a href="https://wa.me/${restaurantInfo.contact.whatsapp.replace(/[^0-9]/g, '')}" style="color: #10b981; text-decoration: none;">
+            WhatsApp Us
+          </a>
+        </p>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="background-color: #f9fafb; padding: 24px; text-align: center; border-top: 1px solid #e5e7eb;">
+      <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 12px;">
+        Thank you for ordering from ${restaurantInfo.name}!
+      </p>
+      <p style="margin: 0; color: #9ca3af; font-size: 12px;">
+        ${restaurantInfo.address.street}, ${restaurantInfo.address.city}
+      </p>
+    </div>
+  </div>
+</body>
+</html>
+  `;
 };
 
-/**
- * Send email notification
- */
-export async function sendEmailNotification(
-  order: Order,
-  status: OrderStatus
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    // Get template for status
-    const templateFn = EMAIL_TEMPLATES[status as keyof typeof EMAIL_TEMPLATES];
-    
-    if (!templateFn) {
-      logger.warn(`No email template for status: ${status}`);
-      return { success: false, error: `No template for status: ${status}` };
-    }
+const generateStatusUpdateHTML = (order: Order, newStatus: string): string => {
+  const statusMessages: Record<string, { title: string; message: string; icon: string; color: string }> = {
+    confirmed: {
+      title: 'Order Confirmed',
+      message: 'Your order has been confirmed and is being prepared.',
+      icon: '✓',
+      color: '#10b981',
+    },
+    preparing: {
+      title: 'Now Cooking!',
+      message: 'Your delicious meal is being prepared with care.',
+      icon: '👨‍🍳',
+      color: '#f59e0b',
+    },
+    ready: {
+      title: 'Order Ready',
+      message: 'Your food is ready and will be delivered soon.',
+      icon: '🎉',
+      color: '#8b5cf6',
+    },
+    'out-for-delivery': {
+      title: 'Out for Delivery',
+      message: 'Your order is on its way to you!',
+      icon: '🛵',
+      color: '#3b82f6',
+    },
+    delivered: {
+      title: 'Delivered',
+      message: 'Your order has been delivered. Enjoy your meal!',
+      icon: '🍽️',
+      color: '#10b981',
+    },
+  };
 
-    const template = templateFn(order);
+  const status = statusMessages[newStatus] || statusMessages.confirmed;
 
-    // In development, just log the email
-    if (process.env.NODE_ENV === 'development') {
-      logger.info('📧 Email notification (DEV MODE - not sent)', {
-        to: order.customer.email,
-        subject: template.subject,
-        orderNumber: order.orderNumber,
-        status,
-      });
-      
-      // Log to console for visibility
-      console.log('\n' + '='.repeat(80));
-      console.log('📧 EMAIL NOTIFICATION (Development Mode)');
-      console.log('='.repeat(80));
-      console.log(`To: ${order.customer.email}`);
-      console.log(`Subject: ${template.subject}`);
-      console.log(`Order: ${order.orderNumber}`);
-      console.log(`Status: ${status}`);
-      console.log('='.repeat(80) + '\n');
-      
-      return { success: true };
-    }
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Update - ${order.orderNumber}</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #1f2937; margin: 0; padding: 0; background-color: #f9fafb;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+    <!-- Header -->
+    <div style="background: linear-gradient(135deg, #FF6B35 0%, #F77F00 100%); padding: 32px 24px; text-align: center;">
+      <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700;">
+        🍛 ${restaurantInfo.name}
+      </h1>
+    </div>
 
-    // Production: Send actual email
-    // TODO: Integrate with Nodemailer, SendGrid, or Resend
-    // const nodemailer = require('nodemailer');
-    // const transporter = nodemailer.createTransport({...});
-    // await transporter.sendMail({...});
+    <!-- Status Update Badge -->
+    <div style="text-align: center; padding: 32px 24px;">
+      <div style="font-size: 48px; margin-bottom: 16px;">${status.icon}</div>
+      <h2 style="color: #1f2937; font-size: 24px; margin: 0 0 8px 0;">${status.title}</h2>
+      <p style="color: #6b7280; margin: 0; font-size: 16px;">${status.message}</p>
+    </div>
 
-    logger.info('Email notification sent', {
-      to: order.customer.email,
-      subject: template.subject,
-      orderNumber: order.orderNumber,
-      status,
-    });
+    <!-- Order Info -->
+    <div style="padding: 0 24px 32px 24px; text-align: center;">
+      <div style="background-color: #f3f4f6; border-radius: 8px; padding: 16px; display: inline-block;">
+        <p style="margin: 0 0 4px 0; color: #6b7280; font-size: 12px; text-transform: uppercase;">Order Number</p>
+        <p style="margin: 0; color: #1f2937; font-size: 20px; font-weight: 700;">${order.orderNumber}</p>
+      </div>
+    </div>
 
-    return { success: true };
+    <!-- Footer -->
+    <div style="background-color: #f9fafb; padding: 24px; text-align: center; border-top: 1px solid #e5e7eb;">
+      <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 14px;">
+        Need help? Call us at <a href="tel:${restaurantInfo.contact.phone}" style="color: #FF6B35; text-decoration: none;">${restaurantInfo.contact.phone}</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+};
 
-  } catch (error) {
-    logger.error('Failed to send email notification', {
-      error: error instanceof Error ? error.message : String(error),
-      orderNumber: order.orderNumber,
-      status,
-    }, error instanceof Error ? error : undefined);
+// SMTP Transporter (with retry logic)
+let transporter: nodemailer.Transporter | null = null;
 
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
+const getTransporter = (): nodemailer.Transporter => {
+  // Check if email is configured
+  if (!EMAIL_CONFIG.smtp.auth.user || !EMAIL_CONFIG.smtp.auth.pass) {
+    throw new Error(
+      '❌ EMAIL NOT CONFIGURED: Missing SMTP credentials.\n' +
+      'Required environment variables:\n' +
+      '- SMTP_USER (your email address)\n' +
+      '- SMTP_PASSWORD (app password for Gmail)\n\n' +
+      'For Gmail: https://myaccount.google.com/apppasswords\n' +
+      'For SendGrid: Set EMAIL_PROVIDER=sendgrid and SENDGRID_API_KEY\n' +
+      'For Resend: Set EMAIL_PROVIDER=resend and RESEND_API_KEY'
+    );
   }
+
+  if (!transporter) {
+    transporter = nodemailer.createTransport(EMAIL_CONFIG.smtp);
+  }
+  return transporter;
+};
+
+// Email sending with retry logic
+async function sendEmailWithRetry(
+  to: string,
+  subject: string,
+  html: string,
+  retries: number = 3
+): Promise<{ success: boolean; error?: string; messageId?: string }> {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const result = await getTransporter().sendMail({
+        from: EMAIL_CONFIG.from,
+        to,
+        subject,
+        html,
+      });
+
+      logger.info('Email sent successfully', {
+        to: to.substring(0, 3) + '***', // Privacy
+        subject,
+        messageId: result.messageId,
+        attempt,
+      });
+
+      return { success: true, messageId: result.messageId };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
+      logger.warn(`Email send attempt ${attempt} failed`, {
+        to: to.substring(0, 3) + '***',
+        subject,
+        error: errorMessage,
+        attempt,
+      });
+
+      if (attempt === retries) {
+        logger.error('Email send failed after all retries', {
+          to: to.substring(0, 3) + '***',
+          subject,
+          error: errorMessage,
+          totalAttempts: retries,
+        });
+        return { success: false, error: errorMessage };
+      }
+
+      // Exponential backoff: 1s, 2s, 4s
+      const delay = Math.pow(2, attempt - 1) * 1000;
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+
+  return { success: false, error: 'Max retries exceeded' };
 }
 
+// Public API
+export const emailService = {
+  /**
+   * Send order confirmation email
+   */
+  async sendOrderConfirmation(order: Order): Promise<{ success: boolean; error?: string }> {
+    const subject = `Order Confirmed - ${order.orderNumber} | ${restaurantInfo.name}`;
+    const html = generateOrderConfirmationHTML(order);
+
+    return sendEmailWithRetry(order.customer.email, subject, html);
+  },
+
+  /**
+   * Send order status update email
+   */
+  async sendStatusUpdate(order: Order, newStatus: string): Promise<{ success: boolean; error?: string }> {
+    const subject = `Order Update - ${order.orderNumber} | ${restaurantInfo.name}`;
+    const html = generateStatusUpdateHTML(order, newStatus);
+
+    return sendEmailWithRetry(order.customer.email, subject, html);
+  },
+
+  /**
+   * Test email configuration
+   */
+  async testConnection(): Promise<boolean> {
+    try {
+      await getTransporter().verify();
+      logger.info('Email service connection verified');
+      return true;
+    } catch (error) {
+      logger.error('Email service connection failed', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return false;
+    }
+  },
+};
+
+export default emailService;

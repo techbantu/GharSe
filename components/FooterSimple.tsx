@@ -60,14 +60,14 @@ const FooterSimple: React.FC = () => {
             fontSize: '1.25rem',
             boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
               }}>
-                BK
+                GS
               </div>
           <div>
             <h3 style={{ fontSize: '1.125rem', fontWeight: 700, lineHeight: '1.2', marginBottom: '0.25rem' }}>
-              {restaurantInfo.name}
+              GharSe
             </h3>
             <p style={{ color: '#9CA3AF', fontSize: '0.75rem', lineHeight: '1.2' }}>
-              {restaurantInfo.tagline}
+              From Real Homes To Your Hungry Heart
             </p>
           </div>
             </div>
@@ -78,10 +78,10 @@ const FooterSimple: React.FC = () => {
           alignItems: 'center',
           color: '#D1D5DB',
           fontSize: '0.875rem',
-          maxWidth: '280px',
+          maxWidth: '320px',
           flexShrink: 0
         }}>
-                Bringing authentic Indian flavors to your doorstep with love and care.
+                Home-cooked meals from real home kitchens, bringing authentic regional Indian flavors straight to your door.
             </div>
             
         {/* Rating & Reviews */}
@@ -243,8 +243,28 @@ const FooterSimple: React.FC = () => {
           fontSize: '0.75rem',
           color: '#9CA3AF'
         }}>
-          <p style={{ margin: 0 }}>
-            © {currentYear} {restaurantInfo.name}. All rights reserved.
+          <div style={{ margin: 0 }}>
+            <p style={{ margin: 0, marginBottom: '0.25rem' }}>
+              © {currentYear} <span style={{ fontWeight: 600 }}>GharSe</span>. All rights reserved.
+            </p>
+            <p style={{ margin: 0, fontSize: '0.65rem', color: '#6B7280' }}>
+              Operated by Sailaja | Powered by TechBantu IT Solutions LLC
+            </p>
+          </div>
+          
+          {/* Legal Links */}
+          <p style={{ 
+            margin: 0,
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '1rem',
+            flexWrap: 'wrap'
+          }}>
+            <a href="/legal" style={{ color: '#FF6B35', textDecoration: 'none', fontWeight: 600, fontSize: '0.75rem' }}>Legal</a>
+            <a href="/legal/privacy-policy" style={{ color: '#9CA3AF', textDecoration: 'none', fontSize: '0.75rem' }} className="hover:text-orange-400">Privacy</a>
+            <a href="/legal/terms-of-service" style={{ color: '#9CA3AF', textDecoration: 'none', fontSize: '0.75rem' }} className="hover:text-orange-400">Terms</a>
+            <a href="/legal/refund-policy" style={{ color: '#9CA3AF', textDecoration: 'none', fontSize: '0.75rem' }} className="hover:text-orange-400">Refunds</a>
+            <a href="/legal/referral-terms" style={{ color: '#9CA3AF', textDecoration: 'none', fontSize: '0.75rem' }} className="hover:text-orange-400">Referrals</a>
           </p>
           
           <p style={{ 

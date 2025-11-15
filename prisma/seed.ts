@@ -24,16 +24,24 @@ async function main() {
   
   const admin = await prisma.admin.upsert({
     where: { email: 'admin@bantuskitchen.com' },
-    update: {},
+    update: {
+      // Update password if changed
+      passwordHash,
+      emailVerified: true, // Ensure email is verified for existing admin
+      isActive: true, // Ensure admin is active
+    },
     create: {
       email: process.env.ADMIN_DEFAULT_EMAIL || 'admin@bantuskitchen.com',
       name: process.env.ADMIN_DEFAULT_NAME || 'Sailaja Admin',
       passwordHash,
       role: 'OWNER',
       isActive: true,
+      emailVerified: true, // Set to true for initial admin (skip verification)
     },
   });
   console.log(`✅ Admin created: ${admin.email}`);
+  console.log(`   Password: ${process.env.ADMIN_DEFAULT_PASSWORD || 'Sailaja@2025'}`);
+  console.log(`   Email verified: ${admin.emailVerified}`);
 
   // 2. Create Sample Menu Items
   console.log('\n🍽️  Creating sample menu items...');
@@ -417,6 +425,9 @@ async function main() {
 
   // 3. Create Sample Customer
   console.log('\n👥 Creating sample customer...');
+  const customerPassword = 'customer123';
+  const hashedPassword = await bcrypt.hash(customerPassword, 12);
+
   const customer = await prisma.customer.upsert({
     where: { email: 'customer@example.com' },
     update: {},
@@ -424,6 +435,9 @@ async function main() {
       name: 'Sample Customer',
       email: 'customer@example.com',
       phone: '+91 98765 43210',
+      passwordHash: hashedPassword,
+      emailVerified: true,
+      phoneVerified: true,
       totalOrders: 0,
       totalSpent: 0,
       loyaltyPoints: 0,
@@ -442,9 +456,13 @@ async function main() {
   console.log('   1. Run: npm run dev');
   console.log('   2. Visit: http://localhost:3000');
   console.log('   3. Admin: http://localhost:3000/admin');
-  console.log('\n🔐 Admin Login:');
-  console.log(`   Email: ${admin.email}`);
-  console.log(`   Password: ${process.env.ADMIN_DEFAULT_PASSWORD || 'Sailaja@2025'}`);
+  console.log('\n🔐 Login Credentials:');
+  console.log('   Admin:');
+  console.log(`     Email: ${admin.email}`);
+  console.log(`     Password: ${process.env.ADMIN_DEFAULT_PASSWORD || '***REMOVED***'}`);
+  console.log('   Customer:');
+  console.log('     Email: customer@example.com');
+  console.log('     Password: customer123');
   console.log('');
 }
 

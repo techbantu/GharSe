@@ -10,12 +10,17 @@
 
 'use client';
 
-import React, { useState } from 'react';
-import { X, User, Mail, Phone, MapPin, CreditCard, CheckCircle, Clock, TruckIcon } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, User, Mail, Phone, MapPin, CreditCard, CheckCircle, Clock, TruckIcon, XCircle, AlertCircle, Heart } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
+import { useToast } from '@/context/ToastContext';
+import { useRouter } from 'next/navigation';
+import CancelOrderModal from '@/components/admin/CancelOrderModal';
+import PendingOrderModification from '@/components/PendingOrderModification';
 import { Order, CustomerInfo, Address } from '@/types';
 import { restaurantInfo } from '@/data/menuData';
 import { retryWithBackoff } from '@/utils/retry';
+import { playSuccessSound, playAlertSound } from '@/utils/notification-sound';
 import { Result, Ok, Err, ValidationError, RateLimitError, TimeoutError, NetworkError, ServerError, RetriableError, PermanentError, AppError } from '@/utils/result';
 
 interface CheckoutModalProps {
@@ -25,9 +30,18 @@ interface CheckoutModalProps {
 
 const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
   const { cart, clearCart } = useCart();
-  const [step, setStep] = useState<'form' | 'confirmation'>('form');
+  const toast = useToast();
+  const router = useRouter();
+  const [step, setStep] = useState<'form' | 'pending' | 'confirmation'>('form');
   const [orderNumber, setOrderNumber] = useState('');
   const [orderId, setOrderId] = useState('');
+  const [currentOrder, setCurrentOrder] = useState<Order | null>(null);
+  const [orderCreatedAt, setOrderCreatedAt] = useState<Date | null>(null);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [orderStatus, setOrderStatus] = useState<string>('PENDING_CONFIRMATION');
+  const [orderTotal, setOrderTotal] = useState<number>(0);
+  const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
+  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -43,11 +57,34 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
     specialInstructions: '',
     orderType: 'delivery' as 'delivery' | 'pickup',
     paymentMethod: 'cash-on-delivery' as 'cash-on-delivery' | 'card',
+    paymentMethodDetails: '', // Specific gateway: "paytm", "form-b", "google-pay", "phonepe", etc.
+    tip: 0, // Tip amount
     scheduledTime: '',
   });
   
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Cleanup timer on unmount or modal close
+  useEffect(() => {
+    return () => {
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+      }
+    };
+  }, []);
+  
+  // Reset timer when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+      }
+      setTimeRemaining(null);
+    }
+  }, [isOpen]);
   
   // Handle input changes with character filtering
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -60,32 +97,42 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
       // Allow Unicode letters for international names (Hindi, Arabic, etc.)
       filteredValue = value.replace(/[^a-zA-Z\s\-'\.\u00C0-\u024F\u1E00-\u1EFF\u0400-\u04FF\u0900-\u097F]/g, '');
     } else if (name === 'phone') {
-      // Indian Phone Number Formatting: +91 XXXXX XXXXX (10 digits max)
-      // Remove all non-digits except +
-      let digits = value.replace(/[^\d+]/g, '');
+      // GENIUS FIX: Indian Phone Number with fixed +91 prefix
+      // The input field only shows the 10-digit number (without +91)
+      // Extract only digits
+      const digits = value.replace(/\D/g, '');
       
-      // If starts with +91, keep it
-      if (digits.startsWith('+91')) {
-        digits = digits.substring(3); // Remove +91
-      } else if (digits.startsWith('91') && digits.length > 10) {
-        digits = digits.substring(2); // Remove 91
-      } else if (digits.startsWith('+')) {
-        digits = digits.substring(1); // Remove +
-      }
+      // Limit to 10 digits only (India mobile numbers)
+      const phoneDigits = digits.substring(0, 10);
       
-      // Limit to 10 digits only
-      digits = digits.replace(/\D/g, '').substring(0, 10);
-      
-      // Format as +91 XXXXX XXXXX
-      if (digits.length > 0) {
-        if (digits.length <= 5) {
-          filteredValue = `+91 ${digits}`;
+      // Format as XXXXX XXXXX (input field shows only the number part)
+      if (phoneDigits.length > 0) {
+        if (phoneDigits.length <= 5) {
+          filteredValue = phoneDigits;
         } else {
-          filteredValue = `+91 ${digits.substring(0, 5)} ${digits.substring(5, 10)}`;
+          filteredValue = `${phoneDigits.substring(0, 5)} ${phoneDigits.substring(5, 10)}`;
         }
       } else {
         filteredValue = '';
       }
+      
+      // Store full value with +91 prefix in formData
+      const fullValue = phoneDigits.length > 0 
+        ? (phoneDigits.length <= 5 
+          ? `+91 ${phoneDigits}` 
+          : `+91 ${phoneDigits.substring(0, 5)} ${phoneDigits.substring(5, 10)}`)
+        : '+91 ';
+      
+      // Update formData with full value (for validation and submission)
+      setFormData(prev => ({ ...prev, phone: fullValue }));
+      return; // Early return to prevent double update
+    } else if (name === 'zipCode') {
+      // GENIUS FIX: PIN Code - Only numbers (6 digits for India)
+      filteredValue = value.replace(/\D/g, '').substring(0, 6);
+    } else if (name === 'city' || name === 'state') {
+      // GENIUS FIX: City and State - Remove numbers, only allow letters, spaces, hyphens, apostrophes, periods
+      filteredValue = value.replace(/[0-9]/g, '');
+      console.log(`✅ Filtered ${name}:`, value, '→', filteredValue);
     }
     
     setFormData(prev => ({ ...prev, [name]: filteredValue }));
@@ -97,6 +144,28 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
         delete newErrors[name];
         return newErrors;
       });
+    }
+  };
+  
+  // GENIUS FIX: Handle phone input keydown - input field only shows digits, +91 is in prefix div
+  const handlePhoneKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Allow all normal editing - the input field only contains the 10-digit number
+    // The +91 prefix is in a separate non-editable div, so no need to prevent deletion
+  };
+  
+  // GENIUS FIX: Handle phone input focus to ensure +91 prefix is always present in formData
+  const handlePhoneFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    // Ensure formData has +91 prefix (for validation)
+    if (!formData.phone.startsWith('+91')) {
+      const digits = formData.phone.replace(/\D/g, '').substring(0, 10);
+      if (digits.length > 0) {
+        const formatted = digits.length <= 5 
+          ? `+91 ${digits}` 
+          : `+91 ${digits.substring(0, 5)} ${digits.substring(5, 10)}`;
+        setFormData(prev => ({ ...prev, phone: formatted }));
+      } else {
+        setFormData(prev => ({ ...prev, phone: '+91 ' }));
+      }
     }
   };
   
@@ -143,9 +212,33 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
     
     if (formData.orderType === 'delivery') {
       if (!formData.street.trim()) newErrors.street = 'Street address is required';
-      if (!formData.city.trim()) newErrors.city = 'City is required';
-      if (!formData.state.trim()) newErrors.state = 'State is required';
-      if (!formData.zipCode.trim()) newErrors.zipCode = 'PIN code is required';
+      
+      if (!formData.city.trim()) {
+        newErrors.city = 'City is required';
+      } else if (/\d/.test(formData.city)) {
+        // City cannot contain numbers
+        newErrors.city = 'City name cannot contain numbers';
+      } else if (!/^[a-zA-Z\s\-'.]+$/.test(formData.city)) {
+        // City should only contain letters, spaces, hyphens, apostrophes, and periods
+        newErrors.city = 'City name can only contain letters';
+      }
+      
+      if (!formData.state.trim()) {
+        newErrors.state = 'State is required';
+      } else if (/\d/.test(formData.state)) {
+        // State cannot contain numbers
+        newErrors.state = 'State name cannot contain numbers';
+      } else if (!/^[a-zA-Z\s\-'.]+$/.test(formData.state)) {
+        // State should only contain letters, spaces, hyphens, apostrophes, and periods
+        newErrors.state = 'State name can only contain letters';
+      }
+      
+      if (!formData.zipCode.trim()) {
+        newErrors.zipCode = 'PIN code is required';
+      } else if (!/^\d{6}$/.test(formData.zipCode)) {
+        // GENIUS FIX: PIN code must be exactly 6 digits
+        newErrors.zipCode = 'PIN code must be 6 digits';
+      }
     }
     
     setErrors(newErrors);
@@ -185,11 +278,13 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
           tax: cart.tax,
           deliveryFee: cart.deliveryFee,
           discount: cart.discount || 0,
-          total: cart.total,
+          tip: formData.tip || 0,
+          total: cart.total + (formData.tip || 0),
           promoCode: cart.promoCode,
         },
         orderType: formData.orderType,
         paymentMethod: formData.paymentMethod,
+        paymentMethodDetails: formData.paymentMethodDetails || undefined,
         deliveryAddress: formData.orderType === 'delivery' ? {
           street: formData.street,
           apartment: formData.apartment,
@@ -212,6 +307,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
             const response = await fetch('/api/orders', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
+              credentials: 'include', // CRITICAL: Send auth cookies to link order to customer
               body: JSON.stringify(orderPayload),
               signal: controller.signal,
             });
@@ -299,8 +395,29 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
       const order = result.value;
       setOrderNumber(order.orderNumber);
       setOrderId(order.id);
-      clearCart();
-      setStep('confirmation');
+      const createdAt = new Date();
+      setOrderCreatedAt(createdAt);
+      
+      // Store full order object
+      setCurrentOrder(order);
+      setOrderTotal(order.pricing.total);
+      setOrderStatus('PENDING_CONFIRMATION');
+      
+      // DON'T clear cart yet - allow modifications during grace period
+      // clearCart(); // Move this to after finalization
+      
+      // Go to pending modification step
+      setStep('pending');
+      
+      // Play success sound for order confirmation
+      try {
+        playSuccessSound();
+      } catch (error) {
+        console.warn('Failed to play success sound:', error);
+      }
+      
+      // Show success toast notification (green)
+      toast.success('Order Confirmed!', `Order #${order.orderNumber} has been placed successfully.`);
       
     } catch (error) {
       console.error('Unexpected error in handleSubmit:', error);
@@ -314,6 +431,13 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
   
   // Reset and close
   const handleClose = () => {
+    // Clean up timer
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
+    }
+    setTimeRemaining(null);
+    
     if (step === 'confirmation') {
       clearCart();
       setStep('form');
@@ -734,19 +858,53 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                       }}>
                         Phone *
                       </label>
+                      <div style={{
+                        position: 'relative',
+                        display: 'flex',
+                        alignItems: 'center',
+                        width: '100%'
+                      }}>
+                        {/* India Flag +91 Prefix (Fixed, Non-Editable) */}
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '14px 12px',
+                          background: '#F9FAFB',
+                          borderTop: `2px solid ${errors.phone ? '#EF4444' : '#E5E7EB'}`,
+                          borderBottom: `2px solid ${errors.phone ? '#EF4444' : '#E5E7EB'}`,
+                          borderLeft: `2px solid ${errors.phone ? '#EF4444' : '#E5E7EB'}`,
+                          borderRight: 'none',
+                          borderRadius: '12px 0 0 12px',
+                          fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif',
+                          fontSize: '0.9375rem',
+                          fontWeight: 600,
+                          color: '#1F2937',
+                          userSelect: 'none',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          <span style={{ fontSize: '1.25rem' }}>🇮🇳</span>
+                          <span>+91</span>
+                        </div>
+                        {/* Phone Number Input (Editable) */}
                       <input
                         type="tel"
                         name="phone"
-                        value={formData.phone}
+                          value={formData.phone.startsWith('+91') ? formData.phone.substring(4).trim() : formData.phone.replace(/[^\d\s]/g, '')}
                         onChange={handleChange}
-                        maxLength={17}
+                          onKeyDown={handlePhoneKeyDown}
+                          onFocus={handlePhoneFocus}
+                          maxLength={13}
                         inputMode="tel"
                         autoComplete="tel"
                         style={{
-                          width: '100%',
+                            flex: 1,
                           padding: '14px 16px',
-                          borderRadius: '12px',
-                          border: `2px solid ${errors.phone ? '#EF4444' : '#E5E7EB'}`,
+                            borderRadius: '0 12px 12px 0',
+                          borderTop: `2px solid ${errors.phone ? '#EF4444' : '#E5E7EB'}`,
+                          borderBottom: `2px solid ${errors.phone ? '#EF4444' : '#E5E7EB'}`,
+                          borderRight: `2px solid ${errors.phone ? '#EF4444' : '#E5E7EB'}`,
+                            borderLeft: 'none',
                           fontSize: '0.9375rem',
                           fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, monospace',
                           color: '#1F2937',
@@ -756,15 +914,39 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                           letterSpacing: '0.5px'
                         }}
                         onFocus={(e) => {
+                            handlePhoneFocus(e);
                           e.currentTarget.style.borderColor = errors.phone ? '#EF4444' : '#f97316';
                           e.currentTarget.style.boxShadow = '0 0 0 3px rgba(249, 115, 22, 0.1)';
+                            // Update border of prefix div
+                            const prefixDiv = e.currentTarget.previousElementSibling as HTMLElement;
+                            if (prefixDiv) {
+                              prefixDiv.style.borderColor = errors.phone ? '#EF4444' : '#f97316';
+                            }
                         }}
                         onBlur={(e) => {
                           e.currentTarget.style.borderColor = errors.phone ? '#EF4444' : '#E5E7EB';
                           e.currentTarget.style.boxShadow = 'none';
-                        }}
-                        placeholder="+91 90104 60964"
+                            // Update border of prefix div
+                            const prefixDiv = e.currentTarget.previousElementSibling as HTMLElement;
+                            if (prefixDiv) {
+                              prefixDiv.style.borderColor = errors.phone ? '#EF4444' : '#E5E7EB';
+                            }
+                            // Ensure +91 prefix is always present in formData
+                            if (!formData.phone.startsWith('+91')) {
+                              const digits = formData.phone.replace(/\D/g, '').substring(0, 10);
+                              if (digits.length > 0) {
+                                const formatted = digits.length <= 5 
+                                  ? `+91 ${digits}` 
+                                  : `+91 ${digits.substring(0, 5)} ${digits.substring(5, 10)}`;
+                                setFormData(prev => ({ ...prev, phone: formatted }));
+                              } else {
+                                setFormData(prev => ({ ...prev, phone: '+91 ' }));
+                              }
+                            }
+                          }}
+                          placeholder="90104 60964"
                       />
+                      </div>
                       {errors.phone && <p style={{ color: '#EF4444', fontSize: '0.8125rem', marginTop: '6px', marginBottom: 0 }}>{errors.phone}</p>}
                     </div>
                   </div>
@@ -913,6 +1095,13 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                             e.currentTarget.style.borderColor = errors.city ? '#EF4444' : '#E5E7EB';
                             e.currentTarget.style.boxShadow = 'none';
                           }}
+                          onKeyPress={(e) => {
+                            // PREVENT numbers from being typed in City field
+                            if (/\d/.test(e.key)) {
+                              e.preventDefault();
+                              console.log('❌ Numbers are not allowed in City name');
+                            }
+                          }}
                           placeholder="Hayathnagar"
                         />
                         {errors.city && <p style={{ color: '#EF4444', fontSize: '0.8125rem', marginTop: '6px', marginBottom: 0 }}>{errors.city}</p>}
@@ -954,6 +1143,13 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                             e.currentTarget.style.borderColor = errors.state ? '#EF4444' : '#E5E7EB';
                             e.currentTarget.style.boxShadow = 'none';
                           }}
+                          onKeyPress={(e) => {
+                            // PREVENT numbers from being typed in State field
+                            if (/\d/.test(e.key)) {
+                              e.preventDefault();
+                              console.log('❌ Numbers are not allowed in State name');
+                            }
+                          }}
                           placeholder="Telangana"
                         />
                         {errors.state && <p style={{ color: '#EF4444', fontSize: '0.8125rem', marginTop: '6px', marginBottom: 0 }}>{errors.state}</p>}
@@ -975,17 +1171,47 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                           name="zipCode"
                           value={formData.zipCode}
                           onChange={handleChange}
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          maxLength={6}
                           style={{
                             width: '100%',
                             padding: '14px 16px',
                             borderRadius: '12px',
                             border: `2px solid ${errors.zipCode ? '#EF4444' : '#E5E7EB'}`,
                             fontSize: '0.9375rem',
-                            fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif',
+                            fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, monospace',
                             color: '#1F2937',
                             background: 'white',
                             transition: 'all 0.2s',
-                            outline: 'none'
+                            outline: 'none',
+                            letterSpacing: '0.5px'
+                          }}
+                          onKeyDown={(e) => {
+                            // GENIUS FIX: Only allow numbers, backspace, delete, arrow keys, tab
+                            const allowedKeys = [
+                              'Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
+                              'Tab', 'Home', 'End'
+                            ];
+                            const isNumber = /^[0-9]$/.test(e.key);
+                            const isAllowedKey = allowedKeys.includes(e.key);
+                            const isCtrlA = e.ctrlKey && e.key === 'a';
+                            const isCtrlC = e.ctrlKey && e.key === 'c';
+                            const isCtrlV = e.ctrlKey && e.key === 'v';
+                            const isCtrlX = e.ctrlKey && e.key === 'x';
+                            
+                            if (!isNumber && !isAllowedKey && !isCtrlA && !isCtrlC && !isCtrlV && !isCtrlX) {
+                              e.preventDefault();
+                            }
+                          }}
+                          onPaste={(e) => {
+                            // GENIUS FIX: Only allow pasting numbers
+                            e.preventDefault();
+                            const pastedText = e.clipboardData.getData('text');
+                            const numbersOnly = pastedText.replace(/\D/g, '').substring(0, 6);
+                            if (numbersOnly) {
+                              setFormData(prev => ({ ...prev, zipCode: numbersOnly }));
+                            }
                           }}
                           onFocus={(e) => {
                             e.currentTarget.style.borderColor = errors.zipCode ? '#EF4444' : '#f97316';
@@ -1158,6 +1384,118 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                       </span>
                     </label>
                   </div>
+                  
+                  {/* Payment Method Details - Show when card is selected */}
+                  {formData.paymentMethod === 'card' && (
+                    <div style={{ marginTop: '16px' }}>
+                      <label style={{
+                        display: 'block',
+                        fontSize: '0.875rem',
+                        fontWeight: 600,
+                        color: '#374151',
+                        marginBottom: '8px',
+                        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif'
+                      }}>
+                        Payment Method Details (Optional)
+                      </label>
+                      <select
+                        name="paymentMethodDetails"
+                        value={formData.paymentMethodDetails}
+                        onChange={handleChange}
+                        style={{
+                          width: '100%',
+                          padding: '12px 16px',
+                          borderRadius: '12px',
+                          border: '1px solid #D1D5DB',
+                          fontSize: '0.9375rem',
+                          color: '#1F2937',
+                          backgroundColor: 'white',
+                          fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <option value="">Select payment method...</option>
+                        <option value="paytm">Paytm</option>
+                        <option value="form-b">Form B</option>
+                        <option value="google-pay">Google Pay</option>
+                        <option value="phonepe">PhonePe</option>
+                        <option value="razorpay">Razorpay</option>
+                        <option value="stripe">Stripe</option>
+                        <option value="card">Credit/Debit Card</option>
+                        <option value="netbanking">Net Banking</option>
+                        <option value="upi">UPI</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                  )}
+                  
+                  {/* Tip Input */}
+                  <div style={{ marginTop: '20px' }}>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '0.875rem',
+                      fontWeight: 600,
+                      color: '#374151',
+                      marginBottom: '8px',
+                      fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif'
+                    }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Heart size={16} style={{ color: '#f97316' }} />
+                        Tip (Optional)
+                      </span>
+                    </label>
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(4, 1fr)',
+                      gap: '8px',
+                      marginBottom: '8px'
+                    }}>
+                      {[50, 100, 200, 500].map(amount => (
+                        <button
+                          key={amount}
+                          type="button"
+                          onClick={() => {
+                            setFormData(prev => ({ ...prev, tip: amount }));
+                          }}
+                          style={{
+                            padding: '10px',
+                            borderRadius: '10px',
+                            border: `2px solid ${formData.tip === amount ? '#f97316' : '#E5E7EB'}`,
+                            background: formData.tip === amount ? 'rgba(249, 115, 22, 0.1)' : 'white',
+                            color: formData.tip === amount ? '#f97316' : '#4B5563',
+                            fontWeight: formData.tip === amount ? 700 : 500,
+                            fontSize: '0.875rem',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif'
+                          }}
+                        >
+                          ₹{amount}
+                        </button>
+                      ))}
+                    </div>
+                    <input
+                      type="number"
+                      name="tip"
+                      value={formData.tip || ''}
+                      onChange={(e) => {
+                        const value = parseFloat(e.target.value) || 0;
+                        setFormData(prev => ({ ...prev, tip: Math.max(0, value) }));
+                      }}
+                      placeholder="Enter custom tip amount"
+                      min="0"
+                      step="10"
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        borderRadius: '12px',
+                        border: '1px solid #D1D5DB',
+                        fontSize: '0.9375rem',
+                        color: '#1F2937',
+                        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif'
+                      }}
+                    />
+                  </div>
                 </div>
                 
                 {/* Order Summary - Premium Design */}
@@ -1230,6 +1568,28 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                         ₹{Math.round(cart.tax)}
                       </span>
                     </div>
+                    {formData.tip > 0 && (
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        fontSize: '0.9375rem',
+                        color: '#4B5563',
+                        lineHeight: '1.5'
+                      }}>
+                        <span style={{ fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Heart size={14} style={{ color: '#10B981' }} />
+                          Tip
+                        </span>
+                        <span style={{
+                          fontWeight: 700,
+                          color: '#10B981',
+                          fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif'
+                        }}>
+                          ₹{formData.tip}
+                        </span>
+                      </div>
+                    )}
                     <div style={{
                       paddingTop: '16px',
                       borderTop: '2px solid #E5E7EB',
@@ -1254,7 +1614,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                         fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif',
                         letterSpacing: '-0.02em'
                       }}>
-                        ₹{Math.round(cart.total)}
+                        ₹{Math.round(cart.total + (formData.tip || 0))}
                       </span>
                     </div>
                   </div>
@@ -1345,8 +1705,86 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
               </div>
             </form>
           </>
+        ) : step === 'pending' && currentOrder ? (
+          /* Pending Modification Screen - Grace Period */
+          <div style={{
+            flex: 1,
+            overflowY: 'auto',
+            maxHeight: 'calc(90vh - 100px)',
+            WebkitOverflowScrolling: 'touch'
+          }}>
+            {(() => {
+              try {
+                console.log('[CheckoutModal] Rendering PendingOrderModification with order:', {
+                  id: currentOrder.id,
+                  orderNumber: currentOrder.orderNumber,
+                  itemsCount: currentOrder.items?.length,
+                  gracePeriodExpiresAt: currentOrder.gracePeriodExpiresAt,
+                });
+                
+                if (!currentOrder.items || currentOrder.items.length === 0) {
+                  return (
+                    <div style={{ padding: '48px', textAlign: 'center' }}>
+                      <p style={{ color: '#EF4444', marginBottom: '16px' }}>Error: Order has no items</p>
+                      <button onClick={() => setStep('confirmation')} style={{
+                        padding: '12px 24px',
+                        background: '#3B82F6',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                      }}>
+                        Continue
+                      </button>
+                    </div>
+                  );
+                }
+                
+                return (
+                  <PendingOrderModification
+                    order={currentOrder}
+                    onOrderUpdated={(updatedOrder) => {
+                      setCurrentOrder(updatedOrder);
+                      setOrderTotal(updatedOrder.pricing.total);
+                    }}
+                    onFinalized={() => {
+                      // Order finalized, move to confirmation
+                      clearCart();
+                      setStep('confirmation');
+                    }}
+                    onBrowseMenu={() => {
+                      // Close modal to browse menu (cart is still available)
+                      onClose();
+                    }}
+                  />
+                );
+              } catch (error) {
+                console.error('[CheckoutModal] Error rendering PendingOrderModification:', error);
+                return (
+                  <div style={{ padding: '48px', textAlign: 'center' }}>
+                    <p style={{ color: '#EF4444', marginBottom: '16px' }}>
+                      Error loading order modification screen
+                    </p>
+                    <p style={{ color: '#6B7280', fontSize: '14px', marginBottom: '24px' }}>
+                      {error instanceof Error ? error.message : 'Unknown error'}
+                    </p>
+                    <button onClick={() => setStep('confirmation')} style={{
+                      padding: '12px 24px',
+                      background: '#3B82F6',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                    }}>
+                      Skip to Confirmation
+                    </button>
+                  </div>
+                );
+              }
+            })()}
+          </div>
         ) : (
-          /* Confirmation Screen - Premium Design */
+          /* Confirmation Screen - Premium Design (After Finalization) */
           <div style={{
             flex: 1,
             overflowY: 'auto',
@@ -1600,40 +2038,216 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
               </p>
             </div>
             
-            {/* Action Button */}
-            <button
-              onClick={handleClose}
-              style={{
-                width: '100%',
-                maxWidth: '480px',
-                padding: '16px 32px',
-                background: 'linear-gradient(135deg, #f97316, #ea580c)',
-                color: 'white',
-                borderRadius: '12px',
-                border: 'none',
-                fontWeight: 700,
-                fontSize: '1rem',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
-                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 6px 16px rgba(249, 115, 22, 0.4)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(249, 115, 22, 0.3)';
-              }}
-            >
-              Done
-            </button>
+            {/* Action Buttons */}
+            <div style={{
+              width: '100%',
+              maxWidth: '480px',
+              display: 'flex',
+              gap: '12px',
+              flexDirection: 'column'
+            }}>
+              {/* Cancel Order Section - Only show if order can be cancelled */}
+              {orderId && orderCreatedAt && (() => {
+                const CANCELLATION_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
+                const canCancel = (orderStatus === 'PENDING' || orderStatus === 'CONFIRMED') && 
+                                  timeRemaining !== null && timeRemaining > 0;
+                
+                // Format time remaining as MM:SS
+                const formatTime = (ms: number): string => {
+                  const totalSeconds = Math.floor(ms / 1000);
+                  const minutes = Math.floor(totalSeconds / 60);
+                  const seconds = totalSeconds % 60;
+                  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                };
+                
+                if (!canCancel && timeRemaining !== null && timeRemaining <= 0) {
+                  return (
+                    <div style={{
+                      width: '100%',
+                      padding: '16px',
+                      background: '#F3F4F6',
+                      borderRadius: '12px',
+                      border: '1px solid #E5E7EB',
+                      textAlign: 'center'
+                    }}>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        color: '#6B7280',
+                        fontSize: '0.875rem',
+                        fontWeight: 500
+                      }}>
+                        <AlertCircle size={16} />
+                        <span>Cancellation window has expired</span>
+                      </div>
+                    </div>
+                  );
+                }
+                
+                return canCancel ? (
+                  <div style={{
+                    width: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px'
+                  }}>
+                    {/* Timer Display */}
+                    <div style={{
+                      width: '100%',
+                      padding: '16px',
+                      background: 'linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%)',
+                      borderRadius: '12px',
+                      border: '2px solid #F59E0B',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '12px'
+                    }}>
+                      <Clock size={20} style={{ color: '#D97706' }} />
+                      <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}>
+                        <span style={{
+                          fontSize: '0.75rem',
+                          color: '#92400E',
+                          fontWeight: 600,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em'
+                        }}>
+                          Time to Cancel
+                        </span>
+                        <span style={{
+                          fontSize: '1.75rem',
+                          fontWeight: 800,
+                          color: '#92400E',
+                          fontFamily: 'monospace',
+                          letterSpacing: '0.05em'
+                        }}>
+                          {timeRemaining !== null ? formatTime(timeRemaining) : '5:00'}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {/* Cancel Button */}
+                  <button
+                    onClick={() => setShowCancelModal(true)}
+                    style={{
+                      width: '100%',
+                      padding: '14px 32px',
+                      background: '#DC2626',
+                      color: 'white',
+                      borderRadius: '12px',
+                      border: 'none',
+                      fontWeight: 700,
+                      fontSize: '0.9375rem',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      boxShadow: '0 4px 12px rgba(220, 38, 38, 0.3)',
+                      fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 6px 16px rgba(220, 38, 38, 0.4)';
+                      e.currentTarget.style.backgroundColor = '#B91C1C';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(220, 38, 38, 0.3)';
+                      e.currentTarget.style.backgroundColor = '#DC2626';
+                    }}
+                  >
+                    <XCircle size={18} />
+                    Cancel Order
+                  </button>
+                  </div>
+                ) : null;
+              })()}
+              
+              {/* Done Button */}
+              <button
+                onClick={handleClose}
+                style={{
+                  width: '100%',
+                  padding: '16px 32px',
+                  background: 'linear-gradient(135deg, #f97316, #ea580c)',
+                  color: 'white',
+                  borderRadius: '12px',
+                  border: 'none',
+                  fontWeight: 700,
+                  fontSize: '1rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(249, 115, 22, 0.4)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(249, 115, 22, 0.3)';
+                }}
+              >
+                Done
+              </button>
+            </div>
           </div>
           </div>
         )}
         </div>
       </div>
+
+      {/* Cancel Order Modal */}
+      {orderId && showCancelModal && (
+        <CancelOrderModal
+          isOpen={showCancelModal}
+          onClose={() => setShowCancelModal(false)}
+          order={{
+            id: orderId,
+            orderNumber: orderNumber,
+            total: orderTotal,
+            status: orderStatus,
+            paymentStatus: 'pending',
+            customerName: formData.name || 'Customer',
+          }}
+          cancelledBy="customer"
+          onSuccess={() => {
+            // Clean up timer
+            if (timerIntervalRef.current) {
+              clearInterval(timerIntervalRef.current);
+              timerIntervalRef.current = null;
+            }
+            setTimeRemaining(null);
+            
+            // Play alert sound for cancellation (red alert)
+            try {
+              playAlertSound();
+            } catch (error) {
+              console.warn('Failed to play alert sound:', error);
+            }
+            
+            // Show error toast notification (red) for cancellation
+            toast.error('Order Cancelled', 'Your order has been cancelled successfully. Refund will be processed within 5-7 business days if payment was made.');
+            
+            // Close modal and reset
+            setShowCancelModal(false);
+            handleClose();
+            
+            // Redirect to profile to see updated orders
+            router.push('/profile');
+          }}
+        />
+      )}
     </>
   );
 };

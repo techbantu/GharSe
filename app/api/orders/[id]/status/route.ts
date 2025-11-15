@@ -7,10 +7,10 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { OrderStatus } from '@/types';
+import { OrderStatus, Order } from '@/types';
 import { logger } from '@/utils/logger';
-import { getOrders, updateOrderStatus } from '@/lib/order-storage';
-import { notifyOrderStatusChange } from '@/lib/notifications/notification-manager';
+import prisma from '@/lib/prisma';
+import { rewardReferrerOnDelivery } from '@/lib/referral-engine';
 
 const UpdateStatusSchema = z.object({
   status: z.enum([
@@ -53,11 +53,34 @@ export async function PUT(
     
     const { status } = validation.data;
     
-    // Get the order
-    const orders = getOrders({});
-    const order = orders.find(o => o.id === orderId);
+    // Map frontend status to database enum format
+    const statusMap: Record<string, string> = {
+      'pending': 'PENDING',
+      'confirmed': 'CONFIRMED',
+      'preparing': 'PREPARING',
+      'ready': 'READY',
+      'out-for-delivery': 'OUT_FOR_DELIVERY',
+      'delivered': 'DELIVERED',
+      'picked-up': 'DELIVERED', // Map to DELIVERED since PICKED_UP doesn't exist
+      'cancelled': 'CANCELLED',
+      'refunded': 'CANCELLED', // Map to CANCELLED since REFUNDED doesn't exist
+    };
     
-    if (!order) {
+    const dbStatus = statusMap[status.toLowerCase()] || status.toUpperCase();
+    
+    // Get the order from database
+    const dbOrder = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        items: {
+          include: {
+            menuItem: true,
+          },
+        },
+      },
+    });
+    
+    if (!dbOrder) {
       return NextResponse.json(
         {
           success: false,
@@ -67,45 +90,125 @@ export async function PUT(
       );
     }
     
-    const oldStatus = order.status;
+    const oldStatus = dbOrder.status;
     
-    // Update status
-    const updated = updateOrderStatus(orderId, status);
-    
-    if (!updated) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Failed to update order status',
+    // Update status in database
+    const updatedDbOrder = await prisma.order.update({
+      where: { id: orderId },
+      data: {
+        status: dbStatus as any,
+        updatedAt: new Date(),
+        // Update timestamps based on status
+        ...(status === 'confirmed' && { confirmedAt: new Date() }),
+        ...(status === 'preparing' && { preparingAt: new Date() }),
+        ...(status === 'ready' && { readyAt: new Date() }),
+        ...(status === 'delivered' && { deliveredAt: new Date() }),
+        ...(status === 'cancelled' && { cancelledAt: new Date() }),
+      },
+      include: {
+        items: {
+          include: {
+            menuItem: true,
+          },
         },
-        { status: 500 }
-      );
-    }
+      },
+    });
     
-    logger.info('Order status updated', {
+    logger.info('Order status updated in database', {
       orderId,
-      orderNumber: order.orderNumber,
+      orderNumber: dbOrder.orderNumber,
       oldStatus,
       newStatus: status,
       duration: Date.now() - startTime,
     });
     
-    // Send notifications (async, don't wait)
-    // Using a "fire and forget" pattern so we don't slow down the API
-    notifyOrderStatusChange(updated, status).catch(error => {
-      logger.error('Notification failed (fire-and-forget)', {
-        orderId,
-        orderNumber: order.orderNumber,
-        status,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    });
+    // REFERRAL REWARD: Trigger referrer reward on delivery
+    if (status === 'delivered' && dbOrder.customerId) {
+      (async () => {
+        try {
+          const rewarded = await rewardReferrerOnDelivery(dbOrder.customerId!);
+          
+          if (rewarded) {
+            logger.info('Referrer rewarded after delivery', {
+              orderId,
+              customerId: dbOrder.customerId,
+            });
+          }
+        } catch (referralError) {
+          logger.error('Failed to reward referrer on delivery', {
+            orderId,
+            customerId: dbOrder.customerId,
+            error: referralError instanceof Error ? referralError.message : String(referralError),
+          });
+        }
+      })();
+    }
+    
+    // Transform to frontend format for notification
+    const frontendOrder: Partial<Order> = {
+      id: updatedDbOrder.id,
+      orderNumber: updatedDbOrder.orderNumber,
+      status: status as OrderStatus,
+      customer: {
+        id: updatedDbOrder.customerPhone,
+        name: updatedDbOrder.customerName,
+        email: updatedDbOrder.customerEmail,
+        phone: updatedDbOrder.customerPhone,
+      },
+      pricing: {
+        subtotal: updatedDbOrder.subtotal,
+        tax: updatedDbOrder.tax,
+        deliveryFee: updatedDbOrder.deliveryFee,
+        discount: updatedDbOrder.discount,
+        total: updatedDbOrder.total,
+      },
+      items: [],
+      orderType: 'delivery',
+      paymentMethod: 'cash-on-delivery',
+      paymentStatus: 'pending',
+      createdAt: updatedDbOrder.createdAt,
+      updatedAt: updatedDbOrder.updatedAt,
+      estimatedReadyTime: updatedDbOrder.estimatedDelivery || new Date(),
+      contactPreference: ['email', 'sms'],
+      notifications: [],
+    };
+    
+    // Send status update notifications (async, don't block response)
+    (async () => {
+      try {
+        const { notificationManager } = await import('@/lib/notifications/notification-manager');
+        const notificationResult = await notificationManager.sendStatusUpdate(
+          frontendOrder as Order,
+          status
+        );
+        
+        logger.info('Status update notifications sent', {
+          orderId,
+          orderNumber: dbOrder.orderNumber,
+          newStatus: status,
+          emailSuccess: notificationResult.email?.success,
+          smsSuccess: notificationResult.sms?.success,
+          smsSkipped: notificationResult.sms?.skipped,
+        });
+      } catch (notificationError) {
+        logger.error('Failed to send status update notifications', {
+          orderId,
+          orderNumber: dbOrder.orderNumber,
+          status,
+          error: notificationError instanceof Error ? notificationError.message : String(notificationError),
+        });
+      }
+    })();
     
     return NextResponse.json({
       success: true,
-      order: updated,
+      order: {
+        id: updatedDbOrder.id,
+        orderNumber: updatedDbOrder.orderNumber,
+        status: status,
+      },
       message: `Order status updated to ${status}`,
-      notificationsSent: true, // Optimistic response
+      notificationsSent: true,
     });
     
   } catch (error) {

@@ -20,7 +20,53 @@ interface HeroProps {
 
 const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
   return (
-    <section id="home" className="relative min-h-[90vh] flex items-center overflow-hidden bg-gradient-to-br from-orange-50 via-white to-yellow-50">
+    <>
+      <style dangerouslySetInnerHTML={{__html: `
+        @media (min-width: 1920px) {
+          .hero-section {
+            min-height: auto !important;
+          }
+          .hero-container {
+            padding-top: 1.5rem !important;
+            padding-bottom: 1.5rem !important;
+          }
+          .hero-content {
+            gap: 1rem !important;
+          }
+          .hero-content > * {
+            margin-bottom: 0.75rem !important;
+          }
+          .hero-headline {
+            margin-bottom: 0.5rem !important;
+          }
+          .hero-headline h1 {
+            margin-bottom: 0.25rem !important;
+          }
+          .hero-headline h1 span {
+            margin-bottom: 0.25rem !important;
+          }
+          .hero-description {
+            margin-top: 0.25rem !important;
+          }
+          .hero-buttons {
+            padding-top: 1rem !important;
+          }
+          .hero-pills {
+            padding-top: 0.75rem !important;
+          }
+        }
+        
+        /* Shine animation for discount badge */
+        @keyframes shine {
+          0% {
+            transform: translateX(-100%) translateY(-100%) rotate(45deg);
+          }
+          100% {
+            transform: translateX(100%) translateY(100%) rotate(45deg);
+          }
+        }
+      `}} />
+    <section id="home" className="relative min-h-[90vh] flex items-center overflow-hidden bg-gradient-to-br from-orange-50 via-white to-yellow-50 hero-section" suppressHydrationWarning>
       {/* Decorative Background Pattern */}
       <div className="absolute inset-0 opacity-5">
         <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
@@ -40,10 +86,10 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
         <div className="absolute top-1/3 left-1/4 w-64 h-64 bg-gradient-to-br from-orange-300 to-yellow-300 rounded-full opacity-10 blur-2xl animate-float" style={{ animationDelay: '1s' }}></div>
       </div>
       
-      <div className="container-custom mx-auto px-12 sm:px-16 lg:px-20 pt-40 pb-32 md:pt-48 md:pb-40 lg:pt-56 lg:pb-48 relative z-10">
+      <div className="container-custom mx-auto px-12 sm:px-16 lg:px-20 pt-40 pb-32 md:pt-48 md:pb-40 lg:pt-56 lg:pb-48 relative z-10 hero-container">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 xl:gap-24 items-center max-w-7xl mx-auto">
           {/* Left Column - Content */}
-          <div className="text-center lg:text-left space-y-8 animate-slide-up" style={{ paddingTop: '1rem' }}>
+          <div className="text-center lg:text-left space-y-8 animate-slide-up hero-content" style={{ paddingTop: '1rem' }}>
             {/* Badge - Trust Indicator with Icon */}
             <div className="inline-flex items-center" style={{ gap: '8px' }}>
               <div className="flex items-center" style={{ gap: '2px' }}>
@@ -60,23 +106,50 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
               </span>
             </div>
             
-            {/* Main Headline */}
-            <div className="space-y-6">
-              <h1 className="text-5xl md:text-6xl lg:text-7xl font-black leading-[1.15] tracking-tight">
-                <span className="text-gray-900">Authentic</span>
-                <br />
-                <span className="relative inline-block">
-                  <span className="bg-gradient-to-r from-orange-600 via-red-500 to-orange-600 bg-clip-text text-transparent">
+            {/* Main Headline - Jobs-Level Typography */}
+            <div className="space-y-8 hero-headline">
+              <h1 className="text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black leading-[1.05] tracking-[-0.04em]">
+                <span className="text-[#1d1d1f] block mb-2" style={{ 
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif',
+                  fontWeight: 800,
+                  letterSpacing: '-0.04em',
+                  lineHeight: '1.05'
+                }}>Authentic</span>
+                <span className="relative inline-block mb-2">
+                  <span className="text-gradient-orange block" style={{
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif',
+                    fontWeight: 800,
+                    letterSpacing: '-0.04em',
+                    lineHeight: '1.05',
+                    backgroundSize: '200% 200%',
+                    animation: 'gradientShift 8s ease infinite'
+                  }}>
                     Indian Cuisine
                   </span>
-                  <svg className="absolute -bottom-2 left-0 w-full" height="12" viewBox="0 0 300 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M2 10C50 2 250 2 298 10" stroke="#FF6B35" strokeWidth="3" strokeLinecap="round"/>
+                  <svg className="absolute -bottom-3 left-0 w-full opacity-80" height="14" viewBox="0 0 300 14" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ filter: 'drop-shadow(0 2px 4px rgba(255, 107, 53, 0.2))' }}>
+                    <defs>
+                      <linearGradient id="underlineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" style={{ stopColor: '#FF6B35', stopOpacity: 1 }} />
+                            <stop offset="50%" style={{ stopColor: '#F77F00', stopOpacity: 1 }} />
+                            <stop offset="100%" style={{ stopColor: '#EA580C', stopOpacity: 1 }} />
+                      </linearGradient>
+                    </defs>
+                        <path d="M2 12C50 4 250 4 298 12" stroke="url(#underlineGradient)" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 </span>
-                <br />
-                <span className="text-gray-900">Delivered Fresh</span>
+                <span className="text-[#1d1d1f] block" style={{ 
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif',
+                  fontWeight: 800,
+                  letterSpacing: '-0.04em',
+                  lineHeight: '1.05'
+                }}>Delivered Fresh</span>
               </h1>
-              <p className="text-lg md:text-xl text-gray-600 leading-relaxed max-w-xl mx-auto lg:mx-0 mt-4">
+              <p className="text-lg md:text-xl lg:text-2xl text-[#4B5563] leading-[1.7] max-w-2xl mx-auto lg:mx-0 mt-6 hero-description" style={{
+                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif',
+                fontWeight: 400,
+                letterSpacing: '-0.011em',
+                lineHeight: '1.75'
+              }}>
                 Authentic home-cooked meals prepared with love, traditional family recipes, and the finest spices. Experience India's flavors at your doorstep.
               </p>
             </div>
@@ -84,32 +157,51 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
             {/* CTA Buttons */}
             <div style={{ 
               display: 'flex', 
-              flexDirection: 'column', 
-              gap: '16px', 
+              flexDirection: 'row', 
+              gap: '12px', 
               justifyContent: 'center', 
               alignItems: 'center',
-              paddingTop: '48px'
-            }} className="sm:flex-row lg:justify-start">
+              paddingTop: '48px',
+              flexWrap: 'wrap'
+            }} className="lg:justify-start hero-buttons">
               <button
                 onClick={onOrderNowClick}
                 style={{
                   position: 'relative',
                   overflow: 'hidden',
-                  background: 'linear-gradient(to right, #ea580c, #f97316, #ef4444)',
+                  background: 'linear-gradient(135deg, #FF6B35 0%, #F77F00 50%, #EA580C 100%)',
                   color: 'white',
-                  padding: '14px 28px',
-                  borderRadius: '14px',
+                  padding: '14px 24px',
+                  borderRadius: '16px',
                   fontWeight: 700,
                   fontSize: '0.9375rem',
-                  boxShadow: '0 20px 40px rgba(0, 0, 0, 0.2)',
-                  transition: 'all 0.3s',
+                  letterSpacing: '-0.01em',
+                  boxShadow: '0 12px 32px rgba(255, 107, 53, 0.35), 0 4px 12px rgba(255, 107, 53, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.25)',
+                  transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
                   transform: 'scale(1)',
                   whiteSpace: 'nowrap',
                   border: 'none',
                   cursor: 'pointer',
-                  width: 'auto'
+                  flex: '1 1 auto',
+                  minWidth: '140px',
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif',
+                  WebkitFontSmoothing: 'antialiased'
                 }}
-                className="group hover:scale-105 hover:-translate-y-1 hover:shadow-orange-500/50"
+                className="group"
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px) scale(1.02)';
+                  e.currentTarget.style.boxShadow = '0 16px 40px rgba(255, 107, 53, 0.4), 0 6px 16px rgba(255, 107, 53, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                  e.currentTarget.style.boxShadow = '0 12px 32px rgba(255, 107, 53, 0.35), 0 4px 12px rgba(255, 107, 53, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.25)';
+                }}
+                onMouseDown={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0) scale(0.98)';
+                }}
+                onMouseUp={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px) scale(1.02)';
+                }}
               >
                 <span style={{ 
                   position: 'relative', 
@@ -141,24 +233,42 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
               <a
                 href="#menu"
                 style={{
-                  padding: '14px 28px',
+                  padding: '14px 24px',
                   background: 'white',
-                  border: '2px solid #D1D5DB',
+                  border: '2px solid rgba(209, 213, 219, 0.5)',
                   color: '#374151',
-                  borderRadius: '14px',
-                  fontWeight: 700,
+                  borderRadius: '16px',
+                  fontWeight: 600,
                   fontSize: '0.9375rem',
-                  transition: 'all 0.3s',
+                  letterSpacing: '-0.01em',
+                  transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
                   display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '10px',
-                  boxShadow: '0 8px 12px rgba(0, 0, 0, 0.08)',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04)',
                   whiteSpace: 'nowrap',
                   textDecoration: 'none',
-                  width: 'auto'
+                  flex: '1 1 auto',
+                  minWidth: '140px',
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif',
+                  WebkitFontSmoothing: 'antialiased'
                 }}
-                className="group hover:border-orange-500 hover:text-orange-600 hover:bg-orange-50 hover:shadow-xl"
+                className="group"
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = 'rgba(255, 107, 53, 0.5)';
+                  e.currentTarget.style.color = '#EA580C';
+                  e.currentTarget.style.background = 'rgba(255, 107, 53, 0.06)';
+                  e.currentTarget.style.boxShadow = '0 8px 20px rgba(255, 107, 53, 0.15), 0 4px 8px rgba(0, 0, 0, 0.08)';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = 'rgba(209, 213, 219, 0.5)';
+                  e.currentTarget.style.color = '#374151';
+                  e.currentTarget.style.background = 'white';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
               >
                 <span>View Menu</span>
               </a>
@@ -167,11 +277,12 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
             {/* Feature Pills */}
             <div style={{ 
               display: 'flex', 
+              flexDirection: 'row',
               flexWrap: 'wrap', 
               justifyContent: 'center', 
-              gap: '12px', 
+              gap: '8px', 
               paddingTop: '24px' 
-            }} className="lg:justify-start">
+            }} className="lg:justify-start hero-pills">
               <div style={{ 
                 display: 'flex', 
                 alignItems: 'center', 
@@ -179,9 +290,11 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
                 borderRadius: '12px', 
                 boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)', 
                 border: '1px solid #D1FAE5', 
-                gap: '12px', 
-                padding: '12px 16px',
-                transition: 'box-shadow 0.3s'
+                gap: '10px', 
+                padding: '10px 14px',
+                transition: 'box-shadow 0.3s',
+                flex: '1 1 auto',
+                minWidth: '140px'
               }} className="hover:shadow-lg">
                 <div style={{
                   width: '40px',
@@ -209,9 +322,11 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
                 borderRadius: '12px', 
                 boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)', 
                 border: '1px solid #DBEAFE', 
-                gap: '12px', 
-                padding: '12px 16px',
-                transition: 'box-shadow 0.3s'
+                gap: '10px', 
+                padding: '10px 14px',
+                transition: 'box-shadow 0.3s',
+                flex: '1 1 auto',
+                minWidth: '140px'
               }} className="hover:shadow-lg">
                 <div style={{
                   width: '40px',
@@ -243,18 +358,18 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
                         <div className="relative rounded-3xl overflow-hidden shadow-2xl transform group-hover:scale-105 transition-all duration-500 aspect-square">
                           <img
                             src="https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=800&h=800&fit=crop&q=80"
-                            alt="Biryani"
+                            alt="Authentic Hyderabadi Biryani - Traditional Indian rice dish with spices and meat, delivered fresh in Hayatnagar, Hyderabad"
                             className="w-full h-full object-cover"
                             onError={(e) => {
                               e.currentTarget.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cdefs%3E%3ClinearGradient id='grad1' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23FF6B35;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%23F77F00;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='400' height='400' fill='url(%23grad1)'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='32' fill='white' font-family='system-ui' font-weight='700'%3E🍛 Biryani%3C/text%3E%3C/svg%3E`;
                             }}
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
-                          <div className="absolute bottom-4 left-4 text-white">
-                            <p className="text-xs font-semibold opacity-80">Popular</p>
-                            <p className="text-lg font-black">Biryani</p>
-                            <p className="text-sm font-bold text-yellow-400">From ₹299</p>
-                          </div>
+                                <div className="absolute bottom-4 left-4 text-white" style={{ zIndex: 10 }}>
+                                  <p className="text-xs font-semibold opacity-90" style={{ color: '#ffffff', textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)', fontWeight: 800 }}>Popular</p>
+                                  <p className="text-lg font-black" style={{ color: '#ffffff', textShadow: '0 2px 8px rgba(0, 0, 0, 0.6)', fontWeight: 900 }}>Biryani</p>
+                                  <p className="text-sm font-bold text-yellow-400" style={{ color: '#FBBF24', textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)', fontWeight: 900 }}>From ₹299</p>
+                                </div>
                         </div>
                       </div>
                       
@@ -263,18 +378,18 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
                         <div className="relative rounded-3xl overflow-hidden shadow-2xl transform group-hover:scale-105 transition-all duration-500 aspect-square">
                           <img
                             src="https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=800&h=800&fit=crop&q=80"
-                            alt="Curries"
+                            alt="Indian Curry Dishes - Creamy butter chicken, dal makhani, and paneer curry from Bantu's Kitchen in Hyderabad"
                             className="w-full h-full object-cover"
                             onError={(e) => {
                               e.currentTarget.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cdefs%3E%3ClinearGradient id='grad2' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23F77F00;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%23FF6B35;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='400' height='400' fill='url(%23grad2)'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='32' fill='white' font-family='system-ui' font-weight='700'%3E🍛 Curries%3C/text%3E%3C/svg%3E`;
                             }}
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
-                          <div className="absolute bottom-4 left-4 text-white">
-                            <p className="text-xs font-semibold opacity-80">Signature</p>
-                            <p className="text-lg font-black">Curries</p>
-                            <p className="text-sm font-bold text-yellow-400">From ₹249</p>
-                          </div>
+                                <div className="absolute bottom-4 left-4 text-white" style={{ zIndex: 10 }}>
+                                  <p className="text-xs font-semibold opacity-90" style={{ color: '#ffffff', textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)', fontWeight: 800 }}>Signature</p>
+                                  <p className="text-lg font-black" style={{ color: '#ffffff', textShadow: '0 2px 8px rgba(0, 0, 0, 0.6)', fontWeight: 900 }}>Curries</p>
+                                  <p className="text-sm font-bold text-yellow-400" style={{ color: '#FBBF24', textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)', fontWeight: 900 }}>From ₹249</p>
+                                </div>
                         </div>
                       </div>
                       
@@ -283,18 +398,18 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
                         <div className="relative rounded-3xl overflow-hidden shadow-2xl transform group-hover:scale-105 transition-all duration-500 aspect-square">
                           <img
                             src="https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?w=800&h=800&fit=crop&q=80"
-                            alt="Starters"
+                            alt="Indian Appetizers - Paneer tikka, samosa, and chicken 65 starters from Bantu's Kitchen in Hayatnagar"
                             className="w-full h-full object-cover"
                             onError={(e) => {
                               e.currentTarget.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cdefs%3E%3ClinearGradient id='grad3' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23FFB800;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%23FF6B35;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='400' height='400' fill='url(%23grad3)'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='32' fill='white' font-family='system-ui' font-weight='700'%3E🍢 Starters%3C/text%3E%3C/svg%3E`;
                             }}
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
-                          <div className="absolute bottom-4 left-4 text-white">
-                            <p className="text-xs font-semibold opacity-80">Best Seller</p>
-                            <p className="text-lg font-black">Starters</p>
-                            <p className="text-sm font-bold text-yellow-400">From ₹49</p>
-                          </div>
+                                <div className="absolute bottom-4 left-4 text-white" style={{ zIndex: 10 }}>
+                                  <p className="text-xs font-semibold opacity-90" style={{ color: '#ffffff', textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)', fontWeight: 800 }}>Best Seller</p>
+                                  <p className="text-lg font-black" style={{ color: '#ffffff', textShadow: '0 2px 8px rgba(0, 0, 0, 0.6)', fontWeight: 900 }}>Starters</p>
+                                  <p className="text-sm font-bold text-yellow-400" style={{ color: '#FBBF24', textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)', fontWeight: 900 }}>From ₹49</p>
+                                </div>
                         </div>
                       </div>
                       
@@ -303,54 +418,105 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
                         <div className="relative rounded-3xl overflow-hidden shadow-2xl transform group-hover:scale-105 transition-all duration-500 aspect-square">
                           <img
                             src="https://images.unsplash.com/photo-1631452180519-c014fe946bc7?w=800&h=800&fit=crop&q=80"
-                            alt="Desserts"
+                            alt="Indian Desserts - Gulab jamun, rasmalai, and kheer traditional sweets from Bantu's Kitchen Hyderabad"
                             className="w-full h-full object-cover"
                             onError={(e) => {
                               e.currentTarget.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cdefs%3E%3ClinearGradient id='grad4' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23F77F00;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%23FFB800;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='400' height='400' fill='url(%23grad4)'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='32' fill='white' font-family='system-ui' font-weight='700'%3E🍮 Desserts%3C/text%3E%3C/svg%3E`;
                             }}
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
-                          <div className="absolute bottom-4 left-4 text-white">
-                            <p className="text-xs font-semibold opacity-80">Sweet</p>
-                            <p className="text-lg font-black">Desserts</p>
-                            <p className="text-sm font-bold text-yellow-400">From ₹79</p>
-                          </div>
+                                <div className="absolute bottom-4 left-4 text-white" style={{ zIndex: 10 }}>
+                                  <p className="text-xs font-semibold opacity-90" style={{ color: '#ffffff', textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)', fontWeight: 800 }}>Sweet</p>
+                                  <p className="text-lg font-black" style={{ color: '#ffffff', textShadow: '0 2px 8px rgba(0, 0, 0, 0.6)', fontWeight: 900 }}>Desserts</p>
+                                  <p className="text-sm font-bold text-yellow-400" style={{ color: '#FBBF24', textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)', fontWeight: 900 }}>From ₹79</p>
+                                </div>
                         </div>
                       </div>
             </div>
             
-            {/* Floating Discount Badge */}
+            {/* Floating Discount Badge - Modern Promotional Style */}
             <div style={{ 
               position: 'absolute', 
-              bottom: '-32px', 
+              bottom: '-40px', 
               left: '50%', 
               transform: 'translateX(-50%)', 
               zIndex: 10 
             }}>
               <div style={{ position: 'relative' }}>
+                {/* Main Badge - Pill Shape (Not Circular) */}
                 <div style={{
-                  background: 'linear-gradient(to bottom right, #f97316, #ef4444, #ec4899)',
+                  background: 'linear-gradient(135deg, #F97316 0%, #EA580C 50%, #DC2626 100%)',
                   color: 'white',
-                  borderRadius: '9999px',
-                  boxShadow: '0 25px 50px rgba(0, 0, 0, 0.25)',
-                  border: '4px solid white',
-                  padding: '10px 20px'
-                }} className="animate-bounce-subtle">
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <div style={{ textAlign: 'center', lineHeight: '1.1' }}>
-                      <p style={{ fontSize: '1.25rem', fontWeight: 900, whiteSpace: 'nowrap' }}>20% OFF</p>
-                      <p style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', marginTop: '2px' }}>First Order</p>
-                    </div>
+                  borderRadius: '50px', // Pill shape instead of perfect circle
+                  boxShadow: '0 8px 24px rgba(249, 115, 22, 0.4), 0 4px 12px rgba(0, 0, 0, 0.15)',
+                  border: '3px solid white',
+                  padding: '12px 24px',
+                  minWidth: '140px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  cursor: 'pointer'
+                }} 
+                className="hover:scale-105 hover:shadow-xl"
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 12px 32px rgba(249, 115, 22, 0.5), 0 6px 16px rgba(0, 0, 0, 0.2)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = '0 8px 24px rgba(249, 115, 22, 0.4), 0 4px 12px rgba(0, 0, 0, 0.15)';
+                }}>
+                  {/* Shine Effect */}
+                  <div style={{
+                    position: 'absolute',
+                    top: '-50%',
+                    left: '-50%',
+                    width: '200%',
+                    height: '200%',
+                    background: 'linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.2) 50%, transparent 70%)',
+                    animation: 'shine 3s infinite',
+                    pointerEvents: 'none'
+                  }}></div>
+                  
+                  {/* Content */}
+                  <div style={{ 
+                    textAlign: 'center', 
+                    lineHeight: '1.2',
+                    position: 'relative',
+                    zIndex: 1
+                  }}>
+                    <p style={{ 
+                      fontSize: '1.1rem', 
+                      fontWeight: 900, 
+                      whiteSpace: 'nowrap',
+                      letterSpacing: '-0.02em',
+                      margin: 0,
+                      textShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
+                    }}>20% OFF</p>
+                    <p style={{ 
+                      fontSize: '0.65rem', 
+                      fontWeight: 700, 
+                      textTransform: 'uppercase', 
+                      letterSpacing: '0.1em', 
+                      whiteSpace: 'nowrap', 
+                      marginTop: '2px',
+                      opacity: 0.95,
+                      margin: 0
+                    }}>First Order</p>
                   </div>
                 </div>
+                
+                {/* Subtle Glow Effect */}
                 <div style={{
                   position: 'absolute',
-                  inset: 0,
-                  background: 'linear-gradient(to bottom right, #fb923c, #f87171)',
-                  borderRadius: '9999px',
-                  filter: 'blur(48px)',
-                  opacity: 0.6,
-                  zIndex: -10
+                  inset: '-4px',
+                  background: 'linear-gradient(135deg, #F97316, #DC2626)',
+                  borderRadius: '54px',
+                  filter: 'blur(12px)',
+                  opacity: 0.4,
+                  zIndex: -1,
+                  animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
                 }}></div>
               </div>
             </div>
@@ -373,6 +539,7 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
         </svg>
       </div>
     </section>
+    </>
   );
 };
 

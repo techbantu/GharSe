@@ -120,3 +120,41 @@ out/
 # package-lock.json
 # pnpm-lock.yaml
 # yarn.lock
+
+# Development documentation (internal guides)
+*_GUIDE.md
+*_FIXED.md
+*_FIX.md
+*_COMPLETE.md
+*_TROUBLESHOOTING.md
+*_DEBUG*.md
+*_SUMMARY.md
+*_ASSESSMENT.md
+*_REPORT.md
+START_HERE*.md
+TODOS*.md
+TEST_RESULTS*.md
+*_STATUS.md
+*_CHECKLIST.md
+
+# Keep essential public documentation
+!README.md
+!CONTRIBUTING.md
+!LICENSE.md
+!CHANGELOG.md
+!CODE_OF_CONDUCT.md
+!ARCHITECTURE.md
+!FEATURES.md
+
+# Development log files
+dev.log
+*.log
+
+# Test scripts
+test-*.sh
+clean-*.sh
+clear-*.sh
+
+# Local test HTML files
+public/test-*.html
+public/stop-reload.html

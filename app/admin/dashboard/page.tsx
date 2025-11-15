@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * ADMIN DASHBOARD - Main Control Panel
  * 
@@ -9,8 +11,6 @@
  * - Analytics
  * - Settings
  */
-
-'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -31,18 +31,40 @@ export default function AdminDashboardPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    // Check if admin is logged in
-    const loggedIn = localStorage.getItem('adminLoggedIn');
-    if (loggedIn !== 'true') {
+    // Check if admin is logged in with valid token
+    const token = localStorage.getItem('adminToken');
+    if (!token) {
       router.push('/admin/login');
-    } else {
-      setIsLoggedIn(true);
+      return;
     }
+
+    // Verify token is still valid by checking with API
+    fetch('/api/admin/me', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          setIsLoggedIn(true);
+        } else {
+          localStorage.removeItem('adminToken');
+          localStorage.removeItem('adminUser');
+          router.push('/admin/login');
+        }
+      })
+      .catch(() => {
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminUser');
+        router.push('/admin/login');
+      });
   }, [router]);
 
   const handleLogout = () => {
-    localStorage.removeItem('adminLoggedIn');
-    router.push('/');
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminUser');
+    router.push('/admin/login');
   };
 
   if (!isLoggedIn) {
@@ -74,10 +96,10 @@ export default function AdminDashboardPage() {
               </div>
               <div>
                 <h1 className="text-xl font-black text-gray-900">
-                  Bantu's Kitchen
+                  GharSe
                 </h1>
                 <p className="text-xs text-gray-500 font-semibold">
-                  Admin Dashboard
+                  Admin Dashboard (Operated by Sailaja)
                 </p>
               </div>
             </div>

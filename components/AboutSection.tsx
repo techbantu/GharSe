@@ -75,16 +75,17 @@ const AboutSection: React.FC = () => {
           {/* Title - Full width */}
           <div className="animate-slide-up w-full mb-8 md:mb-12">
             <h2 style={{
-              fontSize: 'clamp(2rem, 5vw, 3rem)',
+              fontSize: 'clamp(2.5rem, 6vw, 4rem)',
               fontWeight: 800,
               marginBottom: '0',
               lineHeight: '1.1',
-              letterSpacing: '-0.02em',
+              letterSpacing: '-0.04em',
               fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif',
-              textAlign: 'center'
+              textAlign: 'center',
+              color: '#1d1d1f'
             }}
             className="md:text-left">
-              About <span className="text-gradient-orange">Bantu's Kitchen</span>
+              About <span className="text-gradient-orange" style={{ backgroundSize: '200% 200%', animation: 'gradientShift 8s ease infinite' }}>GharSe</span>
             </h2>
           </div>
 
@@ -112,7 +113,7 @@ const AboutSection: React.FC = () => {
             }}>
               <img
                 src="https://images.unsplash.com/photo-1556910096-6f5e72db6803?w=1200&h=1000&fit=crop&q=80"
-                alt="Cooking with love"
+                alt="Authentic Indian home cooking at GharSe in Hayatnagar, Hyderabad - Traditional family recipes prepared with fresh ingredients"
                 style={{
                   width: '100%',
                   height: '280px',
@@ -142,61 +143,71 @@ const AboutSection: React.FC = () => {
             }}>
               {/* Mobile: Single concise paragraph */}
               <p className="md:hidden" style={{
-                fontSize: '16px',
+                fontSize: '1.125rem',
                 fontWeight: 400,
                 color: '#4B5563',
-                lineHeight: '1.7',
+                lineHeight: '1.75',
+                letterSpacing: '-0.011em',
                 textAlign: 'center',
                 maxWidth: '600px',
-                margin: '0 auto'
+                margin: '0 auto',
+                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif'
               }}>
-                Welcome to Bantu's Kitchen, where authentic Indian home cooking meets modern convenience. 
-                We prepare every dish in our home kitchen using time-honored family recipes, fresh ingredients, 
-                and authentic spices. When you order from us, you're experiencing the warmth of Indian hospitality 
-                and the genuine taste of homemade Indian food, prepared with the same love and care we'd give our own family meals.
+                GharSe is where real home kitchens become your favorite restaurant. 
+                We connect you with trusted home chefs who cook authentic, regional Indian meals fresh from their homes straight to your door. 
+                Every dish is cooked to order in small batches—fresh rotis, slow-simmered curries, comfort food you rarely find in regular takeout.
               </p>
 
               {/* Desktop: Full text */}
               <div className="hidden md:block">
                 <p style={{
-                  fontSize: '18px',
+                  fontSize: '1.25rem',
                   fontWeight: 500,
-                  color: '#1F2937',
-                  lineHeight: '1.7'
+                  color: '#1d1d1f',
+                  lineHeight: '1.75',
+                  letterSpacing: '-0.011em',
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif',
+                  marginBottom: '1.25rem'
                 }}>
-                  Welcome to Bantu's Kitchen, where authentic Indian home cooking meets modern convenience.
-                  Our journey began with a simple mission: to share the rich, aromatic flavors of traditional
-                  Indian cuisine with our community.
+                  GharSe is where real home kitchens become your favorite restaurant.
+                  We connect you with trusted home chefs who cook the kind of Indian food they serve their own families.
                 </p>
                 <p style={{
-                  fontSize: '17px',
+                  fontSize: '1.0625rem',
                   fontWeight: 400,
                   color: '#4B5563',
-                  lineHeight: '1.75'
+                  lineHeight: '1.75',
+                  letterSpacing: '-0.011em',
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif',
+                  marginBottom: '1.25rem'
                 }}>
-                  Unlike commercial restaurants, we prepare every dish in our home kitchen using time-honored
-                  family recipes and techniques. This means you get the genuine taste of homemade Indian food,
-                  prepared with the same love and care we'd give our own family meals.
+                  Every meal is cooked to order in small batches, then packed and delivered from their home to yours. 
+                  Fresh rotis, slow-simmered curries, biryanis, tiffins, snacks, and soulful comfort dishes—authentic regional flavors 
+                  you rarely find in regular takeout.
                 </p>
                 <p style={{
-                  fontSize: '17px',
+                  fontSize: '1.0625rem',
                   fontWeight: 400,
                   color: '#4B5563',
-                  lineHeight: '1.75'
+                  lineHeight: '1.75',
+                  letterSpacing: '-0.011em',
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif',
+                  marginBottom: '1.25rem'
                 }}>
-                  From our fragrant biryanis to creamy curries, each dish is crafted from scratch using
-                  fresh ingredients and authentic spices. We believe that great food brings people together,
-                  and we're honored to be part of your dining experiences.
+                  Whether you're craving homestyle North Indian, bold South Indian, or nostalgic dishes that taste like 
+                  "back home," GharSe makes it easy to order home-cooked Indian food online with the convenience of delivery 
+                  and the heart of a family kitchen.
                 </p>
                 <p style={{
-                  fontSize: '18px',
+                  fontSize: '1.25rem',
                   fontWeight: 700,
                   color: '#f97316',
-                  lineHeight: '1.7',
-                  marginTop: '8px'
+                  lineHeight: '1.75',
+                  letterSpacing: '-0.011em',
+                  marginTop: '12px',
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif'
                 }}>
-                  When you order from us, you're not just getting a meal – you're experiencing the warmth
-                  of Indian hospitality and the authenticity of home cooking.
+                  From real homes to your hungry heart.
                 </p>
               </div>
             </div>
@@ -212,7 +223,7 @@ const AboutSection: React.FC = () => {
             }}>
               <img
                 src="https://images.unsplash.com/photo-1556910096-6f5e72db6803?w=1200&h=1000&fit=crop&q=80"
-                alt="Cooking with love"
+                alt="Traditional Indian cuisine preparation at GharSe - Authentic home cooking in Hyderabad with family recipes and fresh spices"
                 style={{
                   width: '100%',
                   height: '480px',

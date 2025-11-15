@@ -3,37 +3,51 @@
  * 
  * Purpose: Automatically ensures database schema is set up correctly
  * Runs on server startup or via API call
- * Uses Supabase Migrator to execute SQL directly to Supabase
+ * Uses Prisma db push to create tables automatically
  * 
- * Architecture: Uses SupabaseMigrator which tracks all changes
+ * Architecture: 
+ * 1. First tries Prisma db push (works for both SQLite and PostgreSQL)
+ * 2. Falls back to SupabaseMigrator if needed
  */
 
 import { getSupabaseMigrator } from '@/lib/supabase-migrator';
+import { ensurePrismaSchema } from '@/lib/prisma-auto-setup';
 
 /**
  * Initialize database schema - ensures all tables exist
- * This now uses the SupabaseMigrator for automatic SQL execution
+ * Automatically runs Prisma db push if tables don't exist
  */
 export async function initializeDatabase() {
-  const migrator = getSupabaseMigrator();
-  
   try {
     console.log('🔧 Initializing database schema...');
     
-    // Check if MenuItem table exists
+    // First try Prisma db push (most reliable method)
+    const prismaResult = await ensurePrismaSchema();
+    
+    if (prismaResult.success) {
+      console.log('✅ Database schema initialized successfully via Prisma');
+      return { success: true };
+    }
+    
+    // Fallback to SupabaseMigrator if Prisma fails
+    console.log('⚠️ Prisma setup failed, trying SupabaseMigrator...');
+    const migrator = getSupabaseMigrator();
+    
     const menuItemExists = await migrator.tableExists('MenuItem');
     
     if (!menuItemExists) {
       console.log('📋 MenuItem table not found, running complete schema migration...');
-      // Run complete schema setup
       const result = await migrator.ensureSchema();
       
       if (result.success) {
-        console.log('✅ Database schema initialized successfully');
+        console.log('✅ Database schema initialized successfully via SupabaseMigrator');
         return { success: true };
       } else {
         console.error('❌ Schema migration failed:', result.error);
-        return { success: false, error: result.error };
+        return { 
+          success: false, 
+          error: `Both Prisma and SupabaseMigrator failed. Prisma error: ${prismaResult.error}. Migrator error: ${result.error}` 
+        };
       }
     } else {
       console.log('✅ Database schema already initialized');

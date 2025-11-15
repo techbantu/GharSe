@@ -764,11 +764,12 @@ const KitchenOrders: React.FC<KitchenOrdersProps> = ({
                   {order.status === 'pending' && (
                     <button
                       onClick={() => updateOrderStatus(order.id, 'confirmed')}
+                      className="confirm-button-glow"
                       style={{
                         flex: 1,
                         minWidth: '120px',
                         padding: '12px 20px',
-                        background: 'linear-gradient(135deg, #3B82F6, #2563EB)',
+                        background: 'linear-gradient(135deg, #22c55e, #16a34a)',
                         color: 'white',
                         border: 'none',
                         borderRadius: '10px',
@@ -780,19 +781,17 @@ const KitchenOrders: React.FC<KitchenOrdersProps> = ({
                         justifyContent: 'center',
                         gap: '8px',
                         transition: 'all 0.2s',
-                        boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
+                        position: 'relative',
                         fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif'
                       }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.transform = 'translateY(-2px)';
-                        e.currentTarget.style.boxShadow = '0 6px 16px rgba(59, 130, 246, 0.4)';
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.3)';
                       }}
                     >
-                      <CheckCircle size={16} />
+                      <span className="bell-shake">🔔</span>
                       Confirm
                     </button>
                   )}

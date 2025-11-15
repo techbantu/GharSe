@@ -19,6 +19,10 @@ type LogLevel = 'DEBUG' | 'INFO' | 'WARN' | 'ERROR' | 'FATAL';
 
 interface LogContext {
   [key: string]: unknown;
+  correlationId?: string;
+  userId?: string;
+  orderId?: string;
+  duration?: number;
 }
 
 interface LogEntry {
