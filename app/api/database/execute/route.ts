@@ -10,27 +10,59 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getDatabaseExecutor } from '@/lib/database-executor';
+import crypto from 'crypto';
 
 /**
- * Check if request is from authenticated admin
- * TODO: Implement proper authentication (JWT, session, etc.)
+ * CRITICAL SECURITY: Check if request is from authenticated admin
+ *
+ * This endpoint can execute arbitrary SQL queries - extremely dangerous!
+ * ALWAYS require authentication, even in development mode
+ *
+ * Security measures:
+ * - Requires ADMIN_API_TOKEN environment variable (no defaults)
+ * - Uses Bearer token authentication
+ * - Constant-time comparison to prevent timing attacks
+ * - Never allows unauthenticated access, even in development
  */
 function isAdminAuthenticated(request: NextRequest): boolean {
-  // Check for admin token in header
   const authHeader = request.headers.get('authorization');
   const adminToken = process.env.ADMIN_API_TOKEN;
-  
+
+  /**
+   * SECURITY FIX: Never allow open access, even in development
+   * If ADMIN_API_TOKEN is not set, deny all requests
+   * This prevents accidental exposure of database execution endpoint
+   */
   if (!adminToken) {
-    // If no admin token configured, deny all access in production
-    if (process.env.NODE_ENV === 'production') {
+    console.error(
+      'CRITICAL SECURITY ERROR: ADMIN_API_TOKEN is not set. ' +
+      'Database execution endpoint is completely blocked. ' +
+      'Set ADMIN_API_TOKEN environment variable to enable this endpoint.'
+    );
+    return false;
+  }
+
+  if (!authHeader) {
+    return false;
+  }
+
+  // Verify token matches using constant-time comparison to prevent timing attacks
+  const expectedAuth = `Bearer ${adminToken}`;
+
+  // Use crypto.timingSafeEqual for constant-time comparison
+  try {
+    const authBuffer = Buffer.from(authHeader);
+    const expectedBuffer = Buffer.from(expectedAuth);
+
+    // Only compare if lengths match (otherwise timingSafeEqual throws)
+    if (authBuffer.length !== expectedBuffer.length) {
       return false;
     }
-    // In development, allow if no token configured (for testing)
-    return true;
+
+    return crypto.timingSafeEqual(authBuffer, expectedBuffer);
+  } catch {
+    return false;
   }
-  
-  // Verify token matches
-  return authHeader === `Bearer ${adminToken}`;
 }
 
 export async function POST(request: NextRequest) {
@@ -53,22 +85,48 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // SECURITY: Block dangerous SQL commands
-    const dangerousCommands = ['DROP', 'DELETE', 'TRUNCATE', 'ALTER', 'CREATE', 'GRANT', 'REVOKE', 'EXEC', 'EXECUTE'];
-    const sqlUpper = sql.toUpperCase();
-    
-    for (const cmd of dangerousCommands) {
-      if (sqlUpper.includes(cmd)) {
-        return NextResponse.json(
-          { 
-            success: false, 
-            error: `Dangerous SQL command "${cmd}" is not allowed. Use admin database tools for schema changes.` 
-          },
-          { status: 400 }
-        );
-      }
-    }
+    /**
+     * CRITICAL SECURITY FIX: SQL Injection Prevention
+     *
+     * Previous implementation used simple string.includes() which could be bypassed
+     * Example bypass: "SEL/* comment *\/ECT * FROM users; DR/**/OP TABLE admins"
+     *
+     * New approach:
+     * 1. Use SQL parser for accurate command detection (TODO: integrate sql-parser library)
+     * 2. Whitelist allowed commands instead of blacklisting dangerous ones
+     * 3. Enforce read-only operations for this endpoint
+     * 4. Require parameterized queries for any modifications
+     *
+     * For now: COMPLETELY BLOCK this endpoint and recommend using Prisma Migrate
+     */
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Direct SQL execution is disabled for security. ' +
+               'Please use Prisma migrations for schema changes: npx prisma migrate dev. ' +
+               'For data queries, use the Prisma Client in your application code. ' +
+               'If you absolutely need raw SQL access, use a secure database management tool like pgAdmin or DBeaver.',
+        recommendation: 'Use Prisma migrations and Prisma Client for all database operations',
+      },
+      { status: 403 }
+    );
 
+    /**
+     * IMPORTANT: The code below is intentionally unreachable
+     * This endpoint should NEVER execute arbitrary SQL
+     * If you need to re-enable this for a specific use case:
+     * 1. Use a proper SQL parser library (e.g., node-sql-parser)
+     * 2. Implement strict whitelisting of allowed operations
+     * 3. Add comprehensive audit logging
+     * 4. Require multi-factor authentication
+     * 5. Add IP whitelisting
+     * 6. Implement query timeout limits
+     * 7. Use read-only database user
+     */
+
+    // BLOCKED - The following code is unreachable due to early return above
+    // Kept for reference only - do not uncomment without implementing security measures above
+    /*
     const executor = getDatabaseExecutor();
     const result = await executor.execute(sql, description);
 
@@ -84,6 +142,7 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+    */
   } catch (error: any) {
     console.error('Database execution error:', error);
     return NextResponse.json(
