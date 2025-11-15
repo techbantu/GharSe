@@ -17,13 +17,29 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Phone, Mail, MapPin, Clock, Facebook, Instagram, Heart, CreditCard, IndianRupee, Smartphone, Leaf, ChefHat, Truck, Star } from 'lucide-react';
 import { restaurantInfo } from '@/data/menuData';
 import { getBusinessStatusMessage, BUSINESS_HOURS } from '@/utils/business-hours';
 
 const Footer: React.FC = () => {
+  const router = useRouter();
   const currentYear = new Date().getFullYear();
   const [businessStatus, setBusinessStatus] = useState(getBusinessStatusMessage());
+  
+  // Handle navigation - scroll to section on homepage, or navigate to homepage then scroll
+  const handleNavigation = (section: string) => {
+    if (window.location.pathname === '/') {
+      // On homepage, scroll to section
+      const element = document.getElementById(section);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    } else {
+      // On other pages, navigate to homepage with hash
+      router.push(`/#${section}`);
+    }
+  };
   
   // Update status every minute
   useEffect(() => {
@@ -70,26 +86,23 @@ const Footer: React.FC = () => {
             <div className="space-y-4">
               <div className="flex items-center gap-4">
                 <div className="w-20 h-20 bg-gradient-to-br from-orange-500 via-red-500 to-orange-600 rounded-2xl flex items-center justify-center text-white font-bold text-3xl shadow-2xl shadow-orange-500/30">
-                  BK
+                  GS
                 </div>
                 <div>
-                  <h3 className="text-3xl font-black bg-gradient-to-r from-orange-400 to-red-400 bg-clip-text text-transparent leading-tight">
-                    {restaurantInfo.name.split(' ')[0]}
-                  </h3>
-                  <h3 className="text-3xl font-black bg-gradient-to-r from-orange-400 to-red-400 bg-clip-text text-transparent leading-tight">
-                    Kitchen
+                  <h3 className="text-3xl font-black bg-gradient-to-r from-orange-400 to-red-400 bg-clip-text text-transparent leading-tight" style={{ WebkitTextFillColor: 'transparent', WebkitBackgroundClip: 'text', display: 'inline-block' }}>
+                    GharSe
                   </h3>
                 </div>
               </div>
               
               {/* Tagline */}
               <p className="text-gray-300 text-base leading-relaxed font-medium">
-                {restaurantInfo.tagline}
+                From Real Homes To Your Hungry Heart
               </p>
               
               {/* Description */}
               <p className="text-gray-400 text-sm leading-relaxed">
-                Bringing authentic Indian flavors to your doorstep with love and care. Every dish is crafted with traditional recipes and the finest ingredients.
+                GharSe is where real home kitchens become your favorite restaurant. We connect you with trusted home chefs who cook authentic, regional Indian meals fresh from their homes straight to your door.
               </p>
             </div>
 
@@ -218,66 +231,87 @@ const Footer: React.FC = () => {
                 {/* Navigation Links - Left Column */}
                 <div className="space-y-2">
                   <h5 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Navigate</h5>
-                  <a
-                    href="#home"
-                    className="group flex items-center gap-2 text-gray-300 hover:text-white transition-all duration-300 p-2.5 rounded-lg hover:bg-white/5 border border-transparent hover:border-white/10 text-sm"
+                  <button
+                    onClick={() => handleNavigation('home')}
+                    className="group flex items-center gap-2 text-gray-300 hover:text-white transition-all duration-300 p-2.5 rounded-lg hover:bg-white/5 border border-transparent hover:border-white/10 text-sm w-full text-left"
                   >
                     <div className="w-1 h-1 bg-orange-500 rounded-full group-hover:scale-150 transition-transform flex-shrink-0"></div>
                     <span className="font-medium">Home</span>
-                  </a>
-                  <a
-                    href="#menu"
-                    className="group flex items-center gap-2 text-gray-300 hover:text-white transition-all duration-300 p-2.5 rounded-lg hover:bg-white/5 border border-transparent hover:border-white/10 text-sm"
+                  </button>
+                  <button
+                    onClick={() => handleNavigation('menu')}
+                    className="group flex items-center gap-2 text-gray-300 hover:text-white transition-all duration-300 p-2.5 rounded-lg hover:bg-white/5 border border-transparent hover:border-white/10 text-sm w-full text-left"
                   >
                     <div className="w-1 h-1 bg-orange-500 rounded-full group-hover:scale-150 transition-transform flex-shrink-0"></div>
                     <span className="font-medium">Menu</span>
-                  </a>
-                  <a
-                    href="#about"
-                    className="group flex items-center gap-2 text-gray-300 hover:text-white transition-all duration-300 p-2.5 rounded-lg hover:bg-white/5 border border-transparent hover:border-white/10 text-sm"
+                  </button>
+                  <button
+                    onClick={() => handleNavigation('about')}
+                    className="group flex items-center gap-2 text-gray-300 hover:text-white transition-all duration-300 p-2.5 rounded-lg hover:bg-white/5 border border-transparent hover:border-white/10 text-sm w-full text-left"
                   >
                     <div className="w-1 h-1 bg-orange-500 rounded-full group-hover:scale-150 transition-transform flex-shrink-0"></div>
                     <span className="font-medium">About</span>
-                  </a>
-                  <a
-                    href="#contact"
-                    className="group flex items-center gap-2 text-gray-300 hover:text-white transition-all duration-300 p-2.5 rounded-lg hover:bg-white/5 border border-transparent hover:border-white/10 text-sm"
+                  </button>
+                  <button
+                    onClick={() => handleNavigation('contact')}
+                    className="group flex items-center gap-2 text-gray-300 hover:text-white transition-all duration-300 p-2.5 rounded-lg hover:bg-white/5 border border-transparent hover:border-white/10 text-sm w-full text-left"
                   >
                     <div className="w-1 h-1 bg-orange-500 rounded-full group-hover:scale-150 transition-transform flex-shrink-0"></div>
                     <span className="font-medium">Contact</span>
-                  </a>
+                  </button>
                 </div>
                 
                 {/* Legal Links - Right Column */}
                 <div className="space-y-2">
                   <h5 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Legal</h5>
                   <a
-                    href="#"
+                    href="/legal"
+                    className="group flex items-center gap-2 text-orange-400 hover:text-orange-300 transition-all duration-300 p-2.5 rounded-lg hover:bg-white/5 border border-transparent hover:border-orange-500/30 text-sm font-semibold"
+                  >
+                    <div className="w-1 h-1 bg-orange-500 rounded-full group-hover:scale-150 transition-transform flex-shrink-0"></div>
+                    <span>All Legal Docs</span>
+                  </a>
+                  <a
+                    href="/legal/privacy-policy"
                     className="group flex items-center gap-2 text-gray-300 hover:text-white transition-all duration-300 p-2.5 rounded-lg hover:bg-white/5 border border-transparent hover:border-white/10 text-sm"
                   >
                     <div className="w-1 h-1 bg-orange-500 rounded-full group-hover:scale-150 transition-transform flex-shrink-0"></div>
                     <span className="font-medium">Privacy</span>
                   </a>
                   <a
-                    href="#"
+                    href="/legal/terms-of-service"
                     className="group flex items-center gap-2 text-gray-300 hover:text-white transition-all duration-300 p-2.5 rounded-lg hover:bg-white/5 border border-transparent hover:border-white/10 text-sm"
                   >
                     <div className="w-1 h-1 bg-orange-500 rounded-full group-hover:scale-150 transition-transform flex-shrink-0"></div>
                     <span className="font-medium">Terms</span>
                   </a>
                   <a
-                    href="#"
+                    href="/legal/refund-policy"
                     className="group flex items-center gap-2 text-gray-300 hover:text-white transition-all duration-300 p-2.5 rounded-lg hover:bg-white/5 border border-transparent hover:border-white/10 text-sm"
                   >
                     <div className="w-1 h-1 bg-orange-500 rounded-full group-hover:scale-150 transition-transform flex-shrink-0"></div>
-                    <span className="font-medium">Cookies</span>
+                    <span className="font-medium">Refunds</span>
                   </a>
                   <a
-                    href="#"
+                    href="/legal/referral-terms"
                     className="group flex items-center gap-2 text-gray-300 hover:text-white transition-all duration-300 p-2.5 rounded-lg hover:bg-white/5 border border-transparent hover:border-white/10 text-sm"
                   >
                     <div className="w-1 h-1 bg-orange-500 rounded-full group-hover:scale-150 transition-transform flex-shrink-0"></div>
-                    <span className="font-medium">Sitemap</span>
+                    <span className="font-medium">Referrals</span>
+                  </a>
+                  <a
+                    href="/legal/food-safety"
+                    className="group flex items-center gap-2 text-gray-300 hover:text-white transition-all duration-300 p-2.5 rounded-lg hover:bg-white/5 border border-transparent hover:border-white/10 text-sm"
+                  >
+                    <div className="w-1 h-1 bg-orange-500 rounded-full group-hover:scale-150 transition-transform flex-shrink-0"></div>
+                    <span className="font-medium">Food Safety</span>
+                  </a>
+                  <a
+                    href="/legal/ip-protection"
+                    className="group flex items-center gap-2 text-gray-300 hover:text-white transition-all duration-300 p-2.5 rounded-lg hover:bg-white/5 border border-transparent hover:border-white/10 text-sm"
+                  >
+                    <div className="w-1 h-1 bg-orange-500 rounded-full group-hover:scale-150 transition-transform flex-shrink-0"></div>
+                    <span className="font-medium">IP Rights</span>
                   </a>
                 </div>
               </div>
@@ -346,10 +380,16 @@ const Footer: React.FC = () => {
           <div className="flex flex-col items-center gap-6">
             {/* Centered Content Row */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-8 flex-wrap">
-              {/* Copyright */}
-              <div className="text-center sm:text-left">
-                <p className="text-gray-400 text-sm font-medium">
-                  © {currentYear} <span className="text-white font-semibold">{restaurantInfo.name}</span>. All rights reserved.
+              {/* Copyright & Operator Structure */}
+              <div className="text-center">
+                <p className="text-gray-400 text-sm font-medium mb-2">
+                  © {currentYear} <span className="text-white font-semibold">GharSe</span>. All rights reserved.
+                </p>
+                <p className="text-gray-500 text-xs">
+                  Operated by <span className="text-gray-300 font-medium">Sailaja</span>
+                </p>
+                <p className="text-gray-500 text-xs">
+                  Powered by <span className="text-gray-300 font-medium">TechBantu IT Solutions LLC</span>
                 </p>
               </div>
 

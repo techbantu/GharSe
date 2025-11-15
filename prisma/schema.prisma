@@ -1,9 +1,7 @@
 /**
  * NEW FILE: Prisma Database Schema - Complete Data Model
- * 
  * Purpose: Defines the database structure for Bantu's Kitchen
  * Includes: Menu items, orders, customers, receipts, and admin management
- * 
  * Database: PostgreSQL (production-ready, ACID compliant)
  * ORM: Prisma (type-safe, auto-generated client)
  */
@@ -13,162 +11,347 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"  // Changed from sqlite to postgresql for Supabase
   url      = env("DATABASE_URL")
+}
+
+// ===== CHEF MANAGEMENT (MULTI-TENANCY) =====
+
+model Chef {
+  id           String @id @default(cuid())
+  name         String // "Mrs. Bantu", "Chef Ranjitha"
+  businessName String // "Bantu's Kitchen"
+  slug         String @unique // "bantus-kitchen" for URL
+
+  // Contact & Location
+  phone         String  @unique
+  email         String  @unique
+  address       String? // JSON string for SQLite: { street, city, area, pincode }
+  serviceRadius Int     @default(3) // km radius for delivery
+
+  // Legal Compliance
+  fssaiNumber String?   @unique
+  fssaiExpiry DateTime?
+  gstNumber   String?
+  isVerified  Boolean   @default(false)
+  verifiedAt  DateTime?
+
+  // Business Profile
+  bio          String? // Story, specialties
+  cuisineTypes String? // JSON array string for SQLite: ["Andhra", "Telangana"]
+  logo         String? // Cloudinary URL
+  coverImage   String?
+
+  // Platform Status
+  status      String    @default("PENDING") // PENDING, ACTIVE, SUSPENDED, INACTIVE, REJECTED
+  onboardedAt DateTime?
+
+  // Financial
+  commissionRate   Float     @default(10.0) // 10% commission
+  subscriptionTier String    @default("free") // free, basic, premium
+  subscriptionPaid DateTime?
+
+  // Settings
+  isAcceptingOrders Boolean @default(true)
+  preparationBuffer Int     @default(10) // extra minutes buffer
+  minOrderAmount    Float   @default(199)
+
+  // Relations
+  menuItems MenuItem[]
+  orders    Order[]
+  analytics ChefAnalytics[]
+  payouts   Payout[]
+
+  // Tracking
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug])
+  @@index([status])
+  @@index([isVerified])
+}
+
+model ChefAnalytics {
+  id     String @id @default(cuid())
+  chefId String
+  chef   Chef   @relation(fields: [chefId], references: [id], onDelete: Cascade)
+  date   String // Date string for SQLite: "2025-01-01"
+
+  ordersCount Int   @default(0)
+  revenue     Float @default(0)
+  platformFee Float @default(0)
+  netEarnings Float @default(0)
+
+  avgOrderValue   Float  @default(0)
+  cancelledOrders Int    @default(0)
+  rating          Float?
+
+  createdAt DateTime @default(now())
+
+  @@unique([chefId, date])
+  @@index([chefId])
+  @@index([date])
+}
+
+model Payout {
+  id     String @id @default(cuid())
+  chefId String
+  chef   Chef   @relation(fields: [chefId], references: [id], onDelete: Cascade)
+
+  amount Float
+  period String // "2025-01", "2025-02"
+  status String @default("PENDING") // PENDING, PROCESSING, PAID, FAILED
+
+  ordersIncluded Int
+  totalRevenue   Float
+  platformFee    Float
+  netAmount      Float
+
+  paidAt        DateTime?
+  paymentMethod String? // "bank_transfer", "upi"
+  transactionId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([chefId])
+  @@index([status])
+  @@index([period])
 }
 
 // ===== MENU MANAGEMENT =====
 
 model MenuItem {
-  id              String   @id @default(cuid())
+  id              String  @id @default(cuid())
   name            String
   description     String
   price           Float
   originalPrice   Float?
   category        String
   image           String?
-  imagePublicId   String?  // Cloudinary public ID for deletion
-  isVegetarian    Boolean  @default(false)
-  isVegan         Boolean  @default(false)
-  isGlutenFree    Boolean  @default(false)
-  spicyLevel      Int      @default(0)
-  preparationTime Int      @default(30)
-  isAvailable     Boolean  @default(true)  // Whether item is on menu (not about stock)
-  isPopular       Boolean  @default(false)
+  imagePublicId   String? // Cloudinary public ID for deletion
+  isVegetarian    Boolean @default(false)
+  isVegan         Boolean @default(false)
+  isGlutenFree    Boolean @default(false)
+  spicyLevel      Int     @default(0)
+  preparationTime Int     @default(30)
+  isAvailable     Boolean @default(true) // Whether item is on menu (not about stock)
+  isPopular       Boolean @default(false)
   calories        Int?
   servingSize     String?
-  ingredients     String?  // JSON array string for SQLite compatibility
-  allergens       String?  // JSON array string for SQLite compatibility
-  
-  // INVENTORY MANAGEMENT (NEW!)
-  inventoryEnabled Boolean @default(false)  // Whether to track inventory
-  inventory        Int?                    // Current stock count (null = unlimited)
-  outOfStockMessage String?                // Funny message when out of stock
-  
-  // IMAGE POSITIONING (NEW!)
-  imagePosition    String?                 // JSON string: {x, y, scale} for precise image positioning
-  
+  ingredients     String? // JSON array string for SQLite compatibility
+  allergens       String? // JSON array string for SQLite compatibility
+
+  // INVENTORY MANAGEMENT
+  inventoryEnabled  Boolean @default(false) // Whether to track inventory
+  inventory         Int? // Current stock count (null = unlimited)
+  outOfStockMessage String? // Funny message when out of stock
+
+  // IMAGE POSITIONING
+  imagePosition String? // JSON string: {x, y, scale} for precise image positioning
+
+  // MULTI-CHEF SUPPORT
+  chefId String? // Optional: null for default restaurant
+  chef   Chef?   @relation(fields: [chefId], references: [id], onDelete: Cascade)
+
   // Tracking
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  createdBy       String?  // Admin user ID
-  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String? // Admin user ID
+
   // Relations
-  orderItems      OrderItem[]
-  
+  orderItems       OrderItem[]
+  cartReservations CartReservation[]
+  demandHistory    ItemDemandHistory[]
+
   @@index([category])
   @@index([isAvailable])
   @@index([isPopular])
   @@index([inventoryEnabled])
+  @@index([chefId])
+  @@index([category, isAvailable]) // Fast category filtering
+  @@index([chefId, category]) // Fast chef menu by category
+  @@index([isAvailable, inventoryEnabled, inventory]) // Fast stock checks
 }
 
 // ===== ORDER MANAGEMENT =====
 
 model Order {
-  id              String      @id @default(cuid())
-  orderNumber     String      @unique // Human-readable order number (e.g., "BK-2024-001")
-  
+  id          String @id @default(cuid())
+  orderNumber String @unique // Human-readable order number (e.g., "BK-2024-001")
+
+  // MULTI-CHEF SUPPORT
+  chefId        String? // Optional: null for default restaurant
+  chef          Chef?   @relation(fields: [chefId], references: [id], onDelete: SetNull)
+  parentOrderId String? // For multi-chef orders (group related orders)
+
   // Customer Info
-  customerName    String
-  customerEmail   String
-  customerPhone   String
-  
+  customerId    String? // NEW! Link to Customer for registered users
+  customer      Customer? @relation("CustomerOrders", fields: [customerId], references: [id], onDelete: SetNull)
+  customerName  String
+  customerEmail String
+  customerPhone String
+
   // Delivery Info
   deliveryAddress String
   deliveryCity    String
   deliveryZip     String
   deliveryNotes   String?
-  
+
   // Order Details
-  items           OrderItem[]
-  subtotal        Float
-  tax             Float
-  deliveryFee     Float
-  discount        Float       @default(0)
-  total           Float
-  
+  items       OrderItem[]
+  subtotal    Float
+  tax         Float
+  deliveryFee Float
+  discount    Float       @default(0)
+  tip         Float       @default(0) // Tip amount from customer
+  total       Float
+
   // Status Tracking
-  status          OrderStatus @default(PENDING)
-  paymentStatus   PaymentStatus @default(PENDING)
-  paymentMethod   String?     // "cash", "card", "online"
-  
+  status        OrderStatus   @default(PENDING_CONFIRMATION)
+  paymentStatus PaymentStatus @default(PENDING)
+  paymentMethod String? // "cash-on-delivery", "card", "upi", "paytm", "razorpay", "stripe", etc.
+
   // Timestamps
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  confirmedAt     DateTime?
-  preparingAt     DateTime?
-  readyAt         DateTime?
-  deliveredAt     DateTime?
-  cancelledAt     DateTime?
-  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  confirmedAt DateTime?
+  preparingAt DateTime?
+  readyAt     DateTime?
+  deliveredAt DateTime?
+  cancelledAt DateTime?
+
+  // Grace Period Tracking (NEW! - for order modification window)
+  modificationCount  Int      @default(0) // Track how many times order was modified
+  gracePeriodExpiresAt DateTime? // When the modification window closes
+  lastModifiedAt     DateTime? // Last time order was modified during grace period
+
   // Estimated times
   estimatedPrepTime Int       @default(30) // minutes
   estimatedDelivery DateTime?
-  
+
   // Receipt
-  receipt         Receipt?
-  
+  receipt Receipt?
+
+  // Payment Tracking
+  payments Payment[]
+
+  // Notification Tracking
+  notifications NotificationLog[]
+
+  // Coupon Tracking (NEW!)
+  couponUsage CouponUsage?
+
   @@index([orderNumber])
+  @@index([customerId]) // NEW! Fast customer order lookup
   @@index([customerPhone])
   @@index([status])
   @@index([createdAt])
+  @@index([chefId])
+  @@index([parentOrderId])
+  @@index([chefId, createdAt]) // Fast chef order history
+  @@index([customerPhone, status]) // Fast customer order lookup
+  @@index([status, deliveredAt]) // Fast analytics queries
+  @@index([paymentStatus, createdAt]) // Payment tracking
 }
 
 model OrderItem {
-  id          String   @id @default(cuid())
-  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  orderId     String
-  
-  menuItem    MenuItem @relation(fields: [menuItemId], references: [id])
-  menuItemId  String
-  
-  quantity    Int
-  price       Float    // Price at time of order (for historical accuracy)
-  subtotal    Float    // quantity * price
-  
+  id      String @id @default(cuid())
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId String
+
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id])
+  menuItemId String
+
+  quantity Int
+  price    Float // Price at time of order (for historical accuracy)
+  subtotal Float // quantity * price
+
   specialInstructions String?
-  
+
   @@index([orderId])
   @@index([menuItemId])
 }
 
 enum OrderStatus {
-  PENDING       // Just received
-  CONFIRMED     // Restaurant confirmed
-  PREPARING     // Being cooked
-  READY         // Ready for pickup/delivery
+  PENDING_CONFIRMATION // Waiting for cancellation window to expire (not visible to kitchen)
+  PENDING // Just received (visible to kitchen after confirmation)
+  CONFIRMED // Restaurant confirmed
+  PREPARING // Being cooked
+  READY // Ready for pickup/delivery
   OUT_FOR_DELIVERY // On the way
-  DELIVERED     // Completed
-  CANCELLED     // Cancelled by customer or restaurant
+  DELIVERED // Completed
+  CANCELLED // Cancelled by customer or restaurant
 }
 
 enum PaymentStatus {
-  PENDING       // Not paid yet
-  PAID          // Payment received
-  FAILED        // Payment failed
-  REFUNDED      // Money returned
+  PENDING // Not paid yet
+  PAID // Payment received
+  FAILED // Payment failed
+  REFUNDED // Money returned
+}
+
+// ===== CART INVENTORY TRACKING (NEW!) =====
+
+// Track temporary cart reservations (soft locks for urgency system)
+model CartReservation {
+  id         String   @id @default(cuid())
+  sessionId  String // Unique session/user ID (browser fingerprint)
+  menuItemId String
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  quantity   Int
+
+  createdAt DateTime @default(now())
+  expiresAt DateTime // 30 minutes from creation (auto-cleanup)
+
+  @@index([menuItemId])
+  @@index([sessionId])
+  @@index([expiresAt])
+  @@index([createdAt])
+}
+
+// Track item demand patterns for ML-powered predictions and analytics
+model ItemDemandHistory {
+  id         String   @id @default(cuid())
+  menuItemId String
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+
+  timestamp DateTime @default(now())
+  hour      Int // Hour of day (0-23) for pattern analysis
+
+  addedToCarts Int @default(0) // How many carts added this hour
+  ordered      Int @default(0) // How many actually ordered
+  viewCount    Int @default(0) // How many viewed item (future feature)
+
+  // Aggregated metrics
+  demandScore Float @default(0) // Average demand pressure score
+
+  @@unique([menuItemId, timestamp])
+  @@index([menuItemId])
+  @@index([timestamp])
+  @@index([hour])
 }
 
 // ===== RECEIPT GENERATION =====
 
 model Receipt {
-  id              String   @id @default(cuid())
-  receiptNumber   String   @unique // Human-readable (e.g., "RCP-2024-001")
-  
-  order           Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  orderId         String   @unique
-  
+  id            String @id @default(cuid())
+  receiptNumber String @unique // Human-readable (e.g., "RCP-2024-001")
+
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId String @unique
+
   // Receipt Data (snapshot at time of generation)
-  receiptData     Json     // Complete order details as JSON
-  
+  receiptData Json // Complete order details as JSON
+
   // PDF Storage
-  pdfUrl          String?  // URL to stored PDF
-  pdfPublicId     String?  // Cloud storage ID
-  
+  pdfUrl      String? // URL to stored PDF
+  pdfPublicId String? // Cloud storage ID
+
   // Timestamps
-  generatedAt     DateTime @default(now())
-  emailedAt       DateTime?
-  
+  generatedAt DateTime  @default(now())
+  emailedAt   DateTime?
+
   @@index([receiptNumber])
   @@index([orderId])
 }
@@ -176,88 +359,629 @@ model Receipt {
 // ===== ADMIN MANAGEMENT =====
 
 model Admin {
-  id            String   @id @default(cuid())
-  email         String   @unique
-  name          String
-  passwordHash  String
-  role          AdminRole @default(STAFF)
-  
-  isActive      Boolean  @default(true)
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  lastLoginAt   DateTime?
-  
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String
+  passwordHash String
+  role         AdminRole @default(STAFF)
+
+  isActive                 Boolean   @default(true)
+  emailVerified            Boolean   @default(false)
+  emailVerificationToken   String?
+  emailVerificationExpires DateTime?
+
+  passwordResetToken   String?
+  passwordResetExpires DateTime?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  lastLoginAt DateTime?
+
   @@index([email])
+  @@index([emailVerificationToken])
+  @@index([passwordResetToken])
 }
 
 enum AdminRole {
-  OWNER         // Full access
-  MANAGER       // Can manage menu and orders
-  STAFF         // Can view and update orders only
+  OWNER // Full access
+  MANAGER // Can manage menu and orders
+  STAFF // Can view and update orders only
+}
+
+// ===== PAYMENT TRACKING =====
+
+model Payment {
+  id      String @id @default(cuid())
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  // Payment Gateway Info
+  paymentGateway       String // "stripe", "razorpay", "cash", "cod"
+  paymentMethodDetails String? // Specific method: "paytm", "form-b", "google-pay", "phonepe", "card", "netbanking", etc.
+  paymentIntentId      String? // Stripe payment intent ID or Razorpay order ID
+  transactionId        String? // Actual transaction ID from gateway
+  gatewayResponse      String? // JSON response from payment gateway
+
+  // Amount Details
+  amount     Float // Amount received (in paise/cents)
+  currency   String @default("INR")
+  gatewayFee Float  @default(0) // Fee charged by payment gateway
+  netAmount  Float // amount - gatewayFee (actual money you receive)
+  tip        Float  @default(0) // Tip amount included in payment
+
+  // Status
+  status        PaymentStatus @default(PENDING)
+  failureReason String?
+
+  // Bank Transfer Info
+  payoutId     String? // Stripe payout ID or Razorpay transfer ID
+  payoutStatus String? // "pending", "in_transit", "paid", "failed"
+  payoutDate   DateTime? // When money was transferred to bank
+
+  // Timestamps
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  paidAt     DateTime? // When payment was successfully received
+  refundedAt DateTime?
+
+  @@index([orderId])
+  @@index([paymentIntentId])
+  @@index([transactionId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([payoutStatus])
+  @@index([status, createdAt]) // Fast payment status queries
+  @@index([paymentGateway, status]) // Gateway-specific queries
 }
 
 // ===== ANALYTICS & INSIGHTS =====
 
 model DailySales {
-  id            String   @id @default(cuid())
-  date          DateTime @unique
-  
-  totalOrders   Int      @default(0)
-  totalRevenue  Float    @default(0)
-  totalTax      Float    @default(0)
+  id   String   @id @default(cuid())
+  date DateTime @unique
+
+  totalOrders       Int   @default(0)
+  totalRevenue      Float @default(0)
+  totalTax          Float @default(0)
   totalDeliveryFees Float @default(0)
-  
+
   averageOrderValue Float @default(0)
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@index([date])
 }
 
-// ===== CUSTOMER DATABASE =====
+// ===== CUSTOMER DATABASE WITH AUTHENTICATION =====
 
 model Customer {
-  id            String   @id @default(cuid())
-  name          String
-  email         String   @unique
-  phone         String   @unique
-  
+  id    String @id @default(cuid())
+  name  String
+  email String @unique
+  phone String @unique
+
+  // Authentication (NEW!)
+  passwordHash String? // bcrypt hash (nullable for social login in future)
+
+  // Email Verification (NEW!)
+  emailVerified            Boolean   @default(false)
+  emailVerificationToken   String?   @unique
+  emailVerificationExpires DateTime?
+
+  // Phone Verification (NEW!)
+  phoneVerified             Boolean   @default(false)
+  phoneVerificationOTP      String?
+  phoneVerificationExpires  DateTime?
+  phoneVerificationAttempts Int       @default(0)
+
+  // Password Reset (NEW!)
+  passwordResetToken   String?   @unique
+  passwordResetExpires DateTime?
+
+  // Account Status (NEW!)
+  accountStatus String @default("ACTIVE") // ACTIVE, SUSPENDED, DELETED
+
+  // Referral Code (NEW!)
+  referralCode String? @unique // User's unique referral code (e.g., "RAVI-FEAST")
+  referredBy   String? // ID of user who referred this user
+
+  // Login Tracking (NEW!)
+  loginAttempts Int       @default(0)
+  lastLoginAt   DateTime?
+  lastLoginIP   String?
+
   // Saved addresses
-  addresses     CustomerAddress[]
-  
+  addresses CustomerAddress[]
+
   // Loyalty
-  totalOrders   Int      @default(0)
-  totalSpent    Float    @default(0)
-  loyaltyPoints Int      @default(0)
-  
+  totalOrders   Int   @default(0)
+  totalSpent    Float @default(0)
+  loyaltyPoints Int   @default(0)
+
+  // Terms and Conditions Acceptance (NEW!)
+  termsAccepted              Boolean @default(false)
+  termsAcceptedAt            DateTime?
+  termsVersion               String? // Version of terms accepted (e.g., "1.0")
+
   // Preferences
   dietaryPreferences String? // JSON array string for SQLite compatibility
   favoriteItems      String? // JSON array string for SQLite compatibility
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  lastOrderAt   DateTime?
-  
+  notificationPrefs  String? // JSON string: { email: true, sms: false, whatsapp: true }
+
+  // Relations (NEW!)
+  sessions           UserSession[]
+  couponsUsed        CouponUsage[]
+  referralsMade      Referral[]           @relation("ReferrerRelation")
+  referralsReceived  Referral[]           @relation("RefereeRelation")
+  orders             Order[]              @relation("CustomerOrders")
+  wallet             Wallet? // Genius referral wallet
+  referralMilestones ReferralMilestone[] // Jackpot milestones
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  lastOrderAt DateTime?
+
   @@index([email])
   @@index([phone])
+  @@index([referralCode])
+  @@index([emailVerificationToken])
+  @@index([passwordResetToken])
+  @@index([accountStatus])
 }
 
 model CustomerAddress {
-  id          String   @id @default(cuid())
-  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  customerId  String
-  
-  label       String   // "Home", "Work", etc.
-  address     String
-  city        String
-  zipCode     String
-  isDefault   Boolean  @default(false)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  id         String   @id @default(cuid())
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerId String
+
+  label     String // "Home", "Work", etc.
+  address   String
+  city      String
+  zipCode   String
+  isDefault Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@index([customerId])
 }
 
+// ===== NOTIFICATION TRACKING =====
+
+model NotificationLog {
+  id      String @id @default(cuid())
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  type      String // email, sms, push, whatsapp
+  channel   String // order_confirmation, status_update, payment_confirmation
+  recipient String // email address or phone number
+  status    String // sent, failed, pending
+
+  sentAt       DateTime?
+  failedAt     DateTime?
+  errorMessage String?
+  retryCount   Int       @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// ===== COUPON & REFERRAL SYSTEM =====
+
+model Coupon {
+  id   String @id @default(cuid())
+  code String @unique // "WELCOME20", "RAVI-FEAST" (auto-generated for referrals)
+
+  // Type & Ownership
+  type      String // "MERCHANT" (admin-created) or "REFERRAL" (user-generated)
+  createdBy String? // Admin ID (for merchant coupons) or Customer ID (for referral coupons)
+
+  // Discount Configuration
+  discountType   String // "PERCENTAGE" or "FIXED_AMOUNT"
+  discountValue  Float // 20 for 20%, 50 for ₹50
+  maxDiscountCap Float? // Max discount for percentage-based (e.g., ₹100 max on 20% off)
+  minOrderAmount Float  @default(0) // Minimum order amount to apply coupon
+
+  // Usage Limits
+  maxUsageTotal   Int? // Total uses allowed (null = unlimited)
+  maxUsagePerUser Int  @default(1) // Uses per user (default: 1)
+  usageCount      Int  @default(0) // Current usage count
+
+  // Validity
+  validFrom  DateTime  @default(now())
+  validUntil DateTime?
+  isActive   Boolean   @default(true)
+
+  // Restrictions
+  firstOrderOnly       Boolean @default(false) // Only for first-time users
+  applicableCategories String? // JSON array of category names (null = all categories)
+
+  // Description
+  title       String? // "Welcome Offer", "Friend Referral"
+  description String? // "Get 20% off on your first order"
+
+  // Relations
+  usages CouponUsage[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([code])
+  @@index([type])
+  @@index([isActive])
+  @@index([validFrom, validUntil])
+  @@index([createdBy])
+}
+
+model CouponUsage {
+  id String @id @default(cuid())
+
+  // Relations
+  couponId String
+  coupon   Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  orderId String @unique // One coupon per order
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  // Discount Applied
+  discountAmount Float // Actual discount given (e.g., ₹50)
+  orderTotal     Float // Total before discount
+  finalTotal     Float // Total after discount
+
+  // Metadata
+  usedAt    DateTime @default(now())
+  ipAddress String? // Track for fraud prevention
+
+  @@unique([couponId, orderId]) // Prevent duplicate usage
+  @@index([couponId])
+  @@index([customerId])
+  @@index([orderId])
+  @@index([usedAt])
+}
+
+model Referral {
+  id String @id @default(cuid())
+
+  // Participants
+  referrerId String // User who shared the code
+  referrer   Customer @relation("ReferrerRelation", fields: [referrerId], references: [id], onDelete: Cascade)
+
+  refereeId String // User who used the code
+  referee   Customer @relation("RefereeRelation", fields: [refereeId], references: [id], onDelete: Cascade)
+
+  // Referral Details
+  referralCode String // Code that was used
+
+  // Rewards
+  referrerReward Float @default(0) // Points or discount for referrer
+  refereeReward  Float @default(0) // Discount for referee
+
+  // Status
+  status String @default("PENDING") // PENDING, COMPLETED, EXPIRED, PENDING_VERIFICATION
+
+  // Conversion Tracking
+  firstOrderId String? // Referee's first order (triggers reward)
+  completedAt  DateTime? // When referral was completed
+  
+  // Fraud Detection (NEW!)
+  fraudScore         Int      @default(0) // Risk score 0-100
+  deliveryConfirmed  Boolean  @default(false) // Confirmed delivery before reward
+  ipAddress          String? // IP address of referee at signup
+  deviceFingerprint  String? // Browser fingerprint
+  rewardPaidAt       DateTime? // When wallet credit was issued
+  
+  // Auto-discount tracking
+  refereeDiscountApplied Boolean @default(false) // Whether referee got their ₹50 discount
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([refereeId]) // Each user can be referred only once
+  @@index([referrerId])
+  @@index([refereeId])
+  @@index([referralCode])
+  @@index([status])
+  @@index([fraudScore])
+  @@index([deliveryConfirmed])
+}
+
+// ===== WALLET SYSTEM (GENIUS REFERRAL REWARDS) =====
+
+model Wallet {
+  id         String @id @default(cuid())
+  customerId String @unique
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  // Balance tracking
+  balance     Float @default(0) // Current available balance
+  totalEarned Float @default(0) // Lifetime earnings
+  totalSpent  Float @default(0) // Lifetime spending
+  
+  // Pending balance (24-hour hold for fraud prevention)
+  pendingBalance Float @default(0) // Amount waiting for clearance
+  
+  // Relations
+  transactions WalletTransaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([customerId])
+  @@index([balance])
+}
+
+model WalletTransaction {
+  id       String @id @default(cuid())
+  walletId String
+  wallet   Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  // Transaction details
+  type   String // CREDIT, DEBIT, PENDING_CREDIT
+  amount Float // Transaction amount
+  
+  // Source tracking
+  source      String // REFERRAL_REWARD, JACKPOT, ORDER_PAYMENT, ADMIN_CREDIT, REFUND
+  sourceId    String? // referralId, milestoneId, or orderId
+  description String? // Human-readable description
+  
+  // Balance snapshot
+  balanceAfter        Float // Balance after this transaction
+  pendingBalanceAfter Float @default(0) // Pending balance after transaction
+  
+  // Clearance tracking (for pending credits)
+  clearsAt  DateTime? // When pending credit becomes available
+  clearedAt DateTime? // When actually cleared
+  
+  // Metadata
+  metadata String? // JSON string for additional data
+  
+  createdAt DateTime @default(now())
+
+  @@index([walletId])
+  @@index([type])
+  @@index([source])
+  @@index([createdAt])
+  @@index([clearsAt])
+}
+
+model ReferralMilestone {
+  id         String @id @default(cuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  // Milestone details
+  milestoneType String // FIFTH_REFERRAL, TENTH_REFERRAL, TWENTIETH_REFERRAL, MONTHLY_CHAMPION
+  milestoneCount Int // 5, 10, 20, etc.
+  rewardAmount   Float // Jackpot amount (₹200-₹1000 for referrals, ₹5000 for champion)
+  
+  // Status
+  status String @default("PENDING") // PENDING, PAID, CANCELLED
+  
+  // Payment tracking
+  triggeredAt DateTime @default(now())
+  paidAt      DateTime?
+  
+  // Associated transaction
+  transactionId String? // WalletTransaction ID when paid
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([customerId])
+  @@index([milestoneType])
+  @@index([status])
+  @@index([triggeredAt])
+}
+
+// ===== USER SESSION MANAGEMENT =====
+
+model UserSession {
+  id String @id @default(cuid())
+
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  // Token
+  tokenHash String @unique // SHA-256 hash of JWT token
+
+  // Session Info
+  expiresAt DateTime
+  isRevoked Boolean  @default(false)
+
+  // Device Tracking
+  userAgent  String?
+  ipAddress  String?
+  deviceInfo String? // JSON string: { os, browser, device }
+
+  // Timestamps
+  createdAt  DateTime @default(now())
+  lastUsedAt DateTime @default(now())
+
+  @@index([customerId])
+  @@index([tokenHash])
+  @@index([expiresAt])
+  @@index([isRevoked])
+}
+
+// ===== SMART KITCHEN INTELLIGENCE SYSTEM =====
+
+// Real-time kitchen capacity tracking for dynamic pricing
+model KitchenCapacity {
+  id           String   @id @default(cuid())
+  restaurantId String   @default("default") // Multi-tenant support
+  timestamp    DateTime @default(now())
+
+  // Capacity Metrics
+  currentOrders        Int // Orders being prepared now
+  maxCapacity          Int // Maximum concurrent orders kitchen can handle
+  utilizationPercent   Float // Calculated: (currentOrders / maxCapacity) * 100
+  estimatedWaitMinutes Int // Estimated wait time for new orders
+  staffOnDuty          Int // Number of staff currently working
+
+  // Kitchen State
+  status String @default("OPERATIONAL") // OPERATIONAL, OVERWHELMED, IDLE, CLOSED
+
+  @@index([restaurantId, timestamp])
+  @@index([timestamp])
+  @@index([restaurantId])
+}
+
+// Ingredient-level inventory tracking for waste prevention
+model IngredientInventory {
+  id           String @id @default(cuid())
+  name         String // "Chicken Breast", "Tomato", "Butter"
+  restaurantId String @default("default")
+
+  // Stock Information
+  currentStock Float // Quantity in stock (e.g., 5.5)
+  unit         String // "kg", "liters", "pieces", "grams"
+  costPerUnit  Float // Procurement cost per unit
+
+  // Expiry Tracking
+  expiryDate       DateTime // When this batch expires
+  hoursUntilExpiry Int // Calculated field for quick queries
+
+  // Reordering
+  minimumStock  Float // Reorder threshold
+  lastRestocked DateTime @default(now())
+
+  // Relations to Menu Items
+  affectedMenuItems String? // JSON array of menu item IDs that use this ingredient
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([restaurantId, expiryDate])
+  @@index([hoursUntilExpiry])
+  @@index([name])
+  @@index([expiryDate])
+}
+
+// ML training data for demand forecasting
+model DemandPrediction {
+  id         String   @id @default(cuid())
+  menuItemId String
+  timestamp  DateTime @default(now())
+
+  // Time Features
+  hourOfDay Int // 0-23
+  dayOfWeek Int // 0-6 (0 = Sunday)
+  isHoliday Boolean @default(false)
+  isWeekend Boolean @default(false)
+
+  // External Features
+  weatherCondition String? // "sunny", "rainy", "cold", "hot"
+  temperature      Float? // Temperature in Celsius
+
+  // Historical Context
+  rollingAvg7Days  Float? // 7-day rolling average for this item
+  rollingAvg30Days Float? // 30-day rolling average
+
+  // Ground Truth (Actual Data)
+  actualOrders Int @default(0) // What actually happened
+
+  // Model Predictions
+  predictedOrders    Int? // What the model predicted
+  predictionAccuracy Float? // How accurate was the prediction (0-100%)
+
+  // Confidence
+  confidence      Float? // Model confidence (0-1)
+  confidenceLower Int? // Lower bound of confidence interval
+  confidenceUpper Int? // Upper bound of confidence interval
+
+  // Model Info
+  modelVersion String? // Track which model version made prediction
+
+  @@unique([menuItemId, timestamp])
+  @@index([menuItemId])
+  @@index([timestamp])
+  @@index([hourOfDay, dayOfWeek])
+  @@index([menuItemId, hourOfDay])
+}
+
+// Price adjustment tracking and analytics
+model DynamicPricing {
+  id         String   @id @default(cuid())
+  menuItemId String
+  timestamp  DateTime @default(now())
+
+  // Pricing
+  originalPrice   Float // Base price from menu
+  adjustedPrice   Float // Dynamically calculated price
+  discountPercent Float @default(0) // Percentage discount/increase
+
+  // Adjustment Factors
+  adjustmentReason String // PEAK_DEMAND, LOW_CAPACITY, EXPIRY_RISK, IDLE_KITCHEN, SURGE_PRICING
+  demandScore      Float  @default(0) // 0-100
+  capacityScore    Float  @default(0) // 0-100
+  expiryScore      Float  @default(0) // 0-100
+
+  // Algorithm Tracking
+  algorithmVersion String @default("v1.0")
+
+  // Context at Time of Pricing
+  kitchenUtilization Float? // Kitchen capacity at this moment
+  predictedDemand    Int? // Forecasted orders for next hour
+  hoursToExpiry      Float? // Hours until ingredients expire
+
+  // Customer Impact
+  timesViewed    Int    @default(0) // How many customers saw this price
+  conversionRate Float? // % who bought at this price
+
+  @@index([menuItemId, timestamp])
+  @@index([timestamp])
+  @@index([adjustmentReason])
+  @@index([menuItemId])
+}
+
+// Comprehensive order metrics for ML training
+model OrderMetrics {
+  id        String   @id @default(cuid())
+  orderId   String   @unique
+  timestamp DateTime @default(now())
+
+  // Timing Features
+  orderPlacedHour   Int // 0-23
+  orderPlacedDay    Int // 0-6
+  orderPlacedMinute Int // 0-59 for granular patterns
+
+  // Order Performance
+  preparationTime Int? // Actual minutes taken to prepare
+  deliveryTime    Int? // Actual minutes taken to deliver
+  totalTime       Int? // Order to delivery total time
+
+  // Kitchen State at Order Time
+  kitchenUtilization Float? // Kitchen capacity when order placed
+  ordersInQueue      Int? // How many orders ahead
+  staffOnDuty        Int?
+
+  // Order Details
+  itemsPurchased String // JSON array of {itemId, quantity, price}
+  itemCount      Int // Total number of items
+  totalValue     Float // Order total
+
+  // External Context
+  weatherAtTime     String? // Weather condition when ordered
+  temperatureAtTime Float? // Temperature when ordered
+
+  // Customer Behavior
+  customerIsReturning Boolean @default(false) // Is this a repeat customer?
+  daysSinceLastOrder  Int? // For repeat customers
+
+  // Outcome
+  wasCompleted       Boolean @default(true) // Did order complete successfully?
+  wasCancelled       Boolean @default(false)
+  cancellationReason String? // If cancelled
+
+  @@index([orderId])
+  @@index([timestamp])
+  @@index([orderPlacedHour, orderPlacedDay])
+}

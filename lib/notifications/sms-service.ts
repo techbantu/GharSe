@@ -1,141 +1,282 @@
 /**
- * SMS SERVICE - Production-Grade SMS Notifications
+ * SMS SERVICE - Production-Ready SMS Notifications via Twilio
  * 
- * Uses Twilio for sending SMS notifications
- * Short, actionable messages for order updates
+ * Architecture: Twilio SMS for India (+91 numbers)
+ * 
+ * Features:
+ * - Order confirmation SMS
+ * - Status update SMS (critical milestones only)
+ * - Cost optimization (only high-value orders or on customer request)
+ * - Retry logic with exponential backoff
+ * - Error tracking
  */
 
-import { Order, OrderStatus } from '@/types';
+import { Order } from '@/types';
 import { logger } from '@/utils/logger';
+import { restaurantInfo } from '@/data/menuData';
 
-// SMS configuration
-const SMS_CONFIG = {
+// Twilio configuration
+const TWILIO_CONFIG = {
   accountSid: process.env.TWILIO_ACCOUNT_SID,
   authToken: process.env.TWILIO_AUTH_TOKEN,
-  fromNumber: process.env.TWILIO_PHONE_NUMBER || '+919010460964',
+  phoneNumber: process.env.TWILIO_PHONE_NUMBER || restaurantInfo.contact.phone,
+  enabled: process.env.TWILIO_ENABLED !== 'false', // Default enabled if credentials exist
+  minOrderValue: parseFloat(process.env.SMS_MIN_ORDER_VALUE || '500'), // Only send SMS for orders >₹500
 };
 
-/**
- * SMS Templates - Short and actionable (160 chars limit best practice)
- */
-const SMS_TEMPLATES = {
-  confirmed: (order: Order) => 
-    `Order ${order.orderNumber} confirmed! We're preparing your food. Ready in ~${Math.ceil((new Date(order.estimatedReadyTime).getTime() - Date.now()) / 60000)} min. Track: http://localhost:3000/track-order?id=${order.id}`,
+// SMS templates
+const generateOrderConfirmationSMS = (order: Order): string => {
+  const estimatedTime = new Date(order.estimatedReadyTime).toLocaleTimeString('en-IN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  });
 
-  preparing: (order: Order) =>
-    `🍳 Kitchen Update! Your order ${order.orderNumber} is being prepared by our chef. Almost ready!`,
+  return `✓ Order Confirmed!
 
-  ready: (order: Order) =>
-    `✅ Order ${order.orderNumber} is ready! ${order.orderType === 'delivery' ? 'Out for delivery soon.' : 'Ready for pickup at our restaurant.'}`,
+${restaurantInfo.name}
+Order: ${order.orderNumber}
+Total: ₹${order.pricing.total.toFixed(0)}
+Ready by: ${estimatedTime}
 
-  'out-for-delivery': (order: Order) =>
-    `🚗 Your order ${order.orderNumber} is on the way! Delivering to ${order.deliveryAddress?.street}. Please be available.`,
+${order.orderType === 'delivery' ? 'Will be delivered to you.' : 'Ready for pickup.'}
 
-  delivered: (order: Order) =>
-    `🎉 Order ${order.orderNumber} delivered! Enjoy your meal from Bantu's Kitchen! Rate: http://localhost:3000/feedback?order=${order.id}`,
+Track: ${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/track/${order.orderNumber}
+
+Call: ${restaurantInfo.contact.phone}
+- ${restaurantInfo.name}`;
 };
 
-/**
- * Send SMS notification
- */
-export async function sendSMSNotification(
-  order: Order,
-  status: OrderStatus
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    // Get template for status
-    const templateFn = SMS_TEMPLATES[status as keyof typeof SMS_TEMPLATES];
-    
-    if (!templateFn) {
-      logger.warn(`No SMS template for status: ${status}`);
-      return { success: false, error: `No template for status: ${status}` };
+const generateStatusUpdateSMS = (order: Order, newStatus: string): string => {
+  const statusMessages: Record<string, string> = {
+    confirmed: `Order ${order.orderNumber} confirmed! We're preparing your food. Ready by ${new Date(order.estimatedReadyTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}.`,
+    preparing: `Your order ${order.orderNumber} is being prepared! 👨‍🍳`,
+    ready: `Order ${order.orderNumber} is ready! ${order.orderType === 'delivery' ? 'Out for delivery soon.' : 'Ready for pickup.'}`,
+    'out-for-delivery': `Order ${order.orderNumber} is on the way! 🛵`,
+    delivered: `Order ${order.orderNumber} delivered! Enjoy your meal! 🍽️`,
+  };
+
+  const message = statusMessages[newStatus] || `Order ${order.orderNumber} status updated.`;
+
+  return `${message}
+
+Need help? Call ${restaurantInfo.contact.phone}
+- ${restaurantInfo.name}`;
+};
+
+// Twilio client wrapper
+class TwilioClient {
+  private client: any = null;
+
+  private async initClient() {
+    if (!TWILIO_CONFIG.accountSid || !TWILIO_CONFIG.authToken || !TWILIO_CONFIG.phoneNumber) {
+      throw new Error(
+        '❌ SMS NOT CONFIGURED: Missing Twilio credentials.\n' +
+        'Required environment variables:\n' +
+        '- TWILIO_ACCOUNT_SID (from Twilio Console)\n' +
+        '- TWILIO_AUTH_TOKEN (from Twilio Console)\n' +
+        '- TWILIO_PHONE_NUMBER (your Twilio number)\n\n' +
+        'Sign up: https://www.twilio.com (₹500 free credit for India)\n' +
+        'Get credentials from: Console Dashboard > Account Info'
+      );
     }
 
-    const message = templateFn(order);
-    const phoneNumber = order.customer.phone;
-
-    // Validate phone number format
-    if (!phoneNumber || phoneNumber.length < 10) {
-      logger.warn('Invalid phone number for SMS', {
-        orderNumber: order.orderNumber,
-        phone: phoneNumber,
-      });
-      return { success: false, error: 'Invalid phone number' };
+    if (!this.client) {
+      // Dynamically import Twilio to avoid errors when not configured
+      try {
+        const twilio = await import('twilio');
+        this.client = twilio.default(TWILIO_CONFIG.accountSid, TWILIO_CONFIG.authToken);
+      } catch (error) {
+        logger.error('Failed to initialize Twilio client', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+        throw new Error(
+          '❌ Twilio client initialization failed. Make sure twilio package is installed: npm install twilio'
+        );
+      }
     }
 
-    // In development, just log the SMS
-    if (process.env.NODE_ENV === 'development') {
-      logger.info('📱 SMS notification (DEV MODE - not sent)', {
-        to: phoneNumber,
-        message: message.substring(0, 50) + '...',
-        orderNumber: order.orderNumber,
-        status,
-      });
-      
-      // Log to console for visibility
-      console.log('\n' + '='.repeat(80));
-      console.log('📱 SMS NOTIFICATION (Development Mode)');
-      console.log('='.repeat(80));
-      console.log(`To: ${phoneNumber}`);
-      console.log(`Order: ${order.orderNumber}`);
-      console.log(`Status: ${status}`);
-      console.log(`Message: ${message}`);
-      console.log('='.repeat(80) + '\n');
-      
-      return { success: true };
+    return this.client;
+  }
+
+  async sendSMS(
+    to: string,
+    message: string,
+    retries: number = 3
+  ): Promise<{ success: boolean; error?: string; sid?: string }> {
+    // Validate phone number format (India)
+    const phoneNumber = this.formatPhoneNumber(to);
+    if (!phoneNumber) {
+      return { success: false, error: 'Invalid phone number format' };
     }
 
-    // Production: Send actual SMS via Twilio
-    // TODO: Integrate with Twilio SDK
-    // const twilio = require('twilio');
-    // const client = twilio(SMS_CONFIG.accountSid, SMS_CONFIG.authToken);
-    // await client.messages.create({
-    //   body: message,
-    //   from: SMS_CONFIG.fromNumber,
-    //   to: phoneNumber,
-    // });
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        const client = await this.initClient();
+        
+        const result = await client.messages.create({
+          body: message,
+          from: TWILIO_CONFIG.phoneNumber,
+          to: phoneNumber,
+        });
 
-    logger.info('SMS notification sent', {
-      to: phoneNumber,
-      orderNumber: order.orderNumber,
-      status,
+        logger.info('SMS sent successfully', {
+          to: phoneNumber.substring(0, 6) + '***', // Privacy
+          sid: result.sid,
+          status: result.status,
+          attempt,
+        });
+
+        return { success: true, sid: result.sid };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+
+        logger.warn(`SMS send attempt ${attempt} failed`, {
+          to: phoneNumber.substring(0, 6) + '***',
+          error: errorMessage,
+          attempt,
+        });
+
+        if (attempt === retries) {
+          logger.error('SMS send failed after all retries', {
+            to: phoneNumber.substring(0, 6) + '***',
+            error: errorMessage,
+            totalAttempts: retries,
+          });
+          return { success: false, error: errorMessage };
+        }
+
+        // Exponential backoff: 1s, 2s, 4s
+        const delay = Math.pow(2, attempt - 1) * 1000;
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+
+    return { success: false, error: 'Max retries exceeded' };
+  }
+
+  /**
+   * Format phone number to E.164 format for Twilio
+   * Handles India (+91) numbers
+   */
+  private formatPhoneNumber(phone: string): string | null {
+    // Remove all non-digit characters
+    const cleaned = phone.replace(/\D/g, '');
+
+    // India number (10 digits starting with 6-9)
+    if (cleaned.length === 10 && /^[6-9]/.test(cleaned)) {
+      return `+91${cleaned}`;
+    }
+
+    // Already in E.164 format
+    if (cleaned.length === 12 && cleaned.startsWith('91')) {
+      return `+${cleaned}`;
+    }
+
+    // Invalid format
+    logger.warn('Invalid phone number format', { phone: phone.substring(0, 3) + '***' });
+    return null;
+  }
+}
+
+const twilioClient = new TwilioClient();
+
+// Public API
+export const smsService = {
+  /**
+   * Check if SMS should be sent (cost optimization)
+   */
+  shouldSendSMS(order: Order, customerPreference?: boolean): boolean {
+    // Don't send if Twilio not configured
+    if (!TWILIO_CONFIG.accountSid || !TWILIO_CONFIG.authToken) {
+      logger.debug('SMS not sent: Twilio not configured');
+      return false;
+    }
+
+    // Don't send if disabled
+    if (!TWILIO_CONFIG.enabled) {
+      logger.debug('SMS not sent: SMS service disabled');
+      return false;
+    }
+
+    // Customer explicitly requested SMS
+    if (customerPreference === true) {
+      return true;
+    }
+
+    // Customer explicitly opted out
+    if (customerPreference === false) {
+      return false;
+    }
+
+    // Send SMS for high-value orders (default: >₹500)
+    if (order.pricing.total >= TWILIO_CONFIG.minOrderValue) {
+      return true;
+    }
+
+    logger.debug('SMS not sent: Order value below threshold', {
+      orderValue: order.pricing.total,
+      threshold: TWILIO_CONFIG.minOrderValue,
     });
+    return false;
+  },
 
-    return { success: true };
+  /**
+   * Send order confirmation SMS
+   */
+  async sendOrderConfirmation(
+    order: Order,
+    customerPreference?: boolean
+  ): Promise<{ success: boolean; error?: string; skipped?: boolean }> {
+    if (!this.shouldSendSMS(order, customerPreference)) {
+      return { success: true, skipped: true };
+    }
 
-  } catch (error) {
-    logger.error('Failed to send SMS notification', {
-      error: error instanceof Error ? error.message : String(error),
-      orderNumber: order.orderNumber,
-      status,
-    }, error instanceof Error ? error : undefined);
+    const message = generateOrderConfirmationSMS(order);
+    return twilioClient.sendSMS(order.customer.phone, message);
+  },
 
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
-  }
-}
+  /**
+   * Send order status update SMS
+   * Only sends for critical milestones to reduce SMS costs
+   */
+  async sendStatusUpdate(
+    order: Order,
+    newStatus: string,
+    customerPreference?: boolean
+  ): Promise<{ success: boolean; error?: string; skipped?: boolean }> {
+    // Only send SMS for these critical statuses
+    const criticalStatuses = ['confirmed', 'ready', 'out-for-delivery', 'delivered'];
+    
+    if (!criticalStatuses.includes(newStatus)) {
+      return { success: true, skipped: true };
+    }
 
-/**
- * Format phone number to E.164 format
- * Example: +919876543210
- */
-export function formatPhoneNumber(phone: string): string {
-  // Remove all non-digit characters
-  const digits = phone.replace(/\D/g, '');
-  
-  // If starts with country code, keep it
-  if (digits.startsWith('91') && digits.length === 12) {
-    return `+${digits}`;
-  }
-  
-  // If 10 digits, assume Indian number
-  if (digits.length === 10) {
-    return `+91${digits}`;
-  }
-  
-  // Otherwise, return as is with + prefix
-  return digits.startsWith('+') ? digits : `+${digits}`;
-}
+    if (!this.shouldSendSMS(order, customerPreference)) {
+      return { success: true, skipped: true };
+    }
 
+    const message = generateStatusUpdateSMS(order, newStatus);
+    return twilioClient.sendSMS(order.customer.phone, message);
+  },
+
+  /**
+   * Test SMS configuration
+   */
+  async testConnection(testPhoneNumber: string): Promise<boolean> {
+    try {
+      const result = await twilioClient.sendSMS(
+        testPhoneNumber,
+        `Test message from ${restaurantInfo.name}. Your SMS service is configured correctly! 🎉`
+      );
+      return result.success;
+    } catch (error) {
+      logger.error('SMS service connection test failed', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return false;
+    }
+  },
+};
+
+export default smsService;

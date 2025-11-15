@@ -131,16 +131,13 @@ class DatabaseExecutor {
    */
   async ensureTable(tableName: string, createSql: string): Promise<boolean> {
     try {
-      // Check if table exists using Prisma
+      // Check if table exists using SQLite syntax (default for this project)
       const checkResult = await prisma.$queryRawUnsafe(`
-        SELECT EXISTS (
-          SELECT FROM information_schema.tables 
-          WHERE table_schema = 'public' 
-          AND table_name = '${tableName}'
-        );
+        SELECT name FROM sqlite_master 
+        WHERE type='table' AND name='${tableName}';
       `) as any[];
       
-      if (!checkResult[0]?.exists) {
+      if (!checkResult || checkResult.length === 0) {
         console.log(`📋 Creating table: ${tableName}`);
         const createResult = await this.execute(createSql, `Create table ${tableName}`);
         return createResult.success;
@@ -148,8 +145,26 @@ class DatabaseExecutor {
 
       return true;
     } catch (error: any) {
-      console.error(`Error checking table ${tableName}:`, error.message);
-      return false;
+      // Fallback for PostgreSQL/Supabase (if provider changes)
+      try {
+        const checkResult = await prisma.$queryRawUnsafe(`
+          SELECT EXISTS (
+            SELECT 1 FROM information_schema.tables 
+            WHERE table_schema = 'public' 
+            AND table_name = '${tableName}'
+          ) as exists;
+        `) as any[];
+        
+        if (!checkResult[0]?.exists) {
+          console.log(`📋 Creating table: ${tableName}`);
+          const createResult = await this.execute(createSql, `Create table ${tableName}`);
+          return createResult.success;
+        }
+        return true;
+      } catch (fallbackError: any) {
+        console.error(`Error checking table ${tableName}:`, fallbackError.message);
+        return false;
+      }
     }
   }
 

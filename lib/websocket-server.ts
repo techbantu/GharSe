@@ -44,6 +44,22 @@ export function initializeWebSocket(httpServer: HTTPServer) {
   io.on('connection', (socket: Socket) => {
     console.log(`[WebSocket] Client connected: ${socket.id}`);
 
+    // Join admin room (for real-time order notifications)
+    socket.on('join:admin', async () => {
+      try {
+        socket.join('admin:all');
+        console.log(`[WebSocket] Admin joined admin room: ${socket.id}`);
+        
+        socket.emit('connection:success', {
+          message: 'Connected to admin real-time updates',
+          rooms: Array.from(socket.rooms),
+        });
+      } catch (error) {
+        console.error('[WebSocket] Error joining admin room:', error);
+        socket.emit('error', { message: 'Failed to join admin room' });
+      }
+    });
+
     // Join customer room
     socket.on('join:customer', async (data: { phone?: string; email?: string; orderId?: string }) => {
       try {
@@ -223,6 +239,49 @@ export function broadcastKitchenStatus(activeOrders: number, estimatedWait: numb
     isHighVolume: activeOrders > 15,
     timestamp: new Date().toISOString(),
   });
+}
+
+/**
+ * Broadcast new order to admin room (for real-time notifications)
+ */
+export async function broadcastNewOrderToAdmin(order: {
+  id: string;
+  orderNumber: string;
+  customer: { name: string; email: string; phone: string };
+  pricing: { total: number };
+  status: string;
+  createdAt: Date;
+  items: Array<{ menuItem: { name: string }; quantity: number }>;
+}) {
+  if (!io) {
+    console.warn('[WebSocket] Server not initialized, cannot broadcast new order');
+    return;
+  }
+
+  try {
+    const payload = {
+      type: 'new_order',
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      customerName: order.customer.name,
+      customerPhone: order.customer.phone,
+      total: order.pricing.total,
+      status: order.status,
+      createdAt: order.createdAt.toISOString(),
+      items: order.items.map(item => ({
+        name: item.menuItem.name,
+        quantity: item.quantity,
+      })),
+      timestamp: new Date().toISOString(),
+    };
+
+    // Broadcast to all admin clients
+    io.to('admin:all').emit('admin:new_order', payload);
+    
+    console.log(`[WebSocket] Broadcasted new order ${order.orderNumber} to admin room`);
+  } catch (error) {
+    console.error('[WebSocket] Error broadcasting new order to admin:', error);
+  }
 }
 
 /**

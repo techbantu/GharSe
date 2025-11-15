@@ -56,6 +56,9 @@ export function useWebSocket(): WebSocketHook {
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       reconnectionAttempts: 10,
+      timeout: 10000, // 10 second connection timeout
+      forceNew: false,
+      autoConnect: true,
     });
 
     // Connection events
@@ -79,9 +82,16 @@ export function useWebSocket(): WebSocketHook {
     });
 
     socket.on('connect_error', (error) => {
-      console.error('[WebSocket] Connection error:', error);
+      console.warn('[WebSocket] Connection error (will retry):', error.message);
       setIsConnected(false);
       setReconnectAttempts(prev => prev + 1);
+      // Don't throw - gracefully degrade to polling fallback
+    });
+    
+    socket.on('connect_timeout', () => {
+      console.warn('[WebSocket] Connection timeout - server may not be initialized');
+      setIsConnected(false);
+      // Gracefully degrade - polling will still work
     });
 
     socket.on('reconnect', (attemptNumber) => {

@@ -234,25 +234,26 @@ class SupabaseMigrator {
    */
   async tableExists(tableName: string): Promise<boolean> {
     try {
-      // For PostgreSQL/Supabase
+      // Check database provider from Prisma schema
+      // SQLite is the default for this project
       const result = await prisma.$queryRawUnsafe(`
-        SELECT EXISTS (
-          SELECT FROM information_schema.tables 
-          WHERE table_schema = 'public' 
-          AND table_name = '${tableName}'
-        );
+        SELECT name FROM sqlite_master 
+        WHERE type='table' AND name='${tableName}';
       `) as any[];
 
-      return result[0]?.exists === true;
+      return result.length > 0;
     } catch (error: any) {
-      // Fallback for SQLite
+      // Fallback for PostgreSQL/Supabase (if provider changes)
       try {
         const result = await prisma.$queryRawUnsafe(`
-          SELECT name FROM sqlite_master 
-          WHERE type='table' AND name='${tableName}';
+          SELECT EXISTS (
+            SELECT 1 FROM information_schema.tables 
+            WHERE table_schema = 'public' 
+            AND table_name = '${tableName}'
+          ) as exists;
         `) as any[];
 
-        return result.length > 0;
+        return result[0]?.exists === true;
       } catch {
         return false;
       }

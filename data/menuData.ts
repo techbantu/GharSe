@@ -1,11 +1,11 @@
 /**
- * NEW FILE: Menu Data - Authentic Indian Home Cooking
+ * Menu Data - Home-Cooked Indian Food Platform
  * 
- * Purpose: Comprehensive menu catalog showcasing Bantu's Kitchen specialties.
- * All items feature authentic Indian recipes prepared with traditional techniques.
+ * Purpose: Comprehensive menu catalog showcasing GharSe home-cooked specialties.
+ * All items feature authentic regional Indian recipes prepared fresh from home kitchens.
  * 
  * Data Strategy: Structured for easy updates, SEO optimization, and analytics.
- * Prices are competitive while reflecting quality homemade preparation.
+ * Operated by Sailaja. Technology by TechBantu IT Solutions LLC.
  */
 
 import { MenuItem, Restaurant } from '@/types';
@@ -14,13 +14,13 @@ import { MenuItem, Restaurant } from '@/types';
  * Restaurant Information - Brand Identity and Operating Parameters
  */
 export const restaurantInfo: Restaurant = {
-  name: "Bantu's Kitchen",
-  tagline: "Authentic Indian Home Cooking, Made with Love",
-  description: "Experience the warmth of homemade Indian cuisine, prepared with traditional recipes passed down through generations. Every dish is crafted with fresh ingredients and authentic spices, bringing the authentic taste of India to your table.",
+  name: "GharSe",
+  tagline: "From Real Homes To Your Hungry Heart",
+  description: "GharSe is where real home kitchens become your favorite restaurant. We connect you with trusted home chefs who cook the kind of Indian food they serve their own families—fresh rotis, slow-simmered curries, biryanis, tiffins, snacks, and soulful comfort dishes you rarely find in regular takeout. Every meal is cooked to order in small batches, then packed and delivered from their home to yours.",
   logo: "/logo.png",
   contact: {
     phone: "+91 90104 60964",
-    email: "orders@bantuskitchen.com",
+    email: "orders@gharse.com",
     whatsapp: "+91 90104 60964",
   },
   address: {
@@ -40,11 +40,11 @@ export const restaurantInfo: Restaurant = {
     sunday: { open: "10:00 AM", close: "10:00 PM", isClosed: false },
   },
   socialMedia: {
-    instagram: "@bantuskitchen",
-    facebook: "bantuskitchen",
+    instagram: "@gharse",
+    facebook: "gharse",
   },
   settings: {
-    minimumOrder: 199,
+    minimumOrder: 49, // GENIUS FIX: Lowered to allow small orders (desserts, snacks)
     deliveryRadius: 5, // 5 kilometers (approximately 40 minutes delivery time)
     deliveryFee: 49,
     freeDeliveryOver: 499,
@@ -129,7 +129,8 @@ export const menuItems: MenuItem[] = [
     id: 'cur-001',
     name: 'Butter Chicken',
     description: 'Tender chicken in a rich, creamy tomato-based gravy with aromatic spices and butter',
-    price: 349,
+    price: 299,
+    originalPrice: 349,
     category: 'Curries',
     image: 'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=800&h=600&fit=crop&q=80',
     isVegetarian: false,

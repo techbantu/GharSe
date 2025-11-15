@@ -16,6 +16,7 @@
 import { z } from 'zod';
 import { prisma } from './prisma';
 import { format } from 'date-fns';
+import { cartTracker } from './cart-inventory-tracker';
 
 // ===== FUNCTION SCHEMAS (What AI Can Call) =====
 
@@ -29,7 +30,7 @@ export const aiChatFunctions = {
       isVegetarian: z.boolean().optional().describe('Only vegetarian items'),
       isVegan: z.boolean().optional().describe('Only vegan items'),
       isGlutenFree: z.boolean().optional().describe('Only gluten-free items'),
-      maxPrice: z.number().optional().describe('Maximum price in dollars'),
+      maxPrice: z.number().optional().describe('Maximum price in Indian Rupees (₹)'),
       maxSpicyLevel: z.number().optional().describe('Maximum spicy level (0-5)'),
     }),
   },
@@ -101,6 +102,84 @@ export const aiChatFunctions = {
       date: z.string().optional().describe('Date to check (ISO format, defaults to today)'),
     }),
   },
+
+  // ===== CART INTELLIGENCE FUNCTIONS (NEW!) =====
+
+  getCartSummary: {
+    name: 'getCartSummary',
+    description: 'Get detailed summary of user cart with urgency data for each item. Shows demand pressure, stock levels, and creates FOMO.',
+    parameters: z.object({
+      cartItems: z.array(z.object({
+        itemId: z.string(),
+        name: z.string(),
+        quantity: z.number(),
+        price: z.number(),
+        category: z.string().optional(),
+      })).describe('Array of items currently in user cart'),
+    }),
+  },
+
+  getItemDemandPressure: {
+    name: 'getItemDemandPressure',
+    description: 'Get real-time demand pressure and urgency data for specific menu items. Returns demand scores, active cart counts, stock levels, and urgency messages.',
+    parameters: z.object({
+      itemIds: z.array(z.string()).describe('Array of menu item IDs to check demand for'),
+    }),
+  },
+
+  suggestCartCompletions: {
+    name: 'suggestCartCompletions',
+    description: 'AI-powered upsell suggestions based on cart contents and order patterns. Returns items that are frequently ordered together.',
+    parameters: z.object({
+      cartItems: z.array(z.object({
+        itemId: z.string(),
+        category: z.string(),
+      })).describe('Current cart items with categories'),
+      limit: z.number().optional().default(3).describe('Maximum number of suggestions'),
+    }),
+  },
+
+  checkCartStockStatus: {
+    name: 'checkCartStockStatus',
+    description: 'Verify all cart items are still available before checkout. Checks inventory and returns items that are out of stock or have insufficient quantity.',
+    parameters: z.object({
+      cartItems: z.array(z.object({
+        itemId: z.string(),
+        name: z.string(),
+        quantity: z.number(),
+      })).describe('Cart items to validate'),
+    }),
+  },
+
+  // ===== AI CART MANIPULATION FUNCTIONS (NEW!) =====
+
+  addItemToCart: {
+    name: 'addItemToCart',
+    description: 'Add item to user cart when they confirm purchase intent. Use when user says: yes, add it, I want it, sure, etc. MUST be called when user shows intent to purchase.',
+    parameters: z.object({
+      sessionId: z.string().describe('User session ID from chat context'),
+      itemId: z.string().describe('Menu item ID to add'),
+      itemName: z.string().describe('Menu item name for confirmation'),
+      quantity: z.number().int().positive().default(1).describe('Quantity to add'),
+    }),
+  },
+
+  removeItemFromCart: {
+    name: 'removeItemFromCart',
+    description: 'Remove item from cart when user requests. Use when user says: remove that, take it out, delete it, etc.',
+    parameters: z.object({
+      sessionId: z.string().describe('User session ID from chat context'),
+      itemId: z.string().describe('Menu item ID to remove'),
+    }),
+  },
+
+  proceedToCheckout: {
+    name: 'proceedToCheckout',
+    description: 'Signal frontend to open checkout when user is ready to complete order. Use when user says: checkout, order now, I\'m ready, place order, etc.',
+    parameters: z.object({
+      sessionId: z.string().describe('User session ID from chat context'),
+    }),
+  },
 };
 
 // ===== FUNCTION IMPLEMENTATIONS =====
@@ -115,18 +194,54 @@ export async function searchMenuItems(params: z.infer<typeof aiChatFunctions.sea
       isAvailable: true,
     };
 
-    // Text search
+    // Text search - SQLite compatible (case-insensitive by default with LIKE)
     if (params.query) {
+      const searchTerm = params.query.toLowerCase().trim();
+      
+      // GENIUS FIX: Handle dessert/desserts query variations
+      // If user searches for "dessert" or "desserts", also search by category
+      const dessertKeywords = ['dessert', 'desserts', 'sweet', 'sweets'];
+      const isDessertQuery = dessertKeywords.some(keyword => searchTerm.includes(keyword));
+      
+      if (isDessertQuery && !params.category) {
+        // Add category filter for desserts
+        where.category = { contains: 'Desserts' };
+      }
+      
       where.OR = [
-        { name: { contains: params.query, mode: 'insensitive' } },
-        { description: { contains: params.query, mode: 'insensitive' } },
-        { ingredients: { hasSome: [params.query] } },
+        { name: { contains: searchTerm } },
+        { description: { contains: searchTerm } },
+        { ingredients: { contains: searchTerm } },
       ];
     }
 
-    // Category filter
+    // Category filter - SQLite compatible with case-insensitive matching
     if (params.category) {
-      where.category = { equals: params.category, mode: 'insensitive' };
+      // GENIUS FIX: Case-insensitive category matching
+      // Handle common variations: "dessert" -> "Desserts", "desserts" -> "Desserts"
+      const categoryLower = params.category.toLowerCase().trim();
+      const categoryMap: Record<string, string> = {
+        'dessert': 'Desserts',
+        'desserts': 'Desserts',
+        'drink': 'Beverages',
+        'drinks': 'Beverages',
+        'beverage': 'Beverages',
+        'beverages': 'Beverages',
+        'appetizer': 'Appetizers',
+        'appetizers': 'Appetizers',
+        'main': 'Main Course',
+        'mains': 'Main Course',
+        'main course': 'Main Course',
+        'rice': 'Rice & Breads',
+        'bread': 'Rice & Breads',
+        'breads': 'Rice & Breads',
+        'naan': 'Rice & Breads',
+      };
+      
+      const normalizedCategory = categoryMap[categoryLower] || params.category;
+      
+      // Use case-insensitive contains for SQLite
+      where.category = { contains: normalizedCategory };
     }
 
     // Dietary filters
@@ -197,7 +312,7 @@ export async function searchMenuItems(params: z.infer<typeof aiChatFunctions.sea
           stockMessage: !isInStock 
             ? (item.outOfStockMessage || 'Out of stock - Check back later!')
             : stockCount !== null && stockCount <= 3
-            ? `Only ${stockCount} left! 🍽️`
+            ? `Only ${stockCount} left!`
             : stockCount === null
             ? 'Available'
             : `${stockCount} in stock`,
@@ -353,12 +468,12 @@ export async function getDeliveryEstimate(params: z.infer<typeof aiChatFunctions
  */
 export async function checkItemAvailability(params: z.infer<typeof aiChatFunctions.checkItemAvailability.parameters>) {
   try {
+    // SQLite compatible - search with lowercase comparison
     const items = await prisma.menuItem.findMany({
       where: {
-        name: {
-          in: params.itemNames,
-          mode: 'insensitive',
-        },
+        OR: params.itemNames.map(name => ({
+          name: { contains: name.toLowerCase() }
+        }))
       },
       select: {
         name: true,
@@ -638,6 +753,22 @@ export async function executeAIFunction(functionName: string, params: any) {
         return await calculateOrderTotal(params);
       case 'getRestaurantHours':
         return await getRestaurantHours(params);
+      // Cart intelligence functions
+      case 'getCartSummary':
+        return await getCartSummary(params);
+      case 'getItemDemandPressure':
+        return await getItemDemandPressure(params);
+      case 'suggestCartCompletions':
+        return await suggestCartCompletions(params);
+      case 'checkCartStockStatus':
+        return await checkCartStockStatus(params);
+      // NEW: Cart manipulation functions
+      case 'addItemToCart':
+        return await addItemToCart(params);
+      case 'removeItemFromCart':
+        return await removeItemFromCart(params);
+      case 'proceedToCheckout':
+        return await proceedToCheckout(params);
       default:
         return {
           success: false,
@@ -649,6 +780,488 @@ export async function executeAIFunction(functionName: string, params: any) {
     return {
       success: false,
       error: 'Function execution failed. Please try again.',
+    };
+  }
+}
+
+// ===== NEW CART INTELLIGENCE FUNCTION IMPLEMENTATIONS =====
+
+/**
+ * Get Cart Summary with Urgency Data
+ * GENIUS FEATURE: Analyzes entire cart for urgency triggers
+ */
+export async function getCartSummary(params: z.infer<typeof aiChatFunctions.getCartSummary.parameters>) {
+  try {
+    const { cartItems } = params;
+
+    if (!cartItems || cartItems.length === 0) {
+      return {
+        success: true,
+        message: 'Cart is empty',
+        items: [],
+        totalValue: 0,
+        itemCount: 0,
+      };
+    }
+
+    // Get demand pressure data for all cart items
+    const itemsWithUrgency = await Promise.all(
+      cartItems.map(async (item) => {
+        const demandData = await cartTracker.calculateDemandPressure(item.itemId);
+        
+        return {
+          ...item,
+          demandScore: demandData.demandScore,
+          activeCartCount: demandData.activeCartCount,
+          currentStock: demandData.currentStock,
+          availableStock: demandData.availableStock,
+          ordersLast24h: demandData.ordersLast24h,
+          urgencyTier: demandData.urgencyTier,
+          urgencyMessage: demandData.urgencyMessage,
+          socialProof: demandData.socialProof,
+        };
+      })
+    );
+
+    // Calculate totals
+    const totalValue = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+
+    // Find highest urgency items
+    const highUrgencyItems = itemsWithUrgency.filter(item => 
+      item.urgencyTier === 'critical' || item.urgencyTier === 'high'
+    );
+
+    // Find low stock items
+    const lowStockItems = itemsWithUrgency.filter(item => 
+      item.availableStock !== null && item.availableStock <= 5 && item.availableStock > 0
+    );
+
+    // Find out of stock items
+    const outOfStockItems = itemsWithUrgency.filter(item => 
+      item.availableStock === 0
+    );
+
+    return {
+      success: true,
+      cartSummary: {
+        totalValue: `₹${totalValue.toFixed(2)}`,
+        totalItems,
+        itemCount: cartItems.length,
+      },
+      items: itemsWithUrgency,
+      alerts: {
+        highUrgency: highUrgencyItems.length > 0 
+          ? `${highUrgencyItems.length} items have high demand!`
+          : null,
+        lowStock: lowStockItems.length > 0
+          ? `${lowStockItems.length} items running low on stock`
+          : null,
+        outOfStock: outOfStockItems.length > 0
+          ? `Warning: ${outOfStockItems.map(i => i.name).join(', ')} out of stock!`
+          : null,
+      },
+      recommendation: highUrgencyItems.length > 0
+        ? 'Complete your order soon - some items are in high demand!'
+        : lowStockItems.length > 0
+        ? 'Some items are running low. Order now to secure them!'
+        : 'Your cart looks great! Ready to order?',
+    };
+  } catch (error) {
+    console.error('Error getting cart summary:', error);
+    return {
+      success: false,
+      error: 'Failed to analyze cart',
+    };
+  }
+}
+
+/**
+ * Get Item Demand Pressure
+ * GENIUS FEATURE: Real-time demand analytics for items
+ */
+export async function getItemDemandPressure(params: z.infer<typeof aiChatFunctions.getItemDemandPressure.parameters>) {
+  try {
+    const { itemIds } = params;
+
+    const pressureData = await Promise.all(
+      itemIds.map(itemId => cartTracker.calculateDemandPressure(itemId))
+    );
+
+    return {
+      success: true,
+      items: pressureData,
+      summary: {
+        criticalItems: pressureData.filter(d => d.urgencyTier === 'critical').length,
+        highDemandItems: pressureData.filter(d => d.urgencyTier === 'high').length,
+        totalActiveCartCount: pressureData.reduce((sum, d) => sum + d.activeCartCount, 0),
+      },
+    };
+  } catch (error) {
+    console.error('Error getting demand pressure:', error);
+    return {
+      success: false,
+      error: 'Failed to get demand data',
+    };
+  }
+}
+
+/**
+ * Suggest Cart Completions
+ * GENIUS FEATURE: AI-powered upsells based on order patterns
+ */
+export async function suggestCartCompletions(params: z.infer<typeof aiChatFunctions.suggestCartCompletions.parameters>) {
+  try {
+    const { cartItems, limit = 3 } = params;
+
+    if (!cartItems || cartItems.length === 0) {
+      return {
+        success: true,
+        suggestions: [],
+        message: 'Add items to cart to get personalized recommendations',
+      };
+    }
+
+    // Get categories in cart
+    const cartCategories = new Set(cartItems.map(item => item.category).filter(Boolean));
+    const cartItemIds = new Set(cartItems.map(item => item.itemId));
+
+    // Find frequently ordered together items
+    // Query orders containing cart items
+    const relatedOrders = await prisma.order.findMany({
+      where: {
+        items: {
+          some: {
+            menuItemId: {
+              in: Array.from(cartItemIds),
+            },
+          },
+        },
+        status: {
+          in: ['DELIVERED', 'OUT_FOR_DELIVERY', 'READY'],
+        },
+      },
+      include: {
+        items: {
+          include: {
+            menuItem: true,
+          },
+        },
+      },
+      take: 50,
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    // Count item frequency
+    const itemFrequency: Record<string, { item: any; count: number }> = {};
+
+    relatedOrders.forEach(order => {
+      order.items.forEach(orderItem => {
+        // Skip items already in cart
+        if (cartItemIds.has(orderItem.menuItemId)) return;
+
+        if (!itemFrequency[orderItem.menuItemId]) {
+          itemFrequency[orderItem.menuItemId] = {
+            item: orderItem.menuItem,
+            count: 0,
+          };
+        }
+        itemFrequency[orderItem.menuItemId].count++;
+      });
+    });
+
+    // Sort by frequency and take top items
+    const suggestions = Object.values(itemFrequency)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, limit)
+      .map(({ item, count }) => ({
+        id: item.id,
+        name: item.name,
+        price: `₹${item.price}`,
+        category: item.category,
+        orderedWithCount: count,
+        percentage: Math.round((count / relatedOrders.length) * 100),
+        reason: `${Math.round((count / relatedOrders.length) * 100)}% of customers who ordered these items also got ${item.name}`,
+      }));
+
+    // If no related orders, suggest popular items from missing categories
+    if (suggestions.length === 0) {
+      const missingCategories = ['Rice & Breads', 'Beverages', 'Desserts'].filter(
+        cat => !cartCategories.has(cat)
+      );
+
+      if (missingCategories.length > 0) {
+        const popularItems = await prisma.menuItem.findMany({
+          where: {
+            category: {
+              in: missingCategories,
+            },
+            isAvailable: true,
+            isPopular: true,
+          },
+          take: limit,
+        });
+
+        return {
+          success: true,
+          suggestions: popularItems.map(item => ({
+            id: item.id,
+            name: item.name,
+            price: `₹${item.price}`,
+            category: item.category,
+            reason: `Popular ${item.category} choice`,
+          })),
+          message: 'Complete your meal with these popular items',
+        };
+      }
+    }
+
+    return {
+      success: true,
+      suggestions,
+      message: suggestions.length > 0
+        ? 'Customers who ordered these items also got:'
+        : 'No specific recommendations at this time',
+    };
+  } catch (error) {
+    console.error('Error suggesting cart completions:', error);
+    return {
+      success: false,
+      error: 'Failed to get suggestions',
+      suggestions: [],
+    };
+  }
+}
+
+/**
+ * Check Cart Stock Status
+ * GENIUS FEATURE: Validates cart before checkout
+ */
+export async function checkCartStockStatus(params: z.infer<typeof aiChatFunctions.checkCartStockStatus.parameters>) {
+  try {
+    const { cartItems } = params;
+
+    if (!cartItems || cartItems.length === 0) {
+      return {
+        success: true,
+        allAvailable: true,
+        items: [],
+      };
+    }
+
+    // Check each item
+    const itemStatuses = await Promise.all(
+      cartItems.map(async (cartItem) => {
+        const menuItem = await prisma.menuItem.findUnique({
+          where: { id: cartItem.itemId },
+          select: {
+            id: true,
+            name: true,
+            isAvailable: true,
+            inventoryEnabled: true,
+            inventory: true,
+            price: true,
+          },
+        });
+
+        if (!menuItem) {
+          return {
+            itemId: cartItem.itemId,
+            name: cartItem.name,
+            requestedQuantity: cartItem.quantity,
+            available: false,
+            reason: 'Item not found',
+            status: 'not_found',
+          };
+        }
+
+        if (!menuItem.isAvailable) {
+          return {
+            itemId: cartItem.itemId,
+            name: menuItem.name,
+            requestedQuantity: cartItem.quantity,
+            available: false,
+            reason: 'Item no longer available',
+            status: 'unavailable',
+          };
+        }
+
+        // Check inventory
+        if (menuItem.inventoryEnabled) {
+          const availableStock = cartTracker.getStockWithReservations(
+            menuItem.id,
+            menuItem.inventory
+          );
+
+          if (availableStock === 0) {
+            return {
+              itemId: cartItem.itemId,
+              name: menuItem.name,
+              requestedQuantity: cartItem.quantity,
+              availableQuantity: 0,
+              available: false,
+              reason: 'Out of stock',
+              status: 'out_of_stock',
+            };
+          }
+
+          if (availableStock !== null && cartItem.quantity > availableStock) {
+            return {
+              itemId: cartItem.itemId,
+              name: menuItem.name,
+              requestedQuantity: cartItem.quantity,
+              availableQuantity: availableStock,
+              available: false,
+              reason: `Only ${availableStock} available`,
+              status: 'insufficient_stock',
+            };
+          }
+        }
+
+        // All checks passed
+        return {
+          itemId: cartItem.itemId,
+          name: menuItem.name,
+          requestedQuantity: cartItem.quantity,
+          available: true,
+          status: 'available',
+          price: `₹${menuItem.price}`,
+        };
+      })
+    );
+
+    const unavailableItems = itemStatuses.filter(item => !item.available);
+    const allAvailable = unavailableItems.length === 0;
+
+    return {
+      success: true,
+      allAvailable,
+      items: itemStatuses,
+      unavailableItems: unavailableItems.length > 0 ? unavailableItems : undefined,
+      message: allAvailable
+        ? 'All items in your cart are available!'
+        : `${unavailableItems.length} item(s) have stock issues`,
+      canCheckout: allAvailable,
+    };
+  } catch (error) {
+    console.error('Error checking cart stock status:', error);
+    return {
+      success: false,
+      error: 'Failed to validate cart',
+      canCheckout: false,
+    };
+  }
+}
+
+// ===== NEW CART MANIPULATION FUNCTION IMPLEMENTATIONS =====
+
+/**
+ * Add Item to Cart
+ * GENIUS FEATURE: AI can add items directly to user cart
+ */
+export async function addItemToCart(params: z.infer<typeof aiChatFunctions.addItemToCart.parameters>) {
+  try {
+    const { sessionId, itemId, itemName, quantity } = params;
+
+    // Call cart modification API
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/cart/modify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionId,
+        action: 'add',
+        itemId,
+        quantity,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: data.error || 'Failed to add item to cart',
+      };
+    }
+
+    return {
+      success: true,
+      message: `Successfully added ${quantity}x ${itemName} to cart!`,
+      item: data.cart.item,
+      action: 'cart_modified',
+    };
+  } catch (error) {
+    console.error('Error adding item to cart:', error);
+    return {
+      success: false,
+      error: 'Failed to add item to cart. Please try again.',
+    };
+  }
+}
+
+/**
+ * Remove Item from Cart
+ * GENIUS FEATURE: AI can remove items on user request
+ */
+export async function removeItemFromCart(params: z.infer<typeof aiChatFunctions.removeItemFromCart.parameters>) {
+  try {
+    const { sessionId, itemId } = params;
+
+    // Call cart modification API
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/cart/modify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionId,
+        action: 'remove',
+        itemId,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: data.error || 'Failed to remove item from cart',
+      };
+    }
+
+    return {
+      success: true,
+      message: 'Item removed from cart!',
+      action: 'cart_modified',
+    };
+  } catch (error) {
+    console.error('Error removing item from cart:', error);
+    return {
+      success: false,
+      error: 'Failed to remove item from cart. Please try again.',
+    };
+  }
+}
+
+/**
+ * Proceed to Checkout
+ * GENIUS FEATURE: AI signals frontend to open checkout
+ */
+export async function proceedToCheckout(params: z.infer<typeof aiChatFunctions.proceedToCheckout.parameters>) {
+  try {
+    const { sessionId } = params;
+
+    return {
+      success: true,
+      message: 'Ready to checkout! Opening checkout page...',
+      action: 'navigate_to_checkout',
+      sessionId,
+    };
+  } catch (error) {
+    console.error('Error proceeding to checkout:', error);
+    return {
+      success: false,
+      error: 'Failed to proceed to checkout. Please try again.',
     };
   }
 }

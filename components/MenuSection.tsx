@@ -11,20 +11,35 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Minus, Flame, Leaf, Clock, Search, X, UtensilsCrossed, XCircle, ShoppingBag, PackageX, ChefHat, Soup, Fish, Beef } from 'lucide-react';
+import { Plus, Minus, Flame, Leaf, Clock, Search, X, UtensilsCrossed, XCircle, ShoppingBag, PackageX, ChefHat, Soup, Fish, Beef, MapPin, Palmtree, Store, Wheat, Waves, Castle } from 'lucide-react';
 import { MenuItem, MenuCategory } from '@/types';
 import { useCart } from '@/context/CartContext';
 import ProductDetailModal from './ProductDetailModal';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 interface MenuSectionProps {
   onItemClick?: (item: MenuItem) => void;
 }
 
+// Regional cuisine configuration with proper icons
+const REGIONAL_CUISINES = [
+  { id: 'north-indian', name: 'North Indian', icon: MapPin, color: '#DC2626' },
+  { id: 'south-indian', name: 'South Indian', icon: Palmtree, color: '#EA580C' },
+  { id: 'street-food', name: 'Street Food', icon: Store, color: '#F97316' },
+  { id: 'gujarati', name: 'Gujarati', icon: Wheat, color: '#F59E0B' },
+  { id: 'bengali', name: 'Bengali', icon: Waves, color: '#10B981' },
+  { id: 'rajasthani', name: 'Rajasthani', icon: Castle, color: '#8B5CF6' },
+];
+
 const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
-  const { addItem } = useCart();
+  const { addItem, cart, updateQuantity, removeItem } = useCart();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [selectedRegion, setSelectedRegion] = useState<string>('all');
   const [dietaryFilters, setDietaryFilters] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
@@ -34,8 +49,17 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [recentlyAdded, setRecentlyAdded] = useState<Record<string, number>>({});
-  const [itemQuantities, setItemQuantities] = useState<Record<string, number>>({});
   const [isDesktop, setIsDesktop] = useState(false);
+  
+  // Get actual quantity from cart for each item
+  const getCartQuantity = (itemId: string): number => {
+    const cartItem = cart.items.find(item => item.menuItem.id === itemId);
+    return cartItem?.quantity || 0;
+  };
+  
+  const isItemInCart = (itemId: string): boolean => {
+    return cart.items.some(cartItem => cartItem.menuItem.id === itemId);
+  };
   
   // Track window width for responsive design
   useEffect(() => {
@@ -46,13 +70,51 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
     window.addEventListener('resize', checkWidth);
     return () => window.removeEventListener('resize', checkWidth);
   }, []);
+
+  // Handle URL parameters for regional filtering
+  useEffect(() => {
+    const region = searchParams?.get('region');
+    if (region && REGIONAL_CUISINES.some(r => r.id === region)) {
+      setSelectedRegion(region);
+      // Scroll to menu section
+      setTimeout(() => {
+        const menuElement = document.getElementById('menu');
+        if (menuElement) {
+          menuElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
+    }
+  }, [searchParams]);
   
   // Fetch menu items from database
   useEffect(() => {
-    const fetchMenuItems = async () => {
+    let isInitialLoad = true;
+    
+    const fetchMenuItems = async (isRefresh = false) => {
       try {
+        // Only show loading on initial load, not on refresh
+        if (!isRefresh) {
         setLoading(true);
-        const response = await fetch('/api/menu'); // Remove ?available=true to get ALL items
+        }
+        setError(null);
+        
+        // First ensure database is initialized (only on initial load)
+        if (isInitialLoad) {
+        try {
+          await fetch('/api/database/init');
+        } catch (initErr) {
+          console.warn('Database init warning:', initErr);
+          // Continue anyway - might already be initialized
+          }
+        }
+        
+        const response = await fetch('/api/menu'); // Get ALL items
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || `API returned ${response.status}: ${response.statusText}`);
+        }
+        
         const data = await response.json();
         
         if (data.success) {
@@ -80,18 +142,62 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
             outOfStockMessage: item.outOfStockMessage || null,
           }));
           
-          setMenuItems(transformedItems);
+          // Only update if data actually changed (prevent unnecessary re-renders)
+          setMenuItems(prevItems => {
+            const prevIds = new Set(prevItems.map(i => i.id));
+            const newIds = new Set(transformedItems.map(i => i.id));
+            
+            // Check if items changed
+            const itemsChanged = 
+              prevItems.length !== transformedItems.length ||
+              ![...prevIds].every(id => newIds.has(id)) ||
+              transformedItems.some((item, idx) => {
+                const prevItem = prevItems[idx];
+                return !prevItem || 
+                  prevItem.inventory !== item.inventory ||
+                  prevItem.isAvailable !== item.isAvailable ||
+                  prevItem.price !== item.price;
+              });
+            
+            // Only update if something actually changed
+            return itemsChanged ? transformedItems : prevItems;
+          });
+          
+          // Show helpful message if no items found (only on initial load)
+          if (isInitialLoad && transformedItems.length === 0) {
+            setError('No menu items found in database. Please add items via the admin dashboard.');
+          }
+        } else {
+          throw new Error(data.error || 'Failed to fetch menu items');
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error fetching menu items:', err);
+        
+        // Only show error on initial load, not on silent refresh
+        if (!isRefresh) {
+        let errorMessage = 'Failed to load menu items';
+        
+        if (err.message) {
+          errorMessage = err.message;
+        } else if (err.name === 'TypeError' && err.message?.includes('fetch')) {
+          errorMessage = 'Network error: Unable to connect to server. Please check your internet connection.';
+        } else {
+          errorMessage = 'Failed to load menu items. Please check your database connection and try again.';
+        }
+        
+        setError(errorMessage);
+        }
       } finally {
+        if (!isRefresh) {
         setLoading(false);
+      }
+        isInitialLoad = false;
       }
     };
 
-    fetchMenuItems();
-    // Auto-refresh every 30 seconds to get latest inventory
-    const interval = setInterval(fetchMenuItems, 30000);
+    fetchMenuItems(false); // Initial load
+    // Auto-refresh every 60 seconds (reduced from 30) to get latest inventory - silent refresh
+    const interval = setInterval(() => fetchMenuItems(true), 60000);
     return () => clearInterval(interval);
   }, []);
 
@@ -181,10 +287,66 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
     };
   };
   
+  // Helper function to determine if item belongs to a region
+  const getItemRegion = (item: MenuItem): string | null => {
+    const name = item.name.toLowerCase();
+    const desc = item.description.toLowerCase();
+    const category = item.category.toLowerCase();
+    
+    // North Indian keywords
+    if (name.includes('butter') || name.includes('paneer') || name.includes('dal') || 
+        name.includes('naan') || name.includes('roti') || name.includes('tikka') ||
+        desc.includes('punjabi') || desc.includes('delhi') || category.includes('tandoori')) {
+      return 'north-indian';
+    }
+    
+    // South Indian keywords
+    if (name.includes('dosa') || name.includes('idli') || name.includes('sambar') ||
+        name.includes('biryani') || name.includes('vada') || name.includes('uttapam') ||
+        desc.includes('south') || desc.includes('coastal') || desc.includes('coconut')) {
+      return 'south-indian';
+    }
+    
+    // Street Food keywords
+    if (name.includes('pani puri') || name.includes('vada pav') || name.includes('chole bhature') ||
+        name.includes('chaat') || name.includes('pav bhaji') || name.includes('samosa') ||
+        desc.includes('street')) {
+      return 'street-food';
+    }
+    
+    // Gujarati keywords
+    if (name.includes('dhokla') || name.includes('thepla') || name.includes('undhiyu') ||
+        name.includes('khandvi') || name.includes('fafda') ||
+        desc.includes('gujarati') || desc.includes('sweet and savory')) {
+      return 'gujarati';
+    }
+    
+    // Bengali keywords
+    if (name.includes('ilish') || name.includes('mishti') || name.includes('rasgulla') ||
+        name.includes('sandesh') || name.includes('macher') ||
+        desc.includes('bengali') || desc.includes('fish')) {
+      return 'bengali';
+    }
+    
+    // Rajasthani keywords
+    if (name.includes('dal baati') || name.includes('laal maas') || name.includes('ghewar') ||
+        name.includes('ker sangri') || desc.includes('rajasthani') || desc.includes('desert')) {
+      return 'rajasthani';
+    }
+    
+    return null;
+  };
+  
   // Filter menu items for main display - SHOW ALL ITEMS (don't hide unavailable)
   const filteredItems = menuItems.filter(item => {
     // Only filter by isAvailable if item is completely removed from menu
     // Otherwise show it with out-of-stock badge
+    
+    // Apply regional filter first
+    if (selectedRegion !== 'all') {
+      const itemRegion = getItemRegion(item);
+      if (itemRegion !== selectedRegion) return false;
+    }
     
     // If user is searching, IGNORE category filter and search everywhere
     if (searchQuery.length > 0) {
@@ -206,7 +368,7 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
       if (dietaryFilters.has('vegetarian') && !item.isVegetarian) return false;
       if (dietaryFilters.has('non-vegetarian') && item.isVegetarian) return false;
       if (dietaryFilters.has('vegan') && !item.isVegan) return false;
-      if (dietaryFilters.has('spicy') && (!item.spicyLevel || item.spicyLevel === 0)) return false;
+      if (dietaryFilters.has('spicy') && (item.spicyLevel == null || item.spicyLevel === 0)) return false;
     }
     
     return true;
@@ -265,46 +427,73 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
   const totalAvailableItems = menuItems.filter(item => isInStock(item)).length;
   const searchResultCount = filteredItems.length;
   
-  // Handle quantity change - integrated in button
-  const handleQuantityChange = (itemId: string, delta: number, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setItemQuantities(prev => {
-      const currentQty = prev[itemId] || 1;
-      const newQty = Math.max(1, Math.min(10, currentQty + delta)); // Limit 1-10
-      return { ...prev, [itemId]: newQty };
-    });
-  };
-
-  // Handle add to cart - uses quantity from state
-  const handleAddToCart = (item: MenuItem, e: React.MouseEvent) => {
+  // Increment quantity for a specific item in cart
+  const incrementQuantity = (item: MenuItem, e: React.MouseEvent) => {
     e.stopPropagation();
     
-    // Check if item is in stock
-    if (!isInStock(item)) {
-      return; // Don't add if out of stock
-    }
+    const currentQty = getCartQuantity(item.id);
     
-    const quantity = itemQuantities[item.id] || 1;
-    
-    // Check if enough inventory
+    // Check inventory limit
     if (item.inventoryEnabled && item.inventory !== null && item.inventory !== undefined) {
-      if (quantity > item.inventory) {
+      if (currentQty >= item.inventory) {
         alert(`Sorry, only ${item.inventory} available!`);
         return;
       }
     }
     
-    addItem(item, quantity);
+    // Check max limit
+    if (currentQty >= 10) {
+      return;
+    }
     
-    // Natural feedback - show quantity added briefly
-    setRecentlyAdded(prev => ({ ...prev, [item.id]: quantity }));
+    addItem(item, 1); // Add one more
+  };
+
+  // Decrement quantity for a specific item in cart - allows going to zero
+  const decrementQuantity = (item: MenuItem, e: React.MouseEvent) => {
+    e.stopPropagation();
     
-    // Reset quantity after adding
-    setItemQuantities(prev => {
-      const newState = { ...prev };
-      delete newState[item.id];
-      return newState;
-    });
+    const currentQty = getCartQuantity(item.id);
+    const cartItem = cart.items.find(cartItem => cartItem.menuItem.id === item.id);
+    
+    if (!cartItem) {
+      return; // Item not in cart
+    }
+    
+    const newQty = currentQty - 1;
+    
+    if (newQty <= 0) {
+      // Remove item from cart when quantity reaches zero
+      removeItem(cartItem.id);
+    } else {
+      // Update quantity using updateQuantity (handles zero correctly)
+      updateQuantity(cartItem.id, newQty);
+    }
+  };
+
+  // Handle add to cart - always adds 1
+  const handleAddToCart = (item: MenuItem, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    // Check if item is in stock
+    if (!isInStock(item)) {
+      return;
+    }
+    
+    const currentQty = getCartQuantity(item.id);
+    
+    // Check if enough inventory
+    if (item.inventoryEnabled && item.inventory !== null && item.inventory !== undefined) {
+      if (currentQty + 1 > item.inventory) {
+        alert(`Sorry, only ${item.inventory} available!`);
+        return;
+      }
+    }
+    
+    addItem(item, 1);
+    
+    // Show temporary feedback
+    setRecentlyAdded(prev => ({ ...prev, [item.id]: currentQty + 1 }));
     
     setTimeout(() => {
       setRecentlyAdded(prev => {
@@ -316,7 +505,22 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
   };
   
   return (
-    <section id="menu" className="section bg-white py-16 md:py-20 lg:py-24">
+    <>
+      <style dangerouslySetInnerHTML={{__html: `
+        @media (min-width: 1920px) {
+          .menu-section {
+            padding-top: 3rem !important;
+            padding-bottom: 3rem !important;
+          }
+          .menu-header {
+            margin-bottom: 1.5rem !important;
+          }
+          .menu-title {
+            margin-bottom: 0.75rem !important;
+          }
+        }
+      `}} />
+      <section id="menu" className="section bg-white py-16 md:py-20 lg:py-24 menu-section" suppressHydrationWarning>
       <div className="container-custom">
         {/* Section Header - Perfectly Centered */}
         <div style={{
@@ -324,28 +528,32 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
           marginBottom: '48px',
           paddingLeft: '16px',
           paddingRight: '16px'
-        }} className="animate-slide-up">
+          }} className="animate-slide-up menu-header">
           <h2 style={{
-            fontSize: 'clamp(2rem, 5vw, 3.75rem)',
+            fontSize: 'clamp(2.5rem, 6vw, 4.5rem)',
             fontWeight: 800,
-            marginBottom: '24px',
+            marginBottom: '32px',
             lineHeight: '1.1',
-            letterSpacing: '-0.02em',
+            letterSpacing: '-0.04em',
             fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif',
-            textAlign: 'center'
-          }}>
-            Our <span className="text-gradient-orange">Menu</span>
+            textAlign: 'center',
+            color: '#1d1d1f'
+            }} className="menu-title">
+            Our <span className="text-gradient-orange" style={{ backgroundSize: '200% 200%', animation: 'gradientShift 8s ease infinite' }}>Menu</span>
           </h2>
           <p style={{
             textAlign: 'center',
-            color: '#6B7280',
-            fontSize: 'clamp(1rem, 2vw, 1.25rem)',
+            color: '#4B5563',
+            fontSize: 'clamp(1.125rem, 2.5vw, 1.375rem)',
             maxWidth: '768px',
             marginLeft: 'auto',
             marginRight: 'auto',
-            lineHeight: '1.7',
+            lineHeight: '1.75',
             paddingLeft: '16px',
-            paddingRight: '16px'
+            paddingRight: '16px',
+            fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif',
+            fontWeight: 400,
+            letterSpacing: '-0.011em'
           }}>
             Explore our selection of authentic Indian dishes, each prepared with fresh ingredients and traditional recipes.
           </p>
@@ -520,7 +728,7 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
                       >
                         <img
                           src={item.image}
-                          alt={item.name}
+                          alt={`${item.name} - ${item.description} | Order online from Bantu's Kitchen in Hayatnagar, Hyderabad`}
                           style={{
                             width: '100%',
                             height: '100%',
@@ -709,6 +917,116 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
               </div>
             </div>
 
+            {/* Regional Cuisine Filters - NEW! */}
+            <div style={{ paddingBottom: '1rem', paddingTop: '0.5rem', borderBottom: '2px solid #F3F4F6' }}>
+              <h3 style={{
+                fontSize: isDesktop ? '1rem' : '0.875rem',
+                fontWeight: 700,
+                color: '#374151',
+                marginBottom: '0.75rem',
+                textAlign: 'center',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+              }}>
+                <MapPin size={18} style={{ color: '#F97316' }} />
+                Explore by Region
+              </h3>
+              <div style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: isDesktop ? '0.75rem' : '0.5rem',
+                justifyContent: 'center',
+              }}>
+                {/* All Regions Button */}
+                <button
+                  onClick={() => setSelectedRegion('all')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    padding: isDesktop ? '0.75rem 1rem' : '0.5rem 0.75rem',
+                    borderRadius: '1rem',
+                    border: selectedRegion === 'all' ? 'none' : '2px solid #E5E7EB',
+                    background: selectedRegion === 'all' 
+                      ? 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)' 
+                      : '#ffffff',
+                    color: selectedRegion === 'all' ? '#ffffff' : '#6B7280',
+                    fontSize: isDesktop ? '0.875rem' : '0.75rem',
+                    fontWeight: selectedRegion === 'all' ? 700 : 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    boxShadow: selectedRegion === 'all'
+                      ? '0 4px 12px rgba(249, 115, 22, 0.3)'
+                      : '0 1px 3px rgba(0, 0, 0, 0.1)',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (selectedRegion !== 'all') {
+                      e.currentTarget.style.borderColor = '#F97316';
+                      e.currentTarget.style.color = '#F97316';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (selectedRegion !== 'all') {
+                      e.currentTarget.style.borderColor = '#E5E7EB';
+                      e.currentTarget.style.color = '#6B7280';
+                    }
+                  }}
+                >
+                  <UtensilsCrossed size={16} />
+                  All Cuisines
+                </button>
+
+                {/* Individual Region Buttons */}
+                {REGIONAL_CUISINES.map((region) => {
+                  const RegionIcon = region.icon;
+                  const isActive = selectedRegion === region.id;
+                  
+                  return (
+                    <button
+                      key={region.id}
+                      onClick={() => setSelectedRegion(region.id)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: isDesktop ? '0.75rem 1rem' : '0.5rem 0.75rem',
+                        borderRadius: '1rem',
+                        border: isActive ? 'none' : `2px solid ${region.color}40`,
+                        background: isActive 
+                          ? `linear-gradient(135deg, ${region.color} 0%, ${region.color}CC 100%)` 
+                          : '#ffffff',
+                        color: isActive ? '#ffffff' : region.color,
+                        fontSize: isDesktop ? '0.875rem' : '0.75rem',
+                        fontWeight: isActive ? 700 : 600,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        boxShadow: isActive
+                          ? `0 4px 12px ${region.color}40`
+                          : '0 1px 3px rgba(0, 0, 0, 0.1)',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isActive) {
+                          e.currentTarget.style.background = `${region.color}15`;
+                          e.currentTarget.style.transform = 'translateY(-2px)';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isActive) {
+                          e.currentTarget.style.background = '#ffffff';
+                          e.currentTarget.style.transform = 'translateY(0)';
+                        }
+                      }}
+                    >
+                      <RegionIcon size={16} />
+                      {region.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Dietary Filter Chips - Compact on Mobile, Spacious on Desktop */}
             <div style={{ paddingBottom: '1.25rem', paddingTop: '0.5rem' }}>
               <div 
@@ -853,7 +1171,33 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
 
         {/* Menu Items Grid - Premium Layout with Inner Padding */}
         <div className="max-w-7xl mx-auto px-6 md:px-8 lg:px-10">
-          {filteredItems.length === 0 ? (
+          {loading ? (
+            /* Loading State */
+            <div className="text-center py-20">
+              <div className="inline-flex items-center justify-center w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mb-6"></div>
+              <h3 className="text-2xl font-bold text-gray-800 mb-3">Loading menu...</h3>
+              <p className="text-gray-600">Please wait while we fetch your delicious dishes.</p>
+            </div>
+          ) : error ? (
+            /* Error State */
+            <div className="text-center py-20">
+              <div className="inline-flex items-center justify-center w-24 h-24 bg-red-100 rounded-full mb-6">
+                <XCircle size={40} className="text-red-500" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-800 mb-3">Unable to Load Menu</h3>
+              <p className="text-gray-600 mb-6 max-w-md mx-auto">{error}</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="inline-flex items-center gap-2 bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+                style={{ padding: '12px 24px' }}
+              >
+                Retry
+              </button>
+              <p className="text-sm text-gray-500 mt-4">
+                If this persists, check your database connection or add menu items via the admin dashboard.
+              </p>
+            </div>
+          ) : filteredItems.length === 0 ? (
             /* Empty State */
             <div className="text-center py-20">
               <div className="inline-flex items-center justify-center w-24 h-24 bg-gray-100 rounded-full mb-6">
@@ -863,7 +1207,9 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
               <p className="text-gray-600 mb-6 max-w-md mx-auto">
                 {searchQuery 
                   ? `We couldn't find any dishes matching "${searchQuery}". Try different keywords or browse all dishes.`
-                  : 'No dishes available in this category.'
+                  : menuItems.length === 0
+                  ? 'No menu items found. Please add dishes via the admin dashboard.'
+                  : 'No dishes available in this category. Try selecting a different category or clearing filters.'
                 }
               </p>
               {searchQuery && (
@@ -876,21 +1222,57 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
                   Clear Search
                 </button>
               )}
+              {menuItems.length === 0 && (
+                <div className="mt-6">
+                  <a
+                    href="/admin/dashboard"
+                    className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+                    style={{ padding: '12px 24px' }}
+                  >
+                    Go to Admin Dashboard
+                  </a>
+                </div>
+              )}
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3" style={{ gap: '1.5rem' }}>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5" style={{ gap: '1.25rem' }}>
             {filteredItems.map((item, index) => (
               <div
                 key={item.id}
-                className="card rounded-3xl overflow-hidden hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 cursor-pointer group animate-scale-in relative"
-                style={{ animationDelay: `${index * 50}ms` }}
+                className="card card-premium rounded-2xl overflow-hidden cursor-pointer group animate-scale-in relative gpu-accelerated"
+                style={{ 
+                  animationDelay: `${index * 50}ms`,
+                  background: 'white',
+                  border: '1px solid rgba(0, 0, 0, 0.06)',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.8)',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  backdropFilter: 'blur(10px)',
+                  WebkitBackdropFilter: 'blur(10px)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  height: '100%'
+                }}
                 onClick={() => {
                   setSelectedItem(item);
                   setIsDetailOpen(true);
                 }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-6px) scale(1.01)';
+                  e.currentTarget.style.boxShadow = '0 20px 40px rgba(0, 0, 0, 0.12), 0 8px 16px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(255, 107, 53, 0.08)';
+                  e.currentTarget.style.borderColor = 'rgba(255, 107, 53, 0.15)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.8)';
+                  e.currentTarget.style.borderColor = 'rgba(0, 0, 0, 0.06)';
+                }}
               >
-                {/* Image Container - Proper Height with Background */}
-                <div className="relative bg-gray-100 overflow-hidden" style={{ height: isDesktop ? '280px' : '220px' }}>
+                {/* Image Container - Proper Aspect Ratio */}
+                <div className="relative bg-gray-100 overflow-hidden" style={{ 
+                  aspectRatio: '4/3',
+                  minHeight: isDesktop ? '200px' : '160px',
+                  maxHeight: isDesktop ? '240px' : '200px'
+                }}>
                   {imageLoading.has(item.id) && (
                     <div className="absolute inset-0 flex items-center justify-center">
                       <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
@@ -898,8 +1280,9 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
                   )}
                   {!imageErrors.has(item.id) && item.image ? (
                     <img
+                      key={item.id}
                       src={item.image}
-                      alt={item.name}
+                      alt={`${item.name} - Authentic Indian ${item.category.toLowerCase()} dish from Bantu's Kitchen in Hyderabad`}
                       style={{
                         width: '100%',
                         height: '100%',
@@ -913,6 +1296,8 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
                         transition: 'transform 0.3s ease'
                       }}
                       className="group-hover:scale-110"
+                      loading="lazy"
+                      decoding="async"
                       onLoad={() => {
                         setImageLoading(prev => {
                           const next = new Set(prev);
@@ -1029,21 +1414,21 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
                   )}
                 </div>
 
-                {/* Content - Proper Vertical Spacing */}
-                <div style={{ padding: '0.875rem', paddingTop: '0.875rem', paddingBottom: '0.875rem' }}>
+                {/* Content - Compact and Balanced */}
+                <div style={{ padding: '0.75rem', paddingTop: '0.75rem', paddingBottom: '0.75rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
                   {/* Dish Name - Prominent and Always Visible */}
-                  <div style={{ marginBottom: '0.5rem' }}>
+                  <div style={{ marginBottom: '0.375rem' }}>
                     <h3 
                       style={{
-                        fontSize: isDesktop ? '1.125rem' : '1rem',
-                        fontWeight: 600,
+                        fontSize: isDesktop ? '1.0625rem' : '1rem',
+                        fontWeight: 700,
                         color: '#1d1d1f',
-                        letterSpacing: '-0.015em',
+                        letterSpacing: '-0.02em',
                         lineHeight: '1.3',
                         margin: 0,
                         marginBottom: '0.25rem',
                         fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif',
-                        transition: 'color 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                        transition: 'color 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
                         WebkitFontSmoothing: 'antialiased',
                         MozOsxFontSmoothing: 'grayscale',
                         display: 'flex',
@@ -1054,32 +1439,40 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
                     >
                       <span style={{ flex: 1, minWidth: 0 }}>{item.name}</span>
                       {/* Quantity Badge - Next to Name (Mobile) */}
-                      {itemQuantities[item.id] && itemQuantities[item.id] > 1 && (
+                      {getCartQuantity(item.id) > 1 && (
                         <div className="md:hidden flex-shrink-0">
                           <div className="w-6 h-6 bg-orange-500 rounded-full flex items-center justify-center shadow-sm">
                             <span className="text-xs font-bold text-white leading-none">
-                              {itemQuantities[item.id]}
+                              {getCartQuantity(item.id)}
                             </span>
                           </div>
                         </div>
                       )}
                     </h3>
-                    {/* Description - Hidden on mobile, visible on tablet+ */}
+                    {/* Description - Compact, Hidden on mobile, visible on tablet+ */}
                     <p 
-                      className="hidden md:block text-gray-500" 
+                      className="hidden md:block" 
                       style={{ 
                         fontSize: '0.8125rem',
-                        lineHeight: '1.4',
+                        lineHeight: '1.5',
                         margin: 0,
                         marginTop: '0.25rem',
-                        color: '#6b7280'
+                        color: '#6b7280',
+                        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif',
+                        fontWeight: 400,
+                        letterSpacing: '-0.011em',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis'
                       }}
                     >
                       {item.description}
                     </p>
                   </div>
-                  {/* Price and Add Buttons - Proper Spacing */}
-                  <div className="border-t border-gray-100" style={{ paddingTop: '0.75rem', marginTop: '0.75rem' }}>
+                  {/* Price and Add Buttons - Compact Spacing */}
+                  <div className="border-t border-gray-100" style={{ paddingTop: '0.625rem', marginTop: 'auto' }}>
                     {/* Low Stock Warning Banner - Proper Spacing */}
                     {isInStock(item) && item.inventoryEnabled && item.inventory !== null && item.inventory !== undefined && item.inventory <= 3 && item.inventory > 0 && (
                       <div style={{
@@ -1112,24 +1505,24 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
                       >
                         {/* Minus Button */}
                         <button
-                          onClick={(e) => handleQuantityChange(item.id, -1, e)}
-                          disabled={(itemQuantities[item.id] || 1) <= 1}
+                          onClick={(e) => decrementQuantity(item, e)}
+                          disabled={getCartQuantity(item.id) <= 0}
                           style={{
                             width: '36px',
                             height: '36px',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            background: (itemQuantities[item.id] || 1) <= 1
+                            background: getCartQuantity(item.id) <= 0
                               ? 'rgba(249, 115, 22, 0.2)'
                               : 'linear-gradient(to right, #F97316, #EA580C)',
                             border: 'none',
                             borderRadius: '0.5rem',
-                            cursor: (itemQuantities[item.id] || 1) <= 1 ? 'not-allowed' : 'pointer',
+                            cursor: getCartQuantity(item.id) <= 0 ? 'not-allowed' : 'pointer',
                             color: 'white',
-                            opacity: (itemQuantities[item.id] || 1) <= 1 ? 0.5 : 1,
+                            opacity: getCartQuantity(item.id) <= 0 ? 0.5 : 1,
                             transition: 'all 0.15s',
-                            boxShadow: (itemQuantities[item.id] || 1) <= 1 ? 'none' : '0 2px 4px rgba(249, 115, 22, 0.3)'
+                            boxShadow: getCartQuantity(item.id) <= 0 ? 'none' : '0 2px 4px rgba(249, 115, 22, 0.3)'
                           }}
                           className="hover:shadow-md active:scale-95"
                           type="button"
@@ -1154,30 +1547,30 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
                             color: '#ea580c',
                             userSelect: 'none'
                           }}>
-                            {itemQuantities[item.id] || 1}
+                            {getCartQuantity(item.id)}
                           </span>
                         </div>
 
                         {/* Plus Button */}
                         <button
-                          onClick={(e) => handleQuantityChange(item.id, 1, e)}
-                          disabled={(itemQuantities[item.id] || 1) >= 10}
+                          onClick={(e) => incrementQuantity(item, e)}
+                          disabled={getCartQuantity(item.id) >= 10}
                           style={{
                             width: '36px',
                             height: '36px',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            background: (itemQuantities[item.id] || 1) >= 10
+                            background: getCartQuantity(item.id) >= 10
                               ? 'rgba(249, 115, 22, 0.2)'
                               : 'linear-gradient(to right, #F97316, #EA580C)',
                             border: 'none',
                             borderRadius: '0.5rem',
-                            cursor: (itemQuantities[item.id] || 1) >= 10 ? 'not-allowed' : 'pointer',
+                            cursor: getCartQuantity(item.id) >= 10 ? 'not-allowed' : 'pointer',
                             color: 'white',
-                            opacity: (itemQuantities[item.id] || 1) >= 10 ? 0.5 : 1,
+                            opacity: getCartQuantity(item.id) >= 10 ? 0.5 : 1,
                             transition: 'all 0.15s',
-                            boxShadow: (itemQuantities[item.id] || 1) >= 10 ? 'none' : '0 2px 4px rgba(249, 115, 22, 0.3)'
+                            boxShadow: getCartQuantity(item.id) >= 10 ? 'none' : '0 2px 4px rgba(249, 115, 22, 0.3)'
                           }}
                           className="hover:shadow-md active:scale-95"
                           type="button"
@@ -1252,7 +1645,7 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
                           className="hover:shadow-lg hover:scale-105 active:scale-95"
                           type="button"
                         >
-                          Add to Cart
+                          {getCartQuantity(item.id) > 0 ? `${getCartQuantity(item.id)} Add` : 'Add to Cart'}
                           {/* Ripple effect */}
                           {recentlyAdded[item.id] && (
                             <span
@@ -1309,7 +1702,7 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
                           </div>
                         ) : (
                           // Beautiful Centered Add to Cart Button - Proper Size
-                          <div
+                          <button
                           onClick={(e) => handleAddToCart(item, e)}
                           style={{
                             position: 'relative',
@@ -1321,15 +1714,15 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
                             fontWeight: 600,
                             fontSize: '0.7rem',
                             transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                            boxShadow: recentlyAdded[item.id]
+                            boxShadow: (recentlyAdded[item.id] || isItemInCart(item.id))
                               ? '0 0 0 2px rgba(34, 197, 94, 0.2)' 
                               : '0 1px 3px rgba(249, 115, 22, 0.2)',
-                            transform: recentlyAdded[item.id] ? 'scale(0.98)' : 'scale(1)',
+                            transform: (recentlyAdded[item.id] || isItemInCart(item.id)) ? 'scale(0.98)' : 'scale(1)',
                             whiteSpace: 'nowrap',
                             padding: '0',
                             border: 'none',
                             cursor: 'pointer',
-                            background: recentlyAdded[item.id]
+                            background: (recentlyAdded[item.id] || isItemInCart(item.id))
                               ? 'linear-gradient(to right, #22C55E, #16A34A)'
                               : 'linear-gradient(to right, #F97316, #EA580C)',
                             color: 'white',
@@ -1340,18 +1733,10 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
                             height: '36px'
                           }}
                           className="hover:shadow-lg hover:scale-105 active:scale-95"
-                          role="button"
-                          tabIndex={0}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault();
-                              handleAddToCart(item, e as any);
-                            }
-                          }}
+                          type="button"
                         >
                           {/* Beautiful Centered Quantity Controls - Proper Gap */}
                           <div
-                            onClick={(e) => e.stopPropagation()}
                             style={{
                               display: 'flex',
                               alignItems: 'center',
@@ -1359,13 +1744,27 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
                               gap: '0.5rem',
                               padding: '0 0.75rem',
                               height: '100%',
-                              width: '100%'
+                              width: '100%',
+                              pointerEvents: 'none'
                             }}
                           >
                             {/* Minus Button */}
-                            <button
-                              onClick={(e) => handleQuantityChange(item.id, -1, e)}
-                              disabled={(itemQuantities[item.id] || 1) <= 1}
+                            <div
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (getCartQuantity(item.id) > 0) {
+                                  decrementQuantity(item, e);
+                                }
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  if (getCartQuantity(item.id) > 0) {
+                                    decrementQuantity(item, e as any);
+                                  }
+                                }
+                              }}
                               style={{
                                 width: '20px',
                                 height: '20px',
@@ -1373,20 +1772,20 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 background: 'rgba(255, 255, 255, 0.2)',
-                                border: 'none',
                                 borderRadius: '4px',
-                                cursor: (itemQuantities[item.id] || 1) <= 1 ? 'not-allowed' : 'pointer',
+                                cursor: getCartQuantity(item.id) <= 0 ? 'not-allowed' : 'pointer',
                                 color: 'white',
-                                opacity: (itemQuantities[item.id] || 1) <= 1 ? 0.4 : 1,
+                                opacity: getCartQuantity(item.id) <= 0 ? 0.4 : 1,
                                 transition: 'all 0.15s',
                                 padding: 0,
-                                flexShrink: 0
+                                flexShrink: 0,
+                                pointerEvents: 'auto'
                               }}
                               className="hover:bg-white/30 active:scale-90"
-                              type="button"
+                              tabIndex={0}
                             >
                               <Minus size={10} strokeWidth={2.5} />
-                            </button>
+                            </div>
 
                             {/* Quantity Display - Compact */}
                             <span style={{
@@ -1399,13 +1798,26 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
                               flexShrink: 0,
                               padding: '0 0.25rem'
                             }}>
-                              {itemQuantities[item.id] || 1}
+                              {getCartQuantity(item.id)}
                             </span>
 
                             {/* Plus Button */}
-                            <button
-                              onClick={(e) => handleQuantityChange(item.id, 1, e)}
-                              disabled={(itemQuantities[item.id] || 1) >= 10}
+                            <div
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (getCartQuantity(item.id) < 10) {
+                                  incrementQuantity(item, e);
+                                }
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  if (getCartQuantity(item.id) < 10) {
+                                    incrementQuantity(item, e as any);
+                                  }
+                                }
+                              }}
                               style={{
                                 width: '20px',
                                 height: '20px',
@@ -1413,22 +1825,22 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 background: 'rgba(255, 255, 255, 0.2)',
-                                border: 'none',
                                 borderRadius: '4px',
-                                cursor: (itemQuantities[item.id] || 1) >= 10 ? 'not-allowed' : 'pointer',
+                                cursor: getCartQuantity(item.id) >= 10 ? 'not-allowed' : 'pointer',
                                 color: 'white',
-                                opacity: (itemQuantities[item.id] || 1) >= 10 ? 0.4 : 1,
+                                opacity: getCartQuantity(item.id) >= 10 ? 0.4 : 1,
                                 transition: 'all 0.15s',
                                 padding: 0,
-                                flexShrink: 0
+                                flexShrink: 0,
+                                pointerEvents: 'auto'
                               }}
                               className="hover:bg-white/30 active:scale-90"
-                              type="button"
+                              tabIndex={0}
                             >
                               <Plus size={10} strokeWidth={2.5} />
-                            </button>
+                            </div>
 
-                            {/* Add Text - Properly Spaced with Min Width */}
+                            {/* Add Text - Shows quantity when > 0 */}
                           <span style={{
                               marginLeft: '0.5rem',
                               paddingLeft: '0.5rem',
@@ -1440,11 +1852,11 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
                               paddingRight: '0.5rem',
                               minWidth: '2.5rem'
                             }}>
-                                Add
+                                {getCartQuantity(item.id) > 0 ? `${getCartQuantity(item.id)} Add` : 'Add'}
                               </span>
                           </div>
                           
-                          {/* Ripple effect */}
+                          {/* Ripple effect - only show on recent add, not persistent cart state */}
                           {recentlyAdded[item.id] && (
                             <span
                               style={{
@@ -1461,7 +1873,7 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
                               }}
                             />
                           )}
-                        </div>
+                        </button>
                         )}
                       </div>
                     </div>
@@ -1484,6 +1896,7 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
         />
       </div>
     </section>
+    </>
   );
 };
 

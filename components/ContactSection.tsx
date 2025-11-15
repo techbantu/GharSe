@@ -65,10 +65,21 @@ const ContactSection: React.FC = () => {
       <div className="container-custom mx-auto px-4 max-w-7xl">
         {/* Section Header */}
         <div className="text-center mb-12 animate-slide-up">
-          <h2 className="text-4xl md:text-5xl font-bold mb-4">
-            Get in <span className="text-gradient-orange">Touch</span>
+          <h2 className="text-4xl md:text-5xl lg:text-6xl font-black mb-6" style={{
+            letterSpacing: '-0.04em',
+            lineHeight: '1.1',
+            fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif',
+            color: '#1d1d1f'
+          }}>
+            Get in <span className="text-gradient-orange" style={{ backgroundSize: '200% 200%', animation: 'gradientShift 8s ease infinite' }}>Touch</span>
           </h2>
-          <p className="text-gray-600 text-lg max-w-2xl mx-auto">
+          <p className="text-gray-600 text-lg md:text-xl max-w-2xl mx-auto" style={{
+            lineHeight: '1.75',
+            letterSpacing: '-0.011em',
+            fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif',
+            fontWeight: 400,
+            color: '#4B5563'
+          }}>
             Have questions or special requests? We're here to help! Reach out to us through any of these channels.
           </p>
         </div>
@@ -172,32 +183,35 @@ const ContactSection: React.FC = () => {
             {/* Content */}
             <div style={{ flex: 1, minWidth: 0 }}>
               <h3 style={{
-                fontSize: '1.5rem',
+                fontSize: '1.75rem',
                 fontWeight: 800,
-                color: '#1F2937',
-                marginBottom: '16px',
+                color: '#1d1d1f',
+                marginBottom: '20px',
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif',
-                letterSpacing: '-0.02em',
-                lineHeight: '1.2'
+                letterSpacing: '-0.03em',
+                lineHeight: '1.15'
               }}>
                 Our Location
               </h3>
               <p style={{
-                fontSize: '1rem',
+                fontSize: '1.125rem',
                 color: '#374151',
-                marginBottom: '12px',
-                lineHeight: '1.7',
-                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif'
+                marginBottom: '16px',
+                lineHeight: '1.75',
+                letterSpacing: '-0.011em',
+                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif',
+                fontWeight: 400
               }}>
                 {restaurantInfo.address.street}<br />
                 {restaurantInfo.address.city}, {restaurantInfo.address.state} {restaurantInfo.address.zipCode}
               </p>
               <p style={{
-                fontSize: '0.9375rem',
-                color: '#6B7280',
-                lineHeight: '1.6',
+                fontSize: '1rem',
+                color: '#4B5563',
+                lineHeight: '1.75',
+                letterSpacing: '-0.011em',
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif',
-                fontWeight: 500
+                fontWeight: 400
               }}>
                 We deliver within a <span style={{ fontWeight: 700, color: '#f97316' }}>{restaurantInfo.settings.deliveryRadius} km</span> radius.{' '}
                 Free delivery on orders over <span style={{ fontWeight: 700, color: '#f97316' }}>₹{restaurantInfo.settings.freeDeliveryOver}</span>!

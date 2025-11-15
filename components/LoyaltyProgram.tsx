@@ -76,8 +76,8 @@ const LoyaltyProgram: React.FC<LoyaltyProgramProps> = ({ customerId }) => {
   const progress = ((loyaltyData.points - currentTierInfo.pointsRequired) / 
     (nextTierInfo.pointsRequired - currentTierInfo.pointsRequired)) * 100;
   
-  // Calculate points earned per dollar (varies by tier)
-  const pointsPerDollar = currentTierInfo.name === 'Platinum' ? 2 : 
+  // Calculate points earned per ₹10 spent (varies by tier)
+  const pointsPerRupee = currentTierInfo.name === 'Platinum' ? 2 : 
     currentTierInfo.name === 'Gold' ? 1.5 : 
     currentTierInfo.name === 'Silver' ? 1.2 : 1;
   
@@ -136,7 +136,7 @@ const LoyaltyProgram: React.FC<LoyaltyProgramProps> = ({ customerId }) => {
             </div>
             <div className="flex items-center gap-2">
               <Star size={20} />
-              <span className="text-sm">{pointsPerDollar} points per ₹10 spent</span>
+              <span className="text-sm">{pointsPerRupee} points per ₹10 spent</span>
             </div>
           </div>
         </div>
@@ -247,7 +247,7 @@ const LoyaltyProgram: React.FC<LoyaltyProgramProps> = ({ customerId }) => {
             <div>
               <h4 className="font-semibold mb-1">Earn Points</h4>
               <p className="text-sm text-gray-600">
-                Get {pointsPerDollar} points for every dollar you spend. Points earned vary by tier!
+                Get {pointsPerRupee} points for every ₹10 you spend. Points earned vary by tier!
               </p>
             </div>
           </div>

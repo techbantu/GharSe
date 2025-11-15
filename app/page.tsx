@@ -11,6 +11,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Header from '@/components/Header';
 import Hero from '@/components/Hero';
 import MenuSection from '@/components/MenuSection';
@@ -21,7 +22,7 @@ import CartSidebar from '@/components/CartSidebar';
 import CheckoutModal from '@/components/CheckoutModal';
 import LiveChat from '@/components/LiveChat';
 import AdvancedSearch from '@/components/AdvancedSearch';
-import { CartProvider } from '@/context/CartContext';
+// CartProvider is now in root layout
 
 /**
  * Home Page Component
@@ -32,9 +33,20 @@ import { CartProvider } from '@/context/CartContext';
  * - Scroll animations trigger
  */
 const HomePage: React.FC = () => {
+  const searchParams = useSearchParams();
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const [isChatMinimized, setIsChatMinimized] = useState(false);
+  
+  // Check if we should open cart from URL parameter (from reorder)
+  useEffect(() => {
+    const openCart = searchParams.get('openCart');
+    if (openCart === 'true') {
+      setIsCartOpen(true);
+      setIsChatMinimized(true);
+    }
+  }, [searchParams]);
   
   // Analytics tracking
   useEffect(() => {
@@ -44,7 +56,55 @@ const HomePage: React.FC = () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ page: 'home', event: 'page_view' }),
     }).catch(console.error);
+    
+    // Listen for custom event from chat to open cart
+    const handleOpenCart = () => {
+      setIsCartOpen(true);
+      setIsChatMinimized(true); // GENIUS: Auto-minimize chat when cart opens
+    };
+    
+    window.addEventListener('openCart', handleOpenCart);
+    
+    return () => {
+      window.removeEventListener('openCart', handleOpenCart);
+    };
   }, []);
+  
+  // Handle hash navigation (e.g., from footer links on other pages)
+  useEffect(() => {
+    const handleHashNavigation = () => {
+      const hash = window.location.hash.replace('#', '');
+      if (hash) {
+        // Wait for page to fully render
+        setTimeout(() => {
+          const element = document.getElementById(hash);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }, 100);
+      }
+    };
+    
+    // Handle initial hash if present
+    handleHashNavigation();
+    
+    // Handle hash changes
+    window.addEventListener('hashchange', handleHashNavigation);
+    
+    return () => {
+      window.removeEventListener('hashchange', handleHashNavigation);
+    };
+  }, []);
+  
+  // Listen for cart close to restore chat
+  useEffect(() => {
+    if (!isCartOpen && isChatMinimized) {
+      // Slight delay to avoid jarring transition
+      setTimeout(() => {
+        setIsChatMinimized(false);
+      }, 300);
+    }
+  }, [isCartOpen, isChatMinimized]);
   
   const handleOrderNowClick = () => {
     // Track CTA click
@@ -129,7 +189,11 @@ const HomePage: React.FC = () => {
       />
       
       {/* Live Chat Support */}
-      <LiveChat />
+      <LiveChat 
+        minimized={isChatMinimized}
+        onMinimize={() => setIsChatMinimized(true)}
+        onRestore={() => setIsChatMinimized(false)}
+      />
     </div>
   );
 };
@@ -139,12 +203,5 @@ const HomePage: React.FC = () => {
  * 
  * Ensures cart state is available throughout the component tree.
  */
-const Home: React.FC = () => {
-  return (
-    <CartProvider>
-      <HomePage />
-    </CartProvider>
-  );
-};
-
-export default Home;
+// Export HomePage directly (CartProvider is now in root layout)
+export default HomePage;

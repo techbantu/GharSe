@@ -25,6 +25,15 @@ export interface ChatMessage {
   timestamp: Date;
   functionsCalled?: string[];
   isError?: boolean;
+  actions?: Array<{
+    type: string;
+    label: string;
+    itemId?: string;
+    itemName?: string;
+    quantity?: number;
+    urgency?: any;
+  }>;
+  sessionId?: string;
 }
 
 interface UserContext {
@@ -53,71 +62,89 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [isTyping, setIsTyping] = useState(false);
   const [isConnected, setIsConnected] = useState(true);
   const [userContext, setUserContextState] = useState<UserContext>({});
-  const [conversationId] = useState(() => `conv_${Date.now()}_${Math.random().toString(36).substring(7)}`);
+  const [conversationId, setConversationId] = useState<string>('');
+  const [isMounted, setIsMounted] = useState(false);
   const lastUserMessageRef = useRef<string>('');
   const router = useRouter();
 
-  // Load conversation history from localStorage on mount
+  // Initialize conversationId and load history only on client side
   useEffect(() => {
+    setIsMounted(true);
+    
+    // Generate conversationId only on client
+    setConversationId(`conv_${Date.now()}_${Math.random().toString(36).substring(7)}`);
+    
+    // Load conversation history from localStorage
     const loadHistory = () => {
       try {
         const stored = localStorage.getItem('bantu_chat_history');
         if (stored) {
           const parsed = JSON.parse(stored);
-          setMessages(parsed.map((msg: any) => ({
+          const loadedMessages = parsed.map((msg: any) => ({
             ...msg,
             timestamp: new Date(msg.timestamp),
-          })));
-        }
-
-        const storedContext = localStorage.getItem('bantu_chat_context');
-        if (storedContext) {
-          setUserContextState(JSON.parse(storedContext));
+          }));
+          
+          // Only load if there are actual conversation messages (not just welcome)
+          if (loadedMessages.length > 0) {
+            setMessages(loadedMessages);
+            
+            // Load user context if exists
+            const storedContext = localStorage.getItem('bantu_chat_context');
+            if (storedContext) {
+              setUserContextState(JSON.parse(storedContext));
+            }
+            return; // Don't add welcome message if we have history
+          }
         }
       } catch (error) {
         console.error('Failed to load chat history:', error);
       }
-    };
-
-    loadHistory();
-
-    // Add welcome message if no history
-    if (messages.length === 0) {
+      
+      // Add welcome message only if no history exists
       const welcomeMessage: ChatMessage = {
         id: 'welcome',
         role: 'assistant',
-        content: 'Hey! I\'m your AI food buddy at Bantu\'s Kitchen. I can find dishes, track orders, answer questions - you know, the usual. What are you craving? Spicy? Creamy? Something that\'ll make your taste buds jealous?',
+        content: 'Hey! Welcome to Bantu\'s Kitchen.\n\nHow can I help you today?',
         timestamp: new Date(),
       };
       setMessages([welcomeMessage]);
-    }
+    };
+
+    loadHistory();
   }, []);
 
-  // Save conversation history to localStorage
+  // Save conversation history to localStorage (only after mount)
   useEffect(() => {
-    if (messages.length > 0) {
-      try {
-        localStorage.setItem('bantu_chat_history', JSON.stringify(messages.slice(-20))); // Keep last 20 messages
-      } catch (error) {
-        console.error('Failed to save chat history:', error);
-      }
+    if (!isMounted) return;
+    
+    // Don't save if messages array is empty or only contains welcome message
+    if (messages.length === 0) return;
+    
+    try {
+      // Save all messages (not just last 20) for full persistence
+      localStorage.setItem('bantu_chat_history', JSON.stringify(messages));
+    } catch (error) {
+      console.error('Failed to save chat history:', error);
     }
-  }, [messages]);
+  }, [messages, isMounted]);
 
-  // Save user context
+  // Save user context (only after mount)
   useEffect(() => {
+    if (!isMounted) return;
+    
     try {
       localStorage.setItem('bantu_chat_context', JSON.stringify(userContext));
     } catch (error) {
       console.error('Failed to save user context:', error);
     }
-  }, [userContext]);
+  }, [userContext, isMounted]);
 
   /**
    * Send a message to the AI
    */
   const sendMessage = useCallback(async (content: string) => {
-    if (!content.trim()) return;
+    if (!content.trim() || !isMounted) return;
 
     lastUserMessageRef.current = content;
 
@@ -126,7 +153,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
     // Add user message immediately (optimistic update)
     const userMessage: ChatMessage = {
-      id: `user_${Date.now()}`,
+      id: `user_${Date.now()}_${Math.random().toString(36).substring(7)}`,
       role: 'user',
       content: content.trim(),
       timestamp: new Date(),
@@ -142,6 +169,29 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         content: msg.content,
       }));
 
+      // Load cart data from localStorage for AI context
+      let cartData = null;
+      try {
+        const storedCart = localStorage.getItem('bantusKitchenCart');
+        if (storedCart) {
+          const parsedCart = JSON.parse(storedCart);
+          cartData = {
+            items: parsedCart.items.map((item: any) => ({
+              id: item.menuItem.id,
+              name: item.menuItem.name,
+              quantity: item.quantity,
+              price: item.menuItem.price,
+              category: item.menuItem.category,
+            })),
+            itemCount: parsedCart.items.reduce((sum: number, item: any) => sum + item.quantity, 0),
+            subtotal: parsedCart.subtotal,
+            total: parsedCart.total,
+          };
+        }
+      } catch (error) {
+        console.error('Failed to load cart for AI context:', error);
+      }
+
       // Call AI API
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -152,6 +202,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           messages: apiMessages,
           conversationId,
           userContext,
+          cartData,
         }),
       });
 
@@ -161,14 +212,16 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
       const data = await response.json();
 
-      // Add AI response
+      // Add AI response with actions and sessionId
       const assistantMessage: ChatMessage = {
-        id: `assistant_${Date.now()}`,
+        id: `assistant_${Date.now()}_${Math.random().toString(36).substring(7)}`,
         role: 'assistant',
         content: data.message || data.fallbackMessage || 'I apologize, but I encountered an issue. Please try again.',
         timestamp: new Date(),
         functionsCalled: data.functionsCalled,
         isError: !data.success,
+        actions: data.actions || [], // NEW: Action buttons from AI
+        sessionId: data.sessionId, // NEW: Session ID for cart operations
       };
 
       setMessages(prev => [...prev, assistantMessage]);
@@ -179,7 +232,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
       // Add error message
       const errorMessage: ChatMessage = {
-        id: `error_${Date.now()}`,
+        id: `error_${Date.now()}_${Math.random().toString(36).substring(7)}`,
         role: 'assistant',
         content: 'I\'m sorry, I\'m having trouble connecting right now. Please try again in a moment, or you can:\n\n• Call us at +91 90104 60964\n• Email orders@bantuskitchen.com\n• Visit our restaurant directly',
         timestamp: new Date(),
@@ -192,7 +245,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsTyping(false);
     }
-  }, [messages, conversationId, userContext]);
+  }, [messages, conversationId, userContext, isMounted]);
 
   /**
    * Retry the last message
@@ -207,13 +260,20 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
    * Clear conversation history
    */
   const clearHistory = useCallback(() => {
-    setMessages([{
-      id: 'welcome',
-      role: 'assistant',
-      content: 'Hello! Welcome to Bantu\'s Kitchen! 🍛 How can I help you today?',
-      timestamp: new Date(),
-    }]);
+    // Clear messages and localStorage
+    setMessages([]);
     localStorage.removeItem('bantu_chat_history');
+    localStorage.removeItem('bantu_chat_context');
+    setUserContextState({});
+    
+    // Add fresh welcome message
+    const welcomeMessage: ChatMessage = {
+      id: `welcome_${Date.now()}`,
+      role: 'assistant',
+      content: 'Hey! Welcome to Bantu\'s Kitchen.\n\nHow can I help you today?',
+      timestamp: new Date(),
+    };
+    setMessages([welcomeMessage]);
   }, []);
 
   /**

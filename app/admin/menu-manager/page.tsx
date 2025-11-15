@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * COMPREHENSIVE MENU MANAGEMENT DASHBOARD
  * 
@@ -12,9 +14,8 @@
  * URL: /admin/menu-manager
  */
 
-'use client';
-
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Plus,
   Edit,
@@ -33,6 +34,9 @@ import {
   ChefHat,
   CheckCircle,
   AlertCircle,
+  LogOut,
+  User,
+  Shield,
 } from 'lucide-react';
 
 const CATEGORIES = [
@@ -68,12 +72,16 @@ interface MenuItem {
 }
 
 export default function MenuManagerDashboard() {
+  const router = useRouter();
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [adminUser, setAdminUser] = useState<any>(null);
+  const [showLoginInfo, setShowLoginInfo] = useState(false);
   const [formData, setFormData] = useState<Partial<MenuItem>>({
     name: '',
     description: '',
@@ -95,6 +103,25 @@ export default function MenuManagerDashboard() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string>('');
+  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
+
+  // Helper function to normalize image URLs
+  const normalizeImageUrl = (url: string | null | undefined): string | null => {
+    if (!url) return null;
+    
+    // If it's already a full URL (http/https), return as is
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    
+    // If it starts with /, it's a relative path - ensure it's correct
+    if (url.startsWith('/')) {
+      return url;
+    }
+    
+    // If it doesn't start with /, add it
+    return `/${url}`;
+  };
 
   // Fetch menu items from database
   const fetchMenuItems = async () => {
@@ -121,12 +148,76 @@ export default function MenuManagerDashboard() {
     }
   };
 
+  // Check authentication on mount
   useEffect(() => {
-    fetchMenuItems();
-    // Auto-refresh every 30 seconds
-    const interval = setInterval(fetchMenuItems, 30000);
+    const checkAuth = async () => {
+      const token = localStorage.getItem('adminToken');
+      if (!token) {
+        router.push('/admin/login');
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/admin/me', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          setIsAuthenticated(true);
+          setAdminUser(data.admin);
+          // Fetch menu items after authentication
+          fetchMenuItems();
+        } else {
+          localStorage.removeItem('adminToken');
+          localStorage.removeItem('adminUser');
+          router.push('/admin/login');
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminUser');
+        router.push('/admin/login');
+      }
+    };
+
+    checkAuth();
+    
+    // Auto-refresh menu items every 30 seconds
+    const interval = setInterval(() => {
+      if (isAuthenticated) {
+        fetchMenuItems();
+      }
+    }, 30000);
+    
     return () => clearInterval(interval);
-  }, []);
+  }, [router, isAuthenticated]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminUser');
+    router.push('/admin/login');
+  };
+
+  // Close login info dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (showLoginInfo && !target.closest('[data-login-info]')) {
+        setShowLoginInfo(false);
+      }
+    };
+
+    if (showLoginInfo) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showLoginInfo]);
 
   const handleInputChange = (field: keyof MenuItem, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -356,6 +447,38 @@ export default function MenuManagerDashboard() {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
         }
+        .menu-items-grid {
+          display: grid !important;
+          grid-template-columns: repeat(2, 1fr) !important;
+          gap: 1rem !important;
+          width: 100% !important;
+        }
+        @media (min-width: 768px) {
+          .menu-items-grid {
+            grid-template-columns: repeat(3, 1fr) !important;
+            gap: 1.25rem !important;
+          }
+        }
+        @media (min-width: 1024px) {
+          .menu-items-grid {
+            grid-template-columns: repeat(4, 1fr) !important;
+            gap: 1.25rem !important;
+          }
+        }
+        @media (min-width: 1280px) {
+          .menu-items-grid {
+            grid-template-columns: repeat(5, 1fr) !important;
+            gap: 1.25rem !important;
+          }
+        }
+        .menu-items-grid > * {
+          min-width: 0 !important;
+          max-width: 100% !important;
+        }
+        .stats-cards-grid {
+          grid-template-columns: repeat(3, 1fr) !important;
+          gap: 0.5rem !important;
+        }
         @media (max-width: 768px) {
           .menu-manager-container {
             padding-left: 0.75rem !important;
@@ -369,8 +492,63 @@ export default function MenuManagerDashboard() {
           .menu-manager-header {
             padding: 0.75rem 1rem !important;
           }
+          .menu-items-grid {
+            display: grid !important;
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 0.75rem !important;
+            width: 100% !important;
+          }
+          @media (min-width: 768px) {
+            .menu-items-grid {
+              grid-template-columns: repeat(3, 1fr) !important;
+            }
+          }
+          @media (min-width: 1024px) {
+            .menu-items-grid {
+              grid-template-columns: repeat(4, 1fr) !important;
+            }
+          }
+          .menu-items-grid > * {
+            min-width: 0 !important;
+            max-width: 100% !important;
+            width: 100% !important;
+          }
+          .stats-cards-grid {
+            grid-template-columns: repeat(3, 1fr) !important;
+            gap: 0.375rem !important;
+          }
+        }
+        @media (max-width: 480px) {
+          .menu-items-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 0.75rem !important;
+          }
         }
       `}} />
+    
+    {/* Show loading screen while checking authentication */}
+    {!isAuthenticated ? (
+      <div style={{ 
+        minHeight: '100vh', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        background: 'linear-gradient(to bottom right, #F9FAFB, #F3F4F6)'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{
+            width: '3rem',
+            height: '3rem',
+            border: '3px solid #F3F4F6',
+            borderTopColor: '#F97316',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto 1rem'
+          }} />
+          <p style={{ color: '#6B7280', fontSize: '0.875rem' }}>Verifying authentication...</p>
+        </div>
+      </div>
+    ) : (
     <div style={{ 
       minHeight: '100vh', 
       background: 'linear-gradient(to bottom right, #F9FAFB, #F3F4F6)',
@@ -427,81 +605,187 @@ export default function MenuManagerDashboard() {
                 margin: 0,
                 lineHeight: '1.2'
               }}>
-                Bantu's Kitchen - Complete Menu Management
+                GharSe - Complete Menu Management (Operated by Sailaja)
               </p>
             </div>
           </div>
-          <button
-            onClick={() => setIsAddingNew(true)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              paddingLeft: '1rem',
-              paddingRight: '1rem',
-              paddingTop: '0.5rem',
-              paddingBottom: '0.5rem',
-              background: 'linear-gradient(to right, #10B981, #059669)',
-              color: '#ffffff',
-              borderRadius: '0.5rem',
-              fontWeight: 700,
-              fontSize: '0.875rem',
-              border: 'none',
-              cursor: 'pointer',
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
-            }}
-          >
-            <Plus size={16} />
-            <span>Add New Dish</span>
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+            {/* User Info & Login Credentials */}
+            <div style={{ position: 'relative' }} data-login-info>
+              <button
+                onClick={() => setShowLoginInfo(!showLoginInfo)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  paddingLeft: '0.75rem',
+                  paddingRight: '0.75rem',
+                  paddingTop: '0.5rem',
+                  paddingBottom: '0.5rem',
+                  backgroundColor: '#F3F4F6',
+                  color: '#374151',
+                  borderRadius: '0.5rem',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#E5E7EB';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#F3F4F6';
+                }}
+              >
+                <User size={14} />
+                <span>{adminUser?.name || 'Admin'}</span>
+                <Shield size={12} style={{ color: '#F97316' }} />
+              </button>
+              
+              {/* Login Info Dropdown */}
+              {showLoginInfo && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  right: 0,
+                  marginTop: '0.5rem',
+                  backgroundColor: '#ffffff',
+                  borderRadius: '0.5rem',
+                  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                  border: '1px solid #E5E7EB',
+                  padding: '1rem',
+                  minWidth: '280px',
+                  zIndex: 1000
+                }}>
+                  <div style={{ marginBottom: '0.75rem', paddingBottom: '0.75rem', borderBottom: '1px solid #E5E7EB' }}>
+                    <p style={{ fontSize: '0.75rem', color: '#6B7280', margin: 0, marginBottom: '0.25rem' }}>Logged in as:</p>
+                    <p style={{ fontSize: '0.875rem', fontWeight: 700, color: '#111827', margin: 0 }}>{adminUser?.name || 'Admin'}</p>
+                    <p style={{ fontSize: '0.75rem', color: '#6B7280', margin: '0.25rem 0 0 0' }}>{adminUser?.email}</p>
+                    <p style={{ fontSize: '0.625rem', color: '#F97316', margin: '0.25rem 0 0 0', fontWeight: 600 }}>
+                      Role: {adminUser?.role || 'OWNER'}
+                    </p>
+                  </div>
+                  
+                  <div style={{ marginBottom: '0.75rem', paddingBottom: '0.75rem', borderBottom: '1px solid #E5E7EB' }}>
+                    <p style={{ fontSize: '0.75rem', fontWeight: 700, color: '#111827', margin: 0, marginBottom: '0.5rem' }}>
+                      🔐 Login Credentials:
+                    </p>
+                    <div style={{ fontSize: '0.75rem', color: '#374151', fontFamily: 'monospace', background: '#F9FAFB', padding: '0.5rem', borderRadius: '0.25rem' }}>
+                      <p style={{ margin: '0.25rem 0', color: '#6B7280' }}>Email:</p>
+                      <p style={{ margin: '0 0 0.5rem 0', fontWeight: 600, color: '#111827' }}>admin@bantuskitchen.com</p>
+                      <p style={{ margin: '0.25rem 0', color: '#6B7280' }}>Password:</p>
+                      <p style={{ margin: 0, fontWeight: 600, color: '#111827' }}>Sailaja@2025</p>
+                    </div>
+                  </div>
+                  
+                  <button
+                    onClick={handleLogout}
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem',
+                      paddingTop: '0.5rem',
+                      paddingBottom: '0.5rem',
+                      backgroundColor: '#EF4444',
+                      color: '#ffffff',
+                      borderRadius: '0.5rem',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      border: 'none',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#DC2626';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#EF4444';
+                    }}
+                  >
+                    <LogOut size={14} />
+                    <span>Logout</span>
+                  </button>
+                </div>
+              )}
+            </div>
+            
+            <button
+              onClick={() => setIsAddingNew(true)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                paddingLeft: '1rem',
+                paddingRight: '1rem',
+                paddingTop: '0.5rem',
+                paddingBottom: '0.5rem',
+                background: 'linear-gradient(to right, #10B981, #059669)',
+                color: '#ffffff',
+                borderRadius: '0.5rem',
+                fontWeight: 700,
+                fontSize: '0.875rem',
+                border: 'none',
+                cursor: 'pointer',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+              }}
+            >
+              <Plus size={16} />
+              <span>Add New Dish</span>
+            </button>
+          </div>
         </div>
 
-        {/* Stats Cards */}
+        {/* Stats Cards - Compact Layout */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '1rem',
-          marginBottom: '1rem'
-        }}>
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: '0.5rem',
+          marginBottom: '0.75rem'
+        }}
+        className="stats-cards-grid"
+        >
           <div style={{
             backgroundColor: '#ffffff',
-            borderRadius: '0.75rem',
-            padding: '1rem',
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+            borderRadius: '0.5rem',
+            padding: '0.625rem 0.75rem',
+            boxShadow: '0 2px 4px -1px rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.06)',
             border: '1px solid #f3f4f6'
           }}>
-            <p style={{ fontSize: '0.75rem', color: '#6B7280', fontWeight: 600, marginBottom: '0.5rem' }}>
+            <p style={{ fontSize: '0.625rem', color: '#6B7280', fontWeight: 600, marginBottom: '0.25rem', margin: 0, lineHeight: '1.2' }}>
               Available Dishes
             </p>
-            <p style={{ fontSize: '2rem', fontWeight: 800, color: '#111827', margin: 0 }}>
+            <p style={{ fontSize: '1.25rem', fontWeight: 800, color: '#111827', margin: 0, lineHeight: '1.2' }}>
               {availableCount}
             </p>
           </div>
           <div style={{
             backgroundColor: '#ffffff',
-            borderRadius: '0.75rem',
-            padding: '1rem',
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+            borderRadius: '0.5rem',
+            padding: '0.625rem 0.75rem',
+            boxShadow: '0 2px 4px -1px rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.06)',
             border: '1px solid #f3f4f6'
           }}>
-            <p style={{ fontSize: '0.75rem', color: '#6B7280', fontWeight: 600, marginBottom: '0.5rem' }}>
+            <p style={{ fontSize: '0.625rem', color: '#6B7280', fontWeight: 600, marginBottom: '0.25rem', margin: 0, lineHeight: '1.2' }}>
               Popular Items
             </p>
-            <p style={{ fontSize: '2rem', fontWeight: 800, color: '#F97316', margin: 0 }}>
+            <p style={{ fontSize: '1.25rem', fontWeight: 800, color: '#F97316', margin: 0, lineHeight: '1.2' }}>
               {popularCount}
             </p>
           </div>
           <div style={{
             backgroundColor: '#ffffff',
-            borderRadius: '0.75rem',
-            padding: '1rem',
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+            borderRadius: '0.5rem',
+            padding: '0.625rem 0.75rem',
+            boxShadow: '0 2px 4px -1px rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.06)',
             border: '1px solid #f3f4f6'
           }}>
-            <p style={{ fontSize: '0.75rem', color: '#6B7280', fontWeight: 600, marginBottom: '0.5rem' }}>
+            <p style={{ fontSize: '0.625rem', color: '#6B7280', fontWeight: 600, marginBottom: '0.25rem', margin: 0, lineHeight: '1.2' }}>
               Total Items
             </p>
-            <p style={{ fontSize: '2rem', fontWeight: 800, color: '#111827', margin: 0 }}>
+            <p style={{ fontSize: '1.25rem', fontWeight: 800, color: '#111827', margin: 0, lineHeight: '1.2' }}>
               {menuItems.length}
             </p>
           </div>
@@ -600,13 +884,11 @@ export default function MenuManagerDashboard() {
           </div>
         )}
 
-        {/* Menu Items Grid */}
+        {/* Menu Items Grid - 2 columns layout (mobile & desktop) */}
         {!loading && (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-            gap: '1rem'
-          }}>
+          <div 
+            className="menu-items-grid"
+          >
             {filteredItems.map(item => (
               <div
                 key={item.id}
@@ -616,7 +898,10 @@ export default function MenuManagerDashboard() {
                   overflow: 'hidden',
                   boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
                   border: '1px solid #f3f4f6',
-                  transition: 'all 0.2s ease'
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  height: '100%'
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = 'translateY(-4px)';
@@ -627,16 +912,41 @@ export default function MenuManagerDashboard() {
                   e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)';
                 }}
               >
-                {/* Image */}
-                <div style={{ position: 'relative', height: '180px', backgroundColor: '#F3F4F6' }}>
-                  {item.image ? (
+                {/* Image - Compact Size (Similar to Homepage Menu) */}
+                <div style={{ 
+                  position: 'relative', 
+                  width: '100%',
+                  height: '120px',
+                  backgroundColor: '#F3F4F6',
+                  overflow: 'hidden'
+                }}>
+                  {item.image && !imageErrors.has(item.id) ? (
                     <img
-                      src={item.image}
+                      src={normalizeImageUrl(item.image) || ''}
                       alt={item.name}
                       style={{
                         width: '100%',
                         height: '100%',
                         objectFit: 'cover'
+                      }}
+                      onError={(e) => {
+                        const imageUrl = normalizeImageUrl(item.image);
+                        console.error('❌ Image failed to load:', {
+                          original: item.image,
+                          normalized: imageUrl,
+                          itemId: item.id,
+                          itemName: item.name,
+                          timestamp: new Date().toISOString()
+                        });
+                        setImageErrors(prev => new Set(prev).add(item.id));
+                        e.currentTarget.style.display = 'none';
+                      }}
+                      onLoad={() => {
+                        setImageErrors(prev => {
+                          const next = new Set(prev);
+                          next.delete(item.id);
+                          return next;
+                        });
                       }}
                     />
                   ) : (
@@ -644,10 +954,22 @@ export default function MenuManagerDashboard() {
                       width: '100%',
                       height: '100%',
                       display: 'flex',
+                      flexDirection: 'column',
                       alignItems: 'center',
-                      justifyContent: 'center'
+                      justifyContent: 'center',
+                      backgroundColor: '#E5E7EB',
+                      gap: '0.5rem'
                     }}>
-                      <ImageIcon size={48} style={{ color: '#D1D5DB' }} />
+                      <ImageIcon size={40} style={{ color: '#9CA3AF' }} />
+                      <span style={{
+                        fontSize: '0.75rem',
+                        color: '#6B7280',
+                        fontWeight: 500,
+                        textAlign: 'center',
+                        padding: '0 0.5rem'
+                      }}>
+                        {item.image ? 'Image not found' : 'No image'}
+                      </span>
                     </div>
                   )}
                   {item.isPopular && (
@@ -711,15 +1033,16 @@ export default function MenuManagerDashboard() {
                   )}
                 </div>
 
-                {/* Content */}
-                <div style={{ padding: '1rem' }}>
+                {/* Content - Compact */}
+                <div style={{ padding: '0.875rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
                   <div style={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                     <h3 style={{
-                      fontSize: '1rem',
+                      fontSize: '0.9375rem',
                       fontWeight: 700,
                       color: '#111827',
                       margin: 0,
-                      flex: 1
+                      flex: 1,
+                      lineHeight: '1.3'
                     }}>
                       {item.name}
                     </h3>
@@ -734,19 +1057,20 @@ export default function MenuManagerDashboard() {
                   </div>
 
                   <p style={{
-                    fontSize: '0.875rem',
+                    fontSize: '0.8125rem',
                     color: '#6B7280',
-                    marginBottom: '0.75rem',
-                    lineHeight: '1.5',
+                    marginBottom: '0.625rem',
+                    lineHeight: '1.4',
                     display: '-webkit-box',
                     WebkitLineClamp: 2,
                     WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden'
+                    overflow: 'hidden',
+                    flex: 1
                   }}>
                     {item.description}
                   </p>
 
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.625rem', marginTop: 'auto' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <IndianRupee size={16} style={{ color: '#10B981' }} />
                       <span style={{ fontSize: '1.125rem', fontWeight: 700, color: '#111827' }}>
@@ -822,7 +1146,7 @@ export default function MenuManagerDashboard() {
           </div>
         )}
 
-        {/* Add/Edit Modal */}
+        {/* Add/Edit Modal - Compact Phone-Sized Cards */}
         {isAddingNew && (
           <div style={{
             position: 'fixed',
@@ -832,74 +1156,100 @@ export default function MenuManagerDashboard() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '1rem',
-            zIndex: 1000
+            padding: '0.5rem',
+            zIndex: 1000,
+            overflowY: 'auto'
           }}>
             <div style={{
               backgroundColor: '#ffffff',
-              borderRadius: '1rem',
-              maxWidth: '800px',
+              borderRadius: '0.625rem',
+              maxWidth: '380px',
               width: '100%',
-              maxHeight: '90vh',
+              maxHeight: '95vh',
               overflowY: 'auto',
-              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+              margin: 'auto'
             }}>
-              <div style={{ padding: '1.5rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-                  <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#111827', margin: 0 }}>
-                    {editingItem ? 'Edit Menu Item' : 'Add New Menu Item'}
+              <div style={{ padding: '0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                  <h2 style={{ fontSize: '0.9375rem', fontWeight: 700, color: '#111827', margin: 0 }}>
+                    {editingItem ? 'Edit Menu Item' : 'Add New Dish'}
                   </h2>
                   <button
                     onClick={cancelEdit}
                     style={{
-                      padding: '0.5rem',
+                      padding: '0.25rem',
                       backgroundColor: '#F3F4F6',
-                      borderRadius: '0.5rem',
+                      borderRadius: '0.375rem',
                       border: 'none',
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
                     }}
                   >
-                    <X size={20} />
+                    <X size={14} />
                   </button>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  {/* Image Upload */}
-                  <div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+                  {/* Image Upload Card */}
+                  <div style={{
+                    backgroundColor: '#F9FAFB',
+                    borderRadius: '0.375rem',
+                    padding: '0.375rem',
+                    border: '1px solid #E5E7EB'
+                  }}>
                     <label style={{
                       display: 'block',
-                      fontSize: '0.875rem',
+                      fontSize: '0.625rem',
                       fontWeight: 700,
                       color: '#374151',
-                      marginBottom: '0.5rem'
+                      marginBottom: '0.25rem'
                     }}>
                       Dish Image *
                     </label>
                     {imagePreview ? (
                       <>
-                        <div style={{ position: 'relative', marginBottom: '0.5rem' }}>
+                        <div style={{ position: 'relative', marginBottom: '0.25rem', borderRadius: '0.25rem', overflow: 'hidden', backgroundColor: '#F3F4F6' }}>
                           <img
                             src={imagePreview}
                             alt="Preview"
                             style={{
                               width: '100%',
-                              maxHeight: '200px',
-                              objectFit: 'cover',
-                              borderRadius: '0.5rem'
+                              height: '120px',
+                              objectFit: 'cover'
+                            }}
+                            onError={(e) => {
+                              console.error('Preview image failed to load:', imagePreview);
+                              e.currentTarget.style.display = 'none';
+                              const fallback = e.currentTarget.parentElement;
+                              if (fallback) {
+                                fallback.innerHTML = `
+                                  <div style="width: 100%; height: 120px; display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: #E5E7EB; gap: 0.5rem;">
+                                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2">
+                                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                      <circle cx="8.5" cy="8.5" r="1.5"/>
+                                      <polyline points="21 15 16 10 5 21"/>
+                                    </svg>
+                                    <span style="font-size: 0.75rem; color: #6B7280; font-weight: 500;">Image not found</span>
+                                  </div>
+                                `;
+                              }
                             }}
                           />
                           <div style={{
                             position: 'absolute',
-                            top: '0.5rem',
-                            right: '0.5rem',
+                            top: '0.25rem',
+                            right: '0.25rem',
                             display: 'flex',
-                            gap: '0.5rem'
+                            gap: '0.25rem'
                           }}>
                             <label style={{
-                              padding: '0.5rem',
+                              padding: '0.25rem',
                               backgroundColor: '#3B82F6',
                               color: '#ffffff',
-                              borderRadius: '0.5rem',
+                              borderRadius: '0.25rem',
                               border: 'none',
                               cursor: 'pointer',
                               display: 'flex',
@@ -909,7 +1259,7 @@ export default function MenuManagerDashboard() {
                             }}
                             title="Change Image"
                             >
-                              <Upload size={14} />
+                              <Upload size={10} />
                               <input
                                 type="file"
                                 accept="image/*"
@@ -923,10 +1273,10 @@ export default function MenuManagerDashboard() {
                                 handleInputChange('image', '');
                               }}
                               style={{
-                                padding: '0.5rem',
+                                padding: '0.25rem',
                                 backgroundColor: '#EF4444',
                                 color: '#ffffff',
-                                borderRadius: '0.5rem',
+                                borderRadius: '0.25rem',
                                 border: 'none',
                                 cursor: 'pointer',
                                 display: 'flex',
@@ -936,37 +1286,35 @@ export default function MenuManagerDashboard() {
                               }}
                               title="Remove Image"
                             >
-                              <X size={14} />
+                              <X size={10} />
                             </button>
                           </div>
                         </div>
-                        <div style={{ marginTop: '0.5rem' }}>
-                          <label style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                            paddingLeft: '0.75rem',
-                            paddingRight: '0.75rem',
-                            paddingTop: '0.5rem',
-                            paddingBottom: '0.5rem',
-                            backgroundColor: '#F3F4F6',
-                            border: '2px solid #D1D5DB',
-                            borderRadius: '0.5rem',
-                            cursor: 'pointer',
-                            fontSize: '0.875rem',
-                            fontWeight: 600,
-                            color: '#374151'
-                          }}>
-                            <Upload size={16} />
-                            <span>Change Image</span>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={handleImageUpload}
-                              style={{ display: 'none' }}
-                            />
-                          </label>
-                        </div>
+                        <label style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.25rem',
+                          paddingLeft: '0.5rem',
+                          paddingRight: '0.5rem',
+                          paddingTop: '0.25rem',
+                          paddingBottom: '0.25rem',
+                          backgroundColor: '#F3F4F6',
+                          border: '1px solid #D1D5DB',
+                          borderRadius: '0.25rem',
+                          cursor: 'pointer',
+                          fontSize: '0.6875rem',
+                          fontWeight: 600,
+                          color: '#374151'
+                        }}>
+                          <Upload size={12} />
+                          <span>Change</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageUpload}
+                            style={{ display: 'none' }}
+                          />
+                        </label>
                       </>
                     ) : (
                       <label style={{
@@ -974,14 +1322,14 @@ export default function MenuManagerDashboard() {
                         flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        padding: '2rem',
+                        padding: '1rem',
                         border: '2px dashed #D1D5DB',
-                        borderRadius: '0.5rem',
+                        borderRadius: '0.375rem',
                         cursor: 'pointer',
-                        backgroundColor: '#F9FAFB'
+                        backgroundColor: '#ffffff'
                       }}>
-                        <Upload size={32} style={{ color: '#9CA3AF', marginBottom: '0.5rem' }} />
-                        <span style={{ fontSize: '0.875rem', color: '#6B7280' }}>Click to upload image</span>
+                        <Upload size={20} style={{ color: '#9CA3AF', marginBottom: '0.25rem' }} />
+                        <span style={{ fontSize: '0.6875rem', color: '#6B7280' }}>Tap to upload</span>
                         <input
                           type="file"
                           accept="image/*"
@@ -992,14 +1340,19 @@ export default function MenuManagerDashboard() {
                     )}
                   </div>
 
-                  {/* Name */}
-                  <div>
+                  {/* Name Card */}
+                  <div style={{
+                    backgroundColor: '#F9FAFB',
+                    borderRadius: '0.375rem',
+                    padding: '0.375rem',
+                    border: '1px solid #E5E7EB'
+                  }}>
                     <label style={{
                       display: 'block',
-                      fontSize: '0.875rem',
+                      fontSize: '0.625rem',
                       fontWeight: 700,
                       color: '#374151',
-                      marginBottom: '0.5rem'
+                      marginBottom: '0.1875rem'
                     }}>
                       Dish Name *
                     </label>
@@ -1010,22 +1363,28 @@ export default function MenuManagerDashboard() {
                       placeholder="e.g., Butter Chicken"
                       style={{
                         width: '100%',
-                        padding: '0.5rem',
-                        border: '2px solid #E5E7EB',
-                        borderRadius: '0.5rem',
-                        fontSize: '0.875rem'
+                        padding: '0.3125rem',
+                        border: '1px solid #D1D5DB',
+                        borderRadius: '0.25rem',
+                        fontSize: '0.75rem',
+                        backgroundColor: '#ffffff'
                       }}
                     />
                   </div>
 
-                  {/* Description */}
-                  <div>
+                  {/* Description Card */}
+                  <div style={{
+                    backgroundColor: '#F9FAFB',
+                    borderRadius: '0.375rem',
+                    padding: '0.375rem',
+                    border: '1px solid #E5E7EB'
+                  }}>
                     <label style={{
                       display: 'block',
-                      fontSize: '0.875rem',
+                      fontSize: '0.625rem',
                       fontWeight: 700,
                       color: '#374151',
-                      marginBottom: '0.5rem'
+                      marginBottom: '0.1875rem'
                     }}>
                       Description *
                     </label>
@@ -1033,27 +1392,34 @@ export default function MenuManagerDashboard() {
                       value={formData.description}
                       onChange={(e) => handleInputChange('description', e.target.value)}
                       placeholder="Describe the dish..."
-                      rows={3}
+                      rows={2}
                       style={{
                         width: '100%',
-                        padding: '0.5rem',
-                        border: '2px solid #E5E7EB',
-                        borderRadius: '0.5rem',
-                        fontSize: '0.875rem',
-                        resize: 'vertical'
+                        padding: '0.3125rem',
+                        border: '1px solid #D1D5DB',
+                        borderRadius: '0.25rem',
+                        fontSize: '0.75rem',
+                        resize: 'vertical',
+                        backgroundColor: '#ffffff',
+                        fontFamily: 'inherit'
                       }}
                     />
                   </div>
 
-                  {/* Price and Category */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                    <div>
+                  {/* Price and Category Cards */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.375rem' }}>
+                    <div style={{
+                      backgroundColor: '#F9FAFB',
+                      borderRadius: '0.375rem',
+                      padding: '0.375rem',
+                      border: '1px solid #E5E7EB'
+                    }}>
                       <label style={{
                         display: 'block',
-                        fontSize: '0.875rem',
+                        fontSize: '0.625rem',
                         fontWeight: 700,
                         color: '#374151',
-                        marginBottom: '0.5rem'
+                        marginBottom: '0.1875rem'
                       }}>
                         Price (₹) *
                       </label>
@@ -1068,20 +1434,26 @@ export default function MenuManagerDashboard() {
                         step="1"
                         style={{
                           width: '100%',
-                          padding: '0.5rem',
-                          border: '2px solid #E5E7EB',
-                          borderRadius: '0.5rem',
-                          fontSize: '0.875rem'
+                          padding: '0.3125rem',
+                          border: '1px solid #D1D5DB',
+                          borderRadius: '0.25rem',
+                          fontSize: '0.75rem',
+                          backgroundColor: '#ffffff'
                         }}
                       />
                     </div>
-                    <div>
+                    <div style={{
+                      backgroundColor: '#F9FAFB',
+                      borderRadius: '0.375rem',
+                      padding: '0.375rem',
+                      border: '1px solid #E5E7EB'
+                    }}>
                       <label style={{
                         display: 'block',
-                        fontSize: '0.875rem',
+                        fontSize: '0.625rem',
                         fontWeight: 700,
                         color: '#374151',
-                        marginBottom: '0.5rem'
+                        marginBottom: '0.1875rem'
                       }}>
                         Category *
                       </label>
@@ -1090,10 +1462,10 @@ export default function MenuManagerDashboard() {
                         onChange={(e) => handleInputChange('category', e.target.value)}
                         style={{
                           width: '100%',
-                          padding: '0.5rem',
-                          border: '2px solid #E5E7EB',
-                          borderRadius: '0.5rem',
-                          fontSize: '0.875rem',
+                          padding: '0.3125rem',
+                          border: '1px solid #D1D5DB',
+                          borderRadius: '0.25rem',
+                          fontSize: '0.75rem',
                           backgroundColor: '#ffffff'
                         }}
                       >
@@ -1104,39 +1476,58 @@ export default function MenuManagerDashboard() {
                     </div>
                   </div>
 
-                  {/* Options */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.75rem' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                      <input
-                        type="checkbox"
-                        checked={formData.isVegetarian}
-                        onChange={(e) => handleInputChange('isVegetarian', e.target.checked)}
-                      />
-                      <Leaf size={16} style={{ color: '#10B981' }} />
-                      <span style={{ fontSize: '0.875rem' }}>Vegetarian</span>
+                  {/* Options Card */}
+                  <div style={{
+                    backgroundColor: '#F9FAFB',
+                    borderRadius: '0.375rem',
+                    padding: '0.375rem',
+                    border: '1px solid #E5E7EB'
+                  }}>
+                    <label style={{
+                      display: 'block',
+                      fontSize: '0.625rem',
+                      fontWeight: 700,
+                      color: '#374151',
+                      marginBottom: '0.25rem'
+                    }}>
+                      Options
                     </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                      <input
-                        type="checkbox"
-                        checked={formData.isPopular}
-                        onChange={(e) => handleInputChange('isPopular', e.target.checked)}
-                      />
-                      <TrendingUp size={16} style={{ color: '#F97316' }} />
-                      <span style={{ fontSize: '0.875rem' }}>Popular</span>
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                      <input
-                        type="checkbox"
-                        checked={formData.isAvailable}
-                        onChange={(e) => handleInputChange('isAvailable', e.target.checked)}
-                      />
-                      <CheckCircle size={16} style={{ color: '#10B981' }} />
-                      <span style={{ fontSize: '0.875rem' }}>Available</span>
-                    </label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={formData.isVegetarian}
+                          onChange={(e) => handleInputChange('isVegetarian', e.target.checked)}
+                          style={{ width: '12px', height: '12px' }}
+                        />
+                        <Leaf size={10} style={{ color: '#10B981' }} />
+                        <span style={{ fontSize: '0.6875rem' }}>Vegetarian</span>
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={formData.isPopular}
+                          onChange={(e) => handleInputChange('isPopular', e.target.checked)}
+                          style={{ width: '12px', height: '12px' }}
+                        />
+                        <TrendingUp size={10} style={{ color: '#F97316' }} />
+                        <span style={{ fontSize: '0.6875rem' }}>Popular</span>
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={formData.isAvailable}
+                          onChange={(e) => handleInputChange('isAvailable', e.target.checked)}
+                          style={{ width: '12px', height: '12px' }}
+                        />
+                        <CheckCircle size={10} style={{ color: '#10B981' }} />
+                        <span style={{ fontSize: '0.6875rem' }}>Available</span>
+                      </label>
+                    </div>
                   </div>
 
-                  {/* Save Button */}
-                  <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+                  {/* Action Buttons */}
+                  <div style={{ display: 'flex', gap: '0.25rem', marginTop: '0.125rem' }}>
                     <button
                       onClick={handleSave}
                       disabled={saving || uploadingImage}
@@ -1145,14 +1536,14 @@ export default function MenuManagerDashboard() {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: '0.5rem',
-                        paddingTop: '0.75rem',
-                        paddingBottom: '0.75rem',
+                        gap: '0.1875rem',
+                        paddingTop: '0.4375rem',
+                        paddingBottom: '0.4375rem',
                         background: 'linear-gradient(to right, #10B981, #059669)',
                         color: '#ffffff',
-                        borderRadius: '0.5rem',
+                        borderRadius: '0.25rem',
                         fontWeight: 700,
-                        fontSize: '0.875rem',
+                        fontSize: '0.6875rem',
                         border: 'none',
                         cursor: (saving || uploadingImage) ? 'not-allowed' : 'pointer',
                         opacity: (saving || uploadingImage) ? 0.5 : 1
@@ -1161,8 +1552,8 @@ export default function MenuManagerDashboard() {
                       {saving ? (
                         <>
                           <div style={{
-                            width: '1rem',
-                            height: '1rem',
+                            width: '0.625rem',
+                            height: '0.625rem',
                             border: '2px solid #ffffff',
                             borderTopColor: 'transparent',
                             borderRadius: '50%',
@@ -1172,23 +1563,23 @@ export default function MenuManagerDashboard() {
                         </>
                       ) : (
                         <>
-                          <Save size={16} />
-                          <span>{editingItem ? 'Update' : 'Create'} Menu Item</span>
+                          <Save size={10} />
+                          <span>{editingItem ? 'Update' : 'Create'}</span>
                         </>
                       )}
                     </button>
                     <button
                       onClick={cancelEdit}
                       style={{
-                        paddingLeft: '1.5rem',
-                        paddingRight: '1.5rem',
-                        paddingTop: '0.75rem',
-                        paddingBottom: '0.75rem',
+                        paddingLeft: '0.625rem',
+                        paddingRight: '0.625rem',
+                        paddingTop: '0.4375rem',
+                        paddingBottom: '0.4375rem',
                         backgroundColor: '#F3F4F6',
                         color: '#374151',
-                        borderRadius: '0.5rem',
+                        borderRadius: '0.25rem',
                         fontWeight: 600,
-                        fontSize: '0.875rem',
+                        fontSize: '0.6875rem',
                         border: 'none',
                         cursor: 'pointer'
                       }}
@@ -1203,6 +1594,7 @@ export default function MenuManagerDashboard() {
         )}
       </div>
     </div>
+    )}
     </>
   );
 }

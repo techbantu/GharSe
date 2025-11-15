@@ -14,13 +14,18 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { Order, OrderStatus, CustomerInfo, Address } from '@/types';
+import { Order, OrderStatus, CustomerInfo, Address, PaymentMethod, PaymentStatus, MenuCategory, CartItem } from '@/types';
 import { Result, Ok, Err, ValidationError, ServerError, AppError } from '@/utils/result';
 import { logger } from '@/utils/logger';
 import { applyRateLimit, RATE_LIMITS } from '@/utils/rate-limit';
 import { restaurantInfo } from '@/data/menuData';
 import { addOrder, getOrders, getOrdersCount } from '@/lib/order-storage';
 import prisma from '@/lib/prisma';
+import { broadcastNewOrderToAdmin } from '@/lib/websocket-server';
+import { validateCoupon, applyCouponToOrder, checkReferralEligibility, completeReferral } from '@/lib/coupon-validator';
+import { extractTokenFromHeader, extractTokenFromCookie, verifyToken } from '@/lib/auth-customer';
+import { checkRefereeDiscount, applyRefereeDiscount } from '@/lib/referral-engine';
+import { getMaxWalletUsage, debitWallet } from '@/lib/wallet-manager';
 
 /**
  * Validation Schema for Order Creation
@@ -54,10 +59,15 @@ const CreateOrderSchema = z.object({
     tax: z.number().nonnegative(),
     deliveryFee: z.number().nonnegative(),
     discount: z.number().nonnegative().optional(),
+    walletAmount: z.number().nonnegative().optional().default(0), // Wallet credits used
+    tip: z.number().nonnegative().optional().default(0),
     total: z.number().nonnegative(),
+    promoCode: z.string().optional(), // Coupon code
   }),
   orderType: z.enum(['delivery', 'pickup']).default('delivery'),
-  paymentMethod: z.enum(['cash-on-delivery', 'card', 'upi']).default('cash-on-delivery'),
+  paymentMethod: z.enum(['cash-on-delivery', 'card', 'upi', 'paytm', 'razorpay', 'stripe', 'google-pay', 'phonepe', 'form-b', 'netbanking']).default('cash-on-delivery'),
+  paymentMethodDetails: z.string().optional(), // Specific gateway details
+  customerId: z.string().optional(), // Customer ID (if logged in)
   deliveryAddress: z.object({
     street: z.string().min(1),
     city: z.string().min(1),
@@ -93,6 +103,101 @@ async function createOrderLogic(body: unknown): Promise<Result<Order, AppError>>
     
     const data = validationResult.data;
     
+    // Coupon validation and discount calculation (if promoCode provided)
+    let couponId: string | undefined;
+    let finalDiscount = data.pricing.discount || 0;
+    let referralId: string | undefined;
+    let referralDiscountApplied = false;
+    
+    // Check for automatic referral discount (first-time user bonus)
+    if (data.customerId) {
+      const refereeDiscountResult = await checkRefereeDiscount(data.customerId);
+      
+      if (refereeDiscountResult.eligible) {
+        // Apply referral discount automatically (no code needed!)
+        finalDiscount += refereeDiscountResult.amount;
+        referralId = refereeDiscountResult.referralId;
+        referralDiscountApplied = true;
+        
+        logger.info('Referral discount auto-applied', {
+          customerId: data.customerId,
+          referralId,
+          discount: refereeDiscountResult.amount,
+        });
+      }
+    }
+    
+    // Check for promo code/coupon (on top of referral discount if applicable)
+    if (data.pricing.promoCode && data.customerId) {
+      const couponResult = await validateCoupon(
+        data.pricing.promoCode,
+        data.customerId,
+        data.pricing.subtotal,
+        data.items.map(item => ({
+          category: item.menuItem.category,
+          price: item.menuItem.price,
+          quantity: item.quantity,
+        }))
+      );
+      
+      if (!couponResult.valid) {
+        return Err(
+          new ValidationError(
+            couponResult.message || 'Invalid coupon code',
+            'pricing.promoCode',
+            'VALIDATION_ERROR'
+          )
+        );
+      }
+      
+      // Apply coupon discount (on top of referral discount)
+      couponId = couponResult.couponId;
+      finalDiscount += (couponResult.discount || 0);
+      
+      logger.info('Coupon applied to order', {
+        customerId: data.customerId,
+        couponCode: data.pricing.promoCode,
+        discount: couponResult.discount,
+      });
+    } else if (data.pricing.promoCode && !data.customerId) {
+      return Err(
+        new ValidationError(
+          'Please login to use coupon codes',
+          'pricing.promoCode',
+          'VALIDATION_ERROR'
+        )
+      );
+    }
+    
+    // Calculate total before wallet
+    let subtotalAfterDiscounts = data.pricing.subtotal + data.pricing.tax + data.pricing.deliveryFee - finalDiscount;
+    
+    // Validate and apply wallet credits
+    let walletAmountUsed = data.pricing.walletAmount || 0;
+    
+    if (walletAmountUsed > 0 && data.customerId) {
+      // Validate wallet amount
+      const maxWalletUsage = await getMaxWalletUsage(data.customerId, subtotalAfterDiscounts);
+      
+      if (walletAmountUsed > maxWalletUsage) {
+        return Err(
+          new ValidationError(
+            `Insufficient wallet balance. Available: ₹${maxWalletUsage}`,
+            'pricing.walletAmount',
+            'VALIDATION_ERROR'
+          )
+        );
+      }
+      
+      logger.info('Wallet credits applied', {
+        customerId: data.customerId,
+        walletAmount: walletAmountUsed,
+      });
+    }
+    
+    // Final total after wallet
+    const finalTotal = Math.max(0, subtotalAfterDiscounts - walletAmountUsed);
+    
     // Business rule: Check minimum order amount
     if (data.pricing.subtotal < restaurantInfo.settings.minimumOrder) {
       return Err(
@@ -113,28 +218,15 @@ async function createOrderLogic(body: unknown): Promise<Result<Order, AppError>>
       Date.now() + (40 + restaurantInfo.settings.preparationBuffer) * 60 * 1000
     );
     
-    // Create order object
-    const order: Order = {
-      id: orderId,
-      orderNumber,
-      customer: data.customer as CustomerInfo,
-      items: data.items,
-      pricing: data.pricing,
-      status: 'pending' as OrderStatus,
-      orderType: data.orderType,
-      paymentMethod: data.paymentMethod,
-      paymentStatus: 'pending',
-      specialInstructions: data.specialInstructions,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      estimatedReadyTime,
-      deliveryAddress: data.deliveryAddress as Address | undefined,
-      contactPreference: ['email', 'sms'],
-      notifications: [],
-    };
+    // Calculate grace period expiry (5 minutes from now)
+    const GRACE_PERIOD_MS = 5 * 60 * 1000; // 5 minutes
+    const gracePeriodExpiresAt = new Date(Date.now() + GRACE_PERIOD_MS);
     
-    // Save to storage (in-memory for now, also save to database)
-    addOrder(order);
+    // CRITICAL FIX: Declare order variable in outer scope
+    let order: Order;
+    
+    // CRITICAL FIX: Save to database FIRST, then memory
+    // This ensures data consistency - if DB fails, order doesn't exist anywhere
     
     // Save to database and decrement inventory (with transaction)
     try {
@@ -144,6 +236,7 @@ async function createOrderLogic(body: unknown): Promise<Result<Order, AppError>>
           data: {
             id: orderId,
             orderNumber,
+            customerId: data.customerId || null, // Link to customer if logged in
             customerName: data.customer.name,
             customerEmail: data.customer.email,
             customerPhone: data.customer.phone,
@@ -154,12 +247,15 @@ async function createOrderLogic(body: unknown): Promise<Result<Order, AppError>>
             subtotal: data.pricing.subtotal,
             tax: data.pricing.tax,
             deliveryFee: data.pricing.deliveryFee,
-            discount: data.pricing.discount || 0,
-            total: data.pricing.total,
-            status: 'PENDING',
+            discount: finalDiscount, // Use calculated discount
+            tip: data.pricing.tip || 0,
+            total: finalTotal + (data.pricing.tip || 0), // Include tip in total
+            status: 'PENDING_CONFIRMATION', // Start in grace period
             paymentStatus: 'PENDING',
-            paymentMethod: data.paymentMethod,
+            paymentMethod: data.paymentMethodDetails || data.paymentMethod, // Use details if provided, otherwise use method
             estimatedDelivery: estimatedReadyTime,
+            gracePeriodExpiresAt, // Grace period expiry timestamp
+            modificationCount: 0, // No modifications yet
             items: {
               create: data.items.map(item => ({
                 menuItemId: item.menuItem.id,
@@ -172,31 +268,51 @@ async function createOrderLogic(body: unknown): Promise<Result<Order, AppError>>
           },
         });
         
-        // Decrement inventory for items with inventory tracking enabled
+        // CRITICAL FIX: Use atomic decrement with row-level locking to prevent race conditions
+        // This ensures two simultaneous orders can't both get the last item
         for (const item of data.items) {
           const menuItem = await tx.menuItem.findUnique({
             where: { id: item.menuItem.id },
-            select: { inventoryEnabled: true, inventory: true },
+            select: { inventoryEnabled: true, inventory: true, name: true },
           });
           
           if (menuItem && menuItem.inventoryEnabled && menuItem.inventory !== null && menuItem.inventory !== undefined) {
-            const newInventory = menuItem.inventory - item.quantity;
-            
-            // Check if sufficient inventory (shouldn't happen if frontend is working correctly, but double-check)
-            if (newInventory < 0) {
-              throw new Error(`Insufficient inventory for item ${item.menuItem.name}. Only ${menuItem.inventory} available.`);
-            }
-            
-            // Update inventory
-            await tx.menuItem.update({
-              where: { id: item.menuItem.id },
-              data: { inventory: newInventory },
+            // Use atomic decrement with condition - only update if enough inventory
+            const updated = await tx.menuItem.updateMany({
+              where: { 
+                id: item.menuItem.id,
+                inventory: { gte: item.quantity } // Only update if sufficient inventory
+              },
+              data: { 
+                inventory: { decrement: item.quantity } // Atomic decrement
+              },
             });
             
-            logger.info(`Inventory decremented for ${item.menuItem.name}`, {
+            // If 0 rows updated, insufficient inventory (race condition caught!)
+            if (updated.count === 0) {
+              // Get current inventory for error message
+              const currentItem = await tx.menuItem.findUnique({
+                where: { id: item.menuItem.id },
+                select: { inventory: true },
+              });
+              
+              throw new Error(
+                `Insufficient inventory for ${menuItem.name}. ` +
+                `Requested: ${item.quantity}, Available: ${currentItem?.inventory || 0}. ` +
+                `This item may have been sold to another customer.`
+              );
+            }
+            
+            // Get updated inventory for logging
+            const updatedItem = await tx.menuItem.findUnique({
+              where: { id: item.menuItem.id },
+              select: { inventory: true },
+            });
+            
+            logger.info(`Inventory decremented for ${menuItem.name}`, {
               itemId: item.menuItem.id,
               quantity: item.quantity,
-              newInventory,
+              newInventory: updatedItem?.inventory,
             });
           }
         }
@@ -206,13 +322,232 @@ async function createOrderLogic(body: unknown): Promise<Result<Order, AppError>>
         orderId,
         orderNumber,
       });
+      
+      // COUPON TRACKING: Create CouponUsage record if coupon was applied
+      if (couponId && data.customerId && finalDiscount > 0) {
+        try {
+          const ipAddress = 'unknown'; // Will be set from request in POST handler
+          await applyCouponToOrder(
+            couponId,
+            data.customerId,
+            orderId,
+            finalDiscount,
+            data.pricing.subtotal + data.pricing.tax + data.pricing.deliveryFee,
+            finalTotal,
+            ipAddress
+          );
+          
+          logger.info('Coupon usage tracked', {
+            couponId,
+            orderId,
+            discount: finalDiscount,
+          });
+        } catch (couponError) {
+          // Don't fail order if coupon tracking fails (already have the discount)
+          logger.error('Failed to track coupon usage', {
+            couponId,
+            orderId,
+            error: couponError instanceof Error ? couponError.message : String(couponError),
+          });
+        }
+      }
+      
+      // REFERRAL TRACKING: Mark referee discount as applied if used
+      if (referralDiscountApplied && referralId) {
+        try {
+          await applyRefereeDiscount(referralId, orderId);
+          
+          logger.info('Referee discount marked as applied', {
+            referralId,
+            orderId,
+          });
+        } catch (referralError) {
+          // Don't fail order if referral marking fails
+          logger.error('Failed to mark referee discount', {
+            referralId,
+            orderId,
+            error: referralError instanceof Error ? referralError.message : String(referralError),
+          });
+        }
+      }
+      
+      // WALLET DEBIT: Deduct wallet credits used
+      if (walletAmountUsed > 0 && data.customerId) {
+        try {
+          await debitWallet(
+            data.customerId,
+            walletAmountUsed,
+            orderId,
+            `Payment for order ${orderNumber}`
+          );
+          
+          logger.info('Wallet debited', {
+              customerId: data.customerId,
+              orderId,
+            amount: walletAmountUsed,
+            });
+        } catch (walletError) {
+          // Log error but don't fail order (money already accounted for in total)
+          logger.error('Failed to debit wallet', {
+            customerId: data.customerId,
+            orderId,
+            amount: walletAmountUsed,
+            error: walletError instanceof Error ? walletError.message : String(walletError),
+          });
+        }
+      }
+      
+      // Update customer statistics if logged in
+      if (data.customerId) {
+        try {
+          await prisma.customer.update({
+            where: { id: data.customerId },
+            data: {
+              totalOrders: { increment: 1 },
+              totalSpent: { increment: finalTotal },
+              lastOrderAt: new Date(),
+            },
+          });
+        } catch (statsError) {
+          // Don't fail order if stats update fails
+          logger.error('Failed to update customer statistics', {
+            customerId: data.customerId,
+            error: statsError instanceof Error ? statsError.message : String(statsError),
+          });
+        }
+      }
+      
+      // CRITICAL FIX: Fetch the complete order from DB with all relations
+      // This ensures frontend gets gracePeriodExpiresAt and full MenuItem data
+      const dbOrder = await prisma.order.findUnique({
+        where: { id: orderId },
+        include: {
+          items: {
+            include: {
+              menuItem: true, // Include full MenuItem data for images
+            },
+          },
+        },
+      });
+      
+      if (!dbOrder) {
+        throw new Error('Order created but not found in database');
+      }
+      
+      // Convert DB order to frontend format
+      order = {
+        id: dbOrder.id,
+        orderNumber: dbOrder.orderNumber,
+        customer: data.customer as CustomerInfo,
+        items: dbOrder.items.map(item => ({
+          id: item.id,
+          menuItemId: item.menuItemId,
+          menuItem: {
+            id: item.menuItem.id,
+            name: item.menuItem.name,
+            description: item.menuItem.description || '',
+            price: parseFloat(item.menuItem.price.toString()),
+            originalPrice: item.menuItem.originalPrice ? parseFloat(item.menuItem.originalPrice.toString()) : undefined,
+            category: item.menuItem.category,
+            image: item.menuItem.image || '',
+            isVegetarian: item.menuItem.isVegetarian,
+            isVegan: item.menuItem.isVegan,
+            isGlutenFree: item.menuItem.isGlutenFree,
+            spicyLevel: item.menuItem.spicyLevel,
+            preparationTime: item.menuItem.preparationTime,
+            isAvailable: item.menuItem.isAvailable,
+            isPopular: item.menuItem.isPopular,
+            calories: item.menuItem.calories || undefined,
+            servingSize: item.menuItem.servingSize || undefined,
+            ingredients: item.menuItem.ingredients || [],
+            allergens: item.menuItem.allergens || [],
+          },
+          quantity: item.quantity,
+          price: parseFloat(item.price.toString()),
+          subtotal: parseFloat(item.subtotal.toString()),
+          customization: item.specialInstructions || undefined,
+        })),
+        pricing: {
+          subtotal: parseFloat(dbOrder.subtotal.toString()),
+          tax: parseFloat(dbOrder.tax.toString()),
+          deliveryFee: parseFloat(dbOrder.deliveryFee.toString()),
+          discount: parseFloat(dbOrder.discount.toString()),
+          tip: parseFloat(dbOrder.tip.toString()),
+          total: parseFloat(dbOrder.total.toString()),
+        },
+        status: dbOrder.status.toLowerCase().replace(/_/g, '-') as OrderStatus,
+        orderType: data.orderType,
+        paymentMethod: dbOrder.paymentMethod || 'cash',
+        paymentStatus: dbOrder.paymentStatus.toLowerCase() as any,
+        specialInstructions: data.specialInstructions,
+        createdAt: dbOrder.createdAt,
+        updatedAt: dbOrder.updatedAt,
+        estimatedReadyTime,
+        deliveryAddress: data.deliveryAddress as Address | undefined,
+        contactPreference: ['email', 'sms'],
+        notifications: [],
+        // Grace period fields - CRITICAL for timer
+        gracePeriodExpiresAt: dbOrder.gracePeriodExpiresAt,
+        modificationCount: dbOrder.modificationCount,
+        lastModifiedAt: dbOrder.lastModifiedAt,
+      };
+      
+      // Save to in-memory storage ONLY after DB success
+      addOrder(order);
+      
+      // Broadcast new order to admin room via WebSocket (real-time notification)
+      try {
+        await broadcastNewOrderToAdmin({
+          id: order.id,
+          orderNumber: order.orderNumber,
+          customer: order.customer,
+          pricing: order.pricing,
+          status: order.status,
+          createdAt: order.createdAt,
+          items: order.items.map(item => ({
+            menuItem: { name: item.menuItem.name },
+            quantity: item.quantity,
+          })),
+        });
+      } catch (wsError) {
+        // Don't fail order creation if WebSocket fails (graceful degradation)
+        logger.warn('Failed to broadcast new order to admin via WebSocket', {
+          orderId,
+          error: wsError instanceof Error ? wsError.message : String(wsError),
+        });
+      }
+      
+      // Send order confirmation notifications (email + SMS)
+      // This runs asynchronously - don't block order response
+      (async () => {
+        try {
+          const { notificationManager } = await import('@/lib/notifications/notification-manager');
+          const notificationResult = await notificationManager.sendOrderConfirmation(order);
+          
+          logger.info('Order confirmation notifications sent', {
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+            emailSuccess: notificationResult.email?.success,
+            smsSuccess: notificationResult.sms?.success,
+            smsSkipped: notificationResult.sms?.skipped,
+          });
+        } catch (notificationError) {
+          // Don't fail order creation if notifications fail (graceful degradation)
+          logger.error('Failed to send order confirmation notifications', {
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+            error: notificationError instanceof Error ? notificationError.message : String(notificationError),
+          });
+        }
+      })();
+      
     } catch (dbError: any) {
       logger.error('Failed to save order to database', {
         orderId,
         error: dbError.message,
       });
       
-      // Return error if inventory insufficient or database error
+      // Return error - order NOT saved anywhere (data consistency maintained)
       if (dbError.message.includes('Insufficient inventory')) {
         return Err(
           new ValidationError(
@@ -223,8 +558,14 @@ async function createOrderLogic(body: unknown): Promise<Result<Order, AppError>>
         );
       }
       
-      // Log but don't fail the order creation (order is already in memory)
-      // In production, we'd want to retry or use a message queue
+      // Database error - return error, don't save to memory
+      return Err(
+        new ServerError(
+          'Failed to create order. Please try again.',
+          500,
+          'DATABASE_ERROR'
+        )
+      );
     }
     
     // TODO: In production:
@@ -310,6 +651,19 @@ export async function POST(request: NextRequest) {
       );
     }
     
+    // Step 2.5: Extract customer ID from auth token if present
+    const authHeader = request.headers.get('authorization');
+    const cookieHeader = request.headers.get('cookie');
+    const token = extractTokenFromHeader(authHeader) || extractTokenFromCookie(cookieHeader);
+    
+    if (token) {
+      const decoded = verifyToken(token);
+      if (decoded && decoded.customerId) {
+        // Add customerId to body if user is logged in
+        (body as any).customerId = decoded.customerId;
+      }
+    }
+    
     // Step 3: Create order (with validation and business logic)
     const result = await createOrderLogic(body);
     
@@ -384,6 +738,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const statusParam = searchParams.get('status');
     const customerId = searchParams.get('customerId');
+    const includePendingConfirmation = searchParams.get('includePendingConfirmation') === 'true';
     
     // Handle multiple statuses (comma-separated)
     let statusFilter: string | undefined;
@@ -391,7 +746,7 @@ export async function GET(request: NextRequest) {
       // Split by comma and filter
       const statuses = statusParam.split(',').map(s => s.trim());
       const validStatuses: OrderStatus[] = [
-        'pending', 'confirmed', 'preparing', 'ready',
+        'pending-confirmation', 'pending', 'confirmed', 'preparing', 'ready',
         'out-for-delivery', 'delivered', 'picked-up', 'cancelled', 'refunded'
       ];
       
@@ -412,16 +767,195 @@ export async function GET(request: NextRequest) {
       statusFilter = statuses.length === 1 ? statuses[0] : undefined;
     }
     
-    // Get filtered orders from shared storage
-    let filteredOrders = getOrders({
-      status: statusFilter,
-      customerId: customerId || undefined,
+    // Fetch orders from database (not in-memory storage)
+    // Map frontend status to database enum format
+    let dbStatusFilter: string | undefined;
+    if (statusFilter) {
+      const statusMap: Record<string, string> = {
+        'pending-confirmation': 'PENDING_CONFIRMATION',
+        'pending': 'PENDING',
+        'confirmed': 'CONFIRMED',
+        'preparing': 'PREPARING',
+        'ready': 'READY',
+        'out-for-delivery': 'OUT_FOR_DELIVERY',
+        'delivered': 'DELIVERED',
+        'picked-up': 'DELIVERED', // Map to DELIVERED since PICKED_UP doesn't exist in enum
+        'cancelled': 'CANCELLED',
+        'refunded': 'CANCELLED', // Map to CANCELLED since REFUNDED doesn't exist in enum
+      };
+      dbStatusFilter = statusMap[statusFilter.toLowerCase()] || statusFilter.toUpperCase();
+    }
+    
+    // Build where clause - exclude PENDING_CONFIRMATION by default (unless explicitly included)
+    const whereClause: any = {
+      ...(dbStatusFilter && { status: dbStatusFilter as any }),
+      ...(customerId && { customerPhone: customerId }),
+    };
+    
+    // Exclude PENDING_CONFIRMATION unless explicitly requested
+    if (!includePendingConfirmation && !dbStatusFilter) {
+      whereClause.status = { not: 'PENDING_CONFIRMATION' };
+    }
+    
+    // Fetch all orders first, then filter out sample/test orders
+    const allDbOrders = await prisma.order.findMany({
+      where: whereClause,
+      include: {
+        items: {
+          include: {
+            menuItem: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+    
+    // SIMPLIFIED FILTERING: Only filter OBVIOUS test/sample orders
+    // Be conservative - we'd rather show a test order than hide a real one!
+    const dbOrders = allDbOrders.filter(order => {
+      const email = order.customerEmail.toLowerCase();
+      const name = order.customerName.toLowerCase();
+      
+      // Only exclude VERY OBVIOUS test patterns
+      // Be VERY conservative to avoid hiding real orders
+      if (
+        // Only filter exact @example.com (standard test domain)
+        email.endsWith('@example.com') ||
+        // Only filter emails that START with obvious test words
+        email.startsWith('test@') ||
+        email.startsWith('sample@') ||
+        email.startsWith('dummy@') ||
+        email.startsWith('fake@') ||
+        // Only filter EXACT matches of obvious test names
+        name === 'test' ||
+        name === 'test user' ||
+        name === 'sample' ||
+        name === 'sample user' ||
+        name === 'dummy' ||
+        name === 'fake'
+      ) {
+        console.log('🚫 Filtered out test order:', order.orderNumber, name, email);
+        return false;
+      }
+      
+      console.log('✅ Including order:', order.orderNumber, name, email);
+      return true; // Real order - show it!
+    });
+    
+    // Transform database orders to frontend Order format
+    const transformedOrders: Order[] = dbOrders.map(dbOrder => {
+      // Map database status to frontend status (lowercase)
+      // Note: Database enum only has: PENDING, CONFIRMED, PREPARING, READY, OUT_FOR_DELIVERY, DELIVERED, CANCELLED
+      const statusMap: Record<string, OrderStatus> = {
+        'PENDING': 'pending',
+        'CONFIRMED': 'confirmed',
+        'PREPARING': 'preparing',
+        'READY': 'ready',
+        'OUT_FOR_DELIVERY': 'out-for-delivery',
+        'DELIVERED': 'delivered',
+        'CANCELLED': 'cancelled',
+      };
+      
+      // Default to pending if status not found
+      const frontendStatus = statusMap[dbOrder.status] || 'pending';
+      
+      // Map payment status
+      const paymentStatusMap: Record<string, PaymentStatus> = {
+        'PENDING': 'pending',
+        'PAID': 'completed',
+        'COMPLETED': 'completed',
+        'FAILED': 'failed',
+        'REFUNDED': 'refunded',
+      };
+      
+      const frontendPaymentStatus = paymentStatusMap[dbOrder.paymentStatus] || 'pending';
+      
+      // Map payment method
+      const paymentMethodMap: Record<string, PaymentMethod> = {
+        'cash': 'cash-on-delivery',
+        'card': 'card',
+        'online': 'card',
+        'upi': 'upi',
+      };
+      
+      const frontendPaymentMethod = paymentMethodMap[dbOrder.paymentMethod?.toLowerCase() || 'cash'] || 'cash-on-delivery';
+      
+      // Transform order items
+      const transformedItems: CartItem[] = dbOrder.items.map(item => ({
+        id: item.id,
+        menuItem: {
+          id: item.menuItem.id,
+          name: item.menuItem.name,
+          description: item.menuItem.description || '',
+          price: item.price, // Use price at time of order
+          category: (item.menuItem.category || 'Main Course') as MenuCategory,
+          image: item.menuItem.image || '',
+          isVegetarian: item.menuItem.isVegetarian || false,
+          isVegan: item.menuItem.isVegan || false,
+          isGlutenFree: item.menuItem.isGlutenFree || false,
+          spicyLevel: (item.menuItem.spicyLevel || 0) as 0 | 1 | 2 | 3 | undefined,
+          preparationTime: item.menuItem.preparationTime || 30,
+          isAvailable: item.menuItem.isAvailable !== undefined ? item.menuItem.isAvailable : true,
+          isPopular: item.menuItem.isPopular || false,
+        },
+        quantity: item.quantity,
+        subtotal: item.subtotal,
+        specialInstructions: item.specialInstructions || undefined,
+      }));
+      
+      // Determine order type from delivery address
+      const orderType: 'delivery' | 'pickup' = dbOrder.deliveryAddress ? 'delivery' : 'pickup';
+      
+      // Build delivery address if exists
+      const deliveryAddress: Address | undefined = dbOrder.deliveryAddress ? {
+        street: dbOrder.deliveryAddress,
+        city: dbOrder.deliveryCity,
+        state: '', // Not stored in DB, but required by type
+        zipCode: dbOrder.deliveryZip,
+        country: 'India',
+        deliveryInstructions: dbOrder.deliveryNotes || undefined,
+      } : undefined;
+      
+      return {
+        id: dbOrder.id,
+        orderNumber: dbOrder.orderNumber,
+        customer: {
+          id: dbOrder.customerPhone, // Use phone as ID
+          name: dbOrder.customerName,
+          email: dbOrder.customerEmail,
+          phone: dbOrder.customerPhone,
+        },
+        items: transformedItems,
+        pricing: {
+          subtotal: dbOrder.subtotal,
+          tax: dbOrder.tax,
+          deliveryFee: dbOrder.deliveryFee,
+          discount: dbOrder.discount || undefined,
+          total: dbOrder.total,
+        },
+        status: frontendStatus,
+        orderType,
+        estimatedReadyTime: dbOrder.estimatedDelivery || dbOrder.createdAt,
+        actualReadyTime: dbOrder.readyAt || undefined,
+        deliveryTime: dbOrder.deliveredAt || undefined,
+        paymentMethod: frontendPaymentMethod,
+        paymentStatus: frontendPaymentStatus,
+        specialInstructions: dbOrder.deliveryNotes || undefined, // Order-level special instructions stored in deliveryNotes
+        createdAt: dbOrder.createdAt,
+        updatedAt: dbOrder.updatedAt,
+        deliveryAddress,
+        contactPreference: ['email', 'sms'],
+        notifications: [],
+      };
     });
     
     // If multiple statuses were provided, filter here
+    let filteredOrders = transformedOrders;
     if (statusParam && statusParam.includes(',')) {
       const statuses = statusParam.split(',').map(s => s.trim());
-      filteredOrders = filteredOrders.filter(o => statuses.includes(o.status));
+      filteredOrders = transformedOrders.filter(o => statuses.includes(o.status));
     }
     
     const duration = Date.now() - startTime;
