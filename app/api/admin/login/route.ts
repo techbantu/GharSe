@@ -22,7 +22,20 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 
-const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || 'admin-change-this-secret-key-in-production';
+/**
+ * CRITICAL SECURITY: Admin JWT Secret must be set in environment variables
+ * This should be DIFFERENT from the customer JWT secret for security isolation
+ * Never use default secrets - the application will fail fast if not configured
+ */
+if (!process.env.ADMIN_JWT_SECRET) {
+  throw new Error(
+    'CRITICAL SECURITY ERROR: ADMIN_JWT_SECRET environment variable is not set. ' +
+    'This is required for admin authentication. Please add ADMIN_JWT_SECRET to your .env file. ' +
+    'Generate a secure secret using: openssl rand -base64 64'
+  );
+}
+
+const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET;
 const JWT_EXPIRES_IN = '7d';
 
 /**
@@ -105,26 +118,46 @@ export async function POST(request: NextRequest) {
       );
     }
     
+    /**
+     * SECURITY FIX: Check email verification BEFORE password verification
+     * This prevents information leakage about valid admin credentials
+     * An attacker should not be able to determine if an unverified admin account exists
+     */
+    if (!admin.emailVerified) {
+      logger.warn('Admin login attempt with unverified email', {
+        adminId: admin.id,
+        email: data.email.substring(0, 3) + '***',
+      });
+
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Invalid email or password', // Generic error - don't reveal email verification status
+        },
+        { status: 401 }
+      );
+    }
+
     // Check if admin is active
     if (!admin.isActive) {
       logger.warn('Login attempt on inactive admin account', {
         adminId: admin.id,
         email: data.email.substring(0, 3) + '***',
       });
-      
+
       return NextResponse.json(
         {
           success: false,
-          error: 'Account is inactive. Please contact support.',
+          error: 'Invalid email or password', // Generic error - don't reveal account status
         },
         { status: 401 }
       );
     }
-    
+
     // Verify password (trim whitespace to handle form input issues)
     const passwordToCompare = (data.password || '').trim();
     const isPasswordValid = await bcrypt.compare(passwordToCompare, admin.passwordHash);
-    
+
     logger.info('Password verification', {
       adminId: admin.id,
       email: normalizedEmail.substring(0, 3) + '***',
@@ -132,14 +165,14 @@ export async function POST(request: NextRequest) {
       hashLength: admin.passwordHash.length,
       isValid: isPasswordValid,
     });
-    
+
     if (!isPasswordValid) {
       logger.warn('Admin login failed - incorrect password', {
         adminId: admin.id,
         email: normalizedEmail.substring(0, 3) + '***',
         passwordLength: passwordToCompare.length,
       });
-      
+
       return NextResponse.json(
         {
           success: false,
@@ -148,9 +181,9 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
-    
-    // Check email verification (if required)
-    if (!admin.emailVerified) {
+
+    // Email is verified and password is correct - proceed with login
+    if (!admin.emailVerified) { // This should never be reached due to early check above
       logger.warn('Admin login attempt with unverified email', {
         adminId: admin.id,
         email: data.email.substring(0, 3) + '***',
