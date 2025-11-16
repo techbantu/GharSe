@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
         peakHourPrediction: peakPrediction.predictedOrders,
         peakHourTime: peakPrediction.timestamp.toISOString(),
         confidence: hourlyPredictions[0]?.confidence || 0.5,
-        hourlyBreakdown: hourlyPredictions.map(p => ({
+        hourlyBreakdown: hourlyPredictions.map((p: any) => ({
           hour: p.timestamp.toISOString(),
           predicted: p.predictedOrders,
           confidenceInterval: p.confidenceInterval,

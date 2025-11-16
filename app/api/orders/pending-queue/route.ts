@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
 
     logger.info('Found pending orders', {
       count: pendingOrders.length,
-      orders: pendingOrders.map(o => ({
+      orders: pendingOrders.map((o: any) => ({
         orderNumber: o.orderNumber,
         status: o.status,
         createdAt: o.createdAt,
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Calculate average time remaining
-    const timeRemainingValues = pendingOrders.map(order => {
+    const timeRemainingValues = pendingOrders.map((order: any) => {
       if (!order.gracePeriodExpiresAt) return 0;
       const remaining = order.gracePeriodExpiresAt.getTime() - now.getTime();
       return Math.max(0, Math.floor(remaining / 1000)); // seconds
@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
       success: true,
       count: pendingOrders.length,
       avgTimeRemainingSeconds,
-      orders: pendingOrders.map(o => ({
+      orders: pendingOrders.map((o: any) => ({
         orderNumber: o.orderNumber,
         expiresAt: o.gracePeriodExpiresAt,
       })),
