@@ -76,14 +76,14 @@ export async function GET(request: NextRequest) {
     });
 
     // Calculate totals
-    const totalReceived = successfulPayments.reduce((sum, p) => sum + p.netAmount + (p.tip || 0), 0);
-    const totalGatewayFees = successfulPayments.reduce((sum, p) => sum + p.gatewayFee, 0);
-    const totalGross = successfulPayments.reduce((sum, p) => sum + p.amount + (p.tip || 0), 0);
+    const totalReceived = successfulPayments.reduce((sum: number, p: any) => sum + p.netAmount + (p.tip || 0), 0);
+    const totalGatewayFees = successfulPayments.reduce((sum: number, p: any) => sum + p.gatewayFee, 0);
+    const totalGross = successfulPayments.reduce((sum: number, p: any) => sum + p.amount + (p.tip || 0), 0);
     // Only count unpaid COD orders in pending collection
-    const totalPending = pendingOrders.reduce((sum, o) => sum + o.total, 0);
+    const totalPending = pendingOrders.reduce((sum: number, o: any) => sum + o.total, 0);
 
     // Group by payment method
-    const byMethod = successfulPayments.reduce((acc, p) => {
+    const byMethod = successfulPayments.reduce((acc: any, p: any) => {
       const method = p.paymentGateway;
       if (!acc[method]) {
         acc[method] = { count: 0, total: 0, fees: 0 };
@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
         const threshold = p.paymentGateway === 'razorpay' ? 1 : 2;
         return daysSince >= threshold && !p.payoutId;
       })
-      .reduce((sum, p) => sum + p.netAmount, 0);
+      .reduce((sum: number, p: any) => sum + p.netAmount, 0);
 
     const inTransit = successfulPayments
       .filter(p => {
@@ -117,7 +117,7 @@ export async function GET(request: NextRequest) {
         const threshold = p.paymentGateway === 'razorpay' ? 1 : 2;
         return daysSince < threshold && !p.payoutId;
       })
-      .reduce((sum, p) => sum + p.netAmount, 0);
+      .reduce((sum: number, p: any) => sum + p.netAmount, 0);
 
     return NextResponse.json({
       success: true,

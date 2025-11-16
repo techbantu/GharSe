@@ -190,7 +190,7 @@ function calculateMonthlySpending(orders: any[]): MonthlySpending[] {
 
   const monthlyData: Record<string, { amount: number; count: number }> = {};
 
-  orders.forEach((order) => {
+  orders.forEach((order: any) => {
     const orderDate = new Date(order.createdAt);
     
     if (orderDate >= sixMonthsAgo) {
@@ -230,7 +230,7 @@ function calculateSavings(orders: any[]): Savings {
   let totalDiscounts = 0;
   let totalCoupons = 0;
 
-  orders.forEach((order) => {
+  orders.forEach((order: any) => {
     totalDiscounts += order.discount || 0;
     // Coupons are tracked in discount field for now
     // In future, separate coupon tracking
@@ -250,7 +250,7 @@ function analyzeCategoryExploration(orders: any[]): CategoryExploration[] {
   const categoryCount: Record<string, number> = {};
   let totalItems = 0;
 
-  orders.forEach((order) => {
+  orders.forEach((order: any) => {
     order.items.forEach((item: any) => {
       const category = item.menuItem.category;
       categoryCount[category] = (categoryCount[category] || 0) + item.quantity;
@@ -311,7 +311,7 @@ function analyzeTimePatterns(orders: any[]): {
   const dayCount: Record<string, number> = {};
   const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-  orders.forEach((order) => {
+  orders.forEach((order: any) => {
     const date = new Date(order.createdAt);
     const hour = date.getHours();
     const dayName = days[date.getDay()];

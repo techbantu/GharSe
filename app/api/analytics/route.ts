@@ -86,14 +86,14 @@ export async function GET(request: NextRequest) {
     if (type === 'dashboard') {
       // Calculate stats
       const totalPageViews = Array.from(analyticsData.pageViews.values())
-        .reduce((sum, count) => sum + count, 0);
+        .reduce((sum: number, count: number) => sum + count, 0);
       
       const totalRevenue = analyticsData.conversions
-        .reduce((sum, conv) => sum + conv.amount, 0);
+        .reduce((sum: number, conv: any) => sum + conv.amount, 0);
       
       const totalOrders = analyticsData.conversions.length;
       
-      const eventsByType = analyticsData.events.reduce((acc, event) => {
+      const eventsByType = analyticsData.events.reduce((acc: any, event: any) => {
         acc[event.type] = (acc[event.type] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);

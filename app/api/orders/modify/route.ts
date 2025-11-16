@@ -56,7 +56,7 @@ const DELIVERY_FEE = restaurantInfo.settings.deliveryFee || 50; // ₹50 deliver
  * Calculate order pricing with tax and delivery
  */
 function calculatePricing(items: { quantity: number; price: number }[], discount: number = 0) {
-  const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+  const subtotal = items.reduce((sum: number, item: any) => sum + (item.quantity * item.price), 0);
   const tax = subtotal * TAX_RATE;
   const total = subtotal + tax + DELIVERY_FEE - discount;
   

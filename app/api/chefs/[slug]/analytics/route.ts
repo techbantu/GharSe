@@ -104,7 +104,7 @@ export async function GET(
     // Calculate averages
     const avgOrderValue = totals.ordersCount > 0 ? totals.revenue / totals.ordersCount : 0;
     const avgRating = analytics.length > 0
-      ? analytics.reduce((sum, day) => sum + (day.rating || 0), 0) / analytics.length
+      ? analytics.reduce((sum: number, day: any) => sum + (day.rating || 0), 0) / analytics.length
       : 0;
     const cancellationRate = totals.ordersCount > 0
       ? (totals.cancelledOrders / totals.ordersCount) * 100

@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
     });
 
     const avgTimeRemainingSeconds = timeRemainingValues.length > 0
-      ? Math.floor(timeRemainingValues.reduce((a, b) => a + b, 0) / timeRemainingValues.length)
+      ? Math.floor(timeRemainingValues.reduce((a: number, b: number) => a + b, 0) / timeRemainingValues.length)
       : 0;
 
     logger.info('Pending queue fetched', {

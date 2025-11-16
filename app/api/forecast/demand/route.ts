@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
       const hourlyPredictions = await demandForecaster.predictNextHours(itemId, hours);
 
       // Calculate peak hour
-      const peakPrediction = hourlyPredictions.reduce((max, pred) =>
+      const peakPrediction = hourlyPredictions.reduce((max: any, pred: any) =>
         pred.predictedOrders > max.predictedOrders ? pred : max
       );
 
@@ -73,9 +73,9 @@ export async function GET(request: NextRequest) {
         nextHourPrediction: hourlyPredictions[0]?.predictedOrders || 0,
         next3HoursPrediction: hourlyPredictions
           .slice(0, 3)
-          .reduce((sum, p) => sum + p.predictedOrders, 0),
+          .reduce((sum: number, p: any) => sum + p.predictedOrders, 0),
         next6HoursPrediction: hourlyPredictions
-          .reduce((sum, p) => sum + p.predictedOrders, 0),
+          .reduce((sum: number, p: any) => sum + p.predictedOrders, 0),
         peakHourPrediction: peakPrediction.predictedOrders,
         peakHourTime: peakPrediction.timestamp.toISOString(),
         confidence: hourlyPredictions[0]?.confidence || 0.5,
@@ -100,7 +100,7 @@ export async function GET(request: NextRequest) {
         const hourlyPredictions = await demandForecaster.predictNextHours(item.id, hours);
 
         // Calculate peak hour
-        const peakPrediction = hourlyPredictions.reduce((max, pred) =>
+        const peakPrediction = hourlyPredictions.reduce((max: any, pred: any) =>
           pred.predictedOrders > max.predictedOrders ? pred : max
         );
 
@@ -110,9 +110,9 @@ export async function GET(request: NextRequest) {
           nextHourPrediction: hourlyPredictions[0]?.predictedOrders || 0,
           next3HoursPrediction: hourlyPredictions
             .slice(0, 3)
-            .reduce((sum, p) => sum + p.predictedOrders, 0),
+            .reduce((sum: number, p: any) => sum + p.predictedOrders, 0),
           next6HoursPrediction: hourlyPredictions
-            .reduce((sum, p) => sum + p.predictedOrders, 0),
+            .reduce((sum: number, p: any) => sum + p.predictedOrders, 0),
           peakHourPrediction: peakPrediction.predictedOrders,
           peakHourTime: peakPrediction.timestamp.toISOString(),
           confidence: hourlyPredictions[0]?.confidence || 0.5,
