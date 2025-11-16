@@ -129,14 +129,23 @@ export async function POST(request: NextRequest) {
     // Broadcast to kitchen via WebSocket
     try {
       await broadcastNewOrderToAdmin({
-        orderId: finalizedOrder.id,
+        id: finalizedOrder.id,
         orderNumber: finalizedOrder.orderNumber,
-        total: finalizedOrder.total,
-        customerName: finalizedOrder.customerName,
+        customer: {
+          name: finalizedOrder.customerName,
+          email: finalizedOrder.customerEmail,
+          phone: finalizedOrder.customerPhone,
+        },
+        pricing: {
+          total: finalizedOrder.total,
+        },
+        status: finalizedOrder.status,
+        createdAt: finalizedOrder.createdAt,
         items: finalizedOrder.items.map((item: any) => ({
-          name: item.menuItem.name,
+          menuItem: {
+            name: item.menuItem.name,
+          },
           quantity: item.quantity,
-          price: item.price,
         })),
       });
       
