@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
         success: true,
         message: 'Test order created. Please complete payment.',
         orderId: order.id,
-        amount: order.amount / 100,
+        amount: Number(order.amount) / 100,
       });
     }
 
