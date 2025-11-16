@@ -208,7 +208,7 @@ export function validateCsrfProtection(
         method: request.method,
         hasCookieToken: !!getCsrfTokenFromCookie(request),
         hasHeaderToken: !!getCsrfTokenFromHeader(request),
-        ip: request.headers.get('x-forwarded-for') || request.ip,
+        ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
         userAgent: request.headers.get('user-agent')?.substring(0, 50),
         duration,
       });
@@ -237,7 +237,7 @@ export function validateCsrfProtection(
           method: request.method,
           origin: request.headers.get('origin'),
           referer: request.headers.get('referer'),
-          ip: request.headers.get('x-forwarded-for') || request.ip,
+          ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
           duration,
         });
 
