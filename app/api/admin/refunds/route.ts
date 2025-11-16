@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
 
     // Calculate statistics
     const totalRefundedAmount = refundedPayments.reduce(
-      (sum, payment) => sum + payment.amount,
+      (sum: number, payment: any) => sum + payment.amount,
       0
     );
     const totalRefundedCount = refundedPayments.length;
