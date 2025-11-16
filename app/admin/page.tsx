@@ -1467,6 +1467,7 @@ const AdminDashboard: React.FC = () => {
   
   const getStatusColor = (status: OrderStatus) => {
     const colors: Record<string, { backgroundColor: string; color: string }> = {
+      'pending-confirmation': { backgroundColor: '#FEF3C7', color: '#92400E' },
       pending: { backgroundColor: '#FEF3C7', color: '#92400E' },
       confirmed: { backgroundColor: '#DBEAFE', color: '#1E40AF' },
       preparing: { backgroundColor: '#E9D5FF', color: '#6B21A8' },
@@ -1481,7 +1482,8 @@ const AdminDashboard: React.FC = () => {
   };
   
   const getStatusColorClassName = (status: OrderStatus) => {
-    const colors = {
+    const colors: Record<OrderStatus, string> = {
+      'pending-confirmation': 'bg-yellow-100 text-yellow-800',
       pending: 'bg-yellow-100 text-yellow-800',
       confirmed: 'bg-blue-100 text-blue-800',
       preparing: 'bg-purple-100 text-purple-800',
@@ -1496,7 +1498,8 @@ const AdminDashboard: React.FC = () => {
   };
   
   const getStatusIcon = (status: OrderStatus) => {
-    const icons = {
+    const icons: Record<OrderStatus, React.ComponentType<{ size?: number }>> = {
+      'pending-confirmation': Clock,
       pending: Clock,
       confirmed: CheckCircle,
       preparing: ChefHat,
