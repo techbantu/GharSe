@@ -895,7 +895,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                           value={formData.phone.startsWith('+91') ? formData.phone.substring(4).trim() : formData.phone.replace(/[^\d\s]/g, '')}
                         onChange={handleChange}
                           onKeyDown={handlePhoneKeyDown}
-                          onFocus={handlePhoneFocus}
                           maxLength={13}
                         inputMode="tel"
                         autoComplete="tel"
