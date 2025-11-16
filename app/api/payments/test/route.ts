@@ -11,8 +11,9 @@ import Razorpay from 'razorpay';
 import { logger } from '@/utils/logger';
 
 export async function POST(request: NextRequest) {
+  let body: any;
   try {
-    const body = await request.json();
+    body = await request.json();
     const { gateway, amount = 1 } = body; // ₹1 test payment
 
     if (gateway === 'stripe') {
