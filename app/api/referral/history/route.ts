@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const customerId = decoded.userId;
+    const customerId = decoded.customerId;
 
     // Get pagination params
     const searchParams = request.nextUrl.searchParams;
