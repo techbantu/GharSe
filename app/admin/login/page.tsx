@@ -341,12 +341,12 @@ export default function AdminLoginPage() {
                 }}>
                   <Mail size={20} style={{ color: '#9CA3AF' }} />
                 </div>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@bantuskitchen.com"
-                  required
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="bantusailaja@gmail.com"
+                required
                   style={{
                     width: '100%',
                     paddingLeft: '3.25rem',
