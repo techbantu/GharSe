@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
      * CRITICAL SECURITY FIX: SQL Injection Prevention
      *
      * Previous implementation used simple string.includes() which could be bypassed
-     * Example bypass: "SEL/* comment *\/ECT * FROM users; DR/**/OP TABLE admins"
+     * Example bypass: "SEL[comment]ECT * FROM users; DR[comment]OP TABLE admins"
      *
      * New approach:
      * 1. Use SQL parser for accurate command detection (TODO: integrate sql-parser library)

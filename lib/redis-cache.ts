@@ -128,7 +128,22 @@ async function getRedisClient() {
 
   try {
     // Dynamically import Redis (only if enabled)
-    const redis = await import('redis');
+    // This is wrapped in try-catch to gracefully handle when redis is not installed
+    const redis = await import('redis').catch((error: any) => {
+      // Redis module not installed - this is OK, we'll use memory cache
+      if (error.code === 'MODULE_NOT_FOUND' || error.message?.includes("Can't resolve")) {
+        logger.info('Redis module not found, using memory cache fallback');
+        redisConnected = false;
+        recordRedisFailure();
+        return null;
+      }
+      throw error; // Re-throw if it's a different error
+    });
+    
+    // If import failed and returned null, return early
+    if (!redis) {
+      return null;
+    }
     
     redisClient = redis.createClient({
       url: REDIS_CONFIG.url,
