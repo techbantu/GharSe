@@ -186,7 +186,7 @@ const generateOrderConfirmationHTML = (order: Order): string => {
           </a>
         </p>
         <p style="margin: 8px 0 0 0; color: #6b7280; font-size: 14px;">
-          <a href="https://wa.me/${restaurantInfo.contact.whatsapp.replace(/[^0-9]/g, '')}" style="color: #10b981; text-decoration: none;">
+          <a href="https://wa.me/${restaurantInfo.contact.whatsapp?.replace(/[^0-9]/g, '') || ''}" style="color: #10b981; text-decoration: none;">
             WhatsApp Us
           </a>
         </p>
