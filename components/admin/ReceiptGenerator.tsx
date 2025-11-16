@@ -159,10 +159,10 @@ const ReceiptGenerator: React.FC<ReceiptGeneratorProps> = ({ order, onClose }) =
                 {order.items && order.items.length > 0 ? (
                   order.items.map((item, index) => (
                     <tr key={index} className="border-b border-gray-200">
-                      <td className="py-3 text-gray-900">{item.name}</td>
+                      <td className="py-3 text-gray-900">{item.menuItem.name}</td>
                       <td className="py-3 text-center text-gray-900">{item.quantity}</td>
-                      <td className="py-3 text-right text-gray-900">₹{item.price.toFixed(2)}</td>
-                      <td className="py-3 text-right text-gray-900">₹{(item.price * item.quantity).toFixed(2)}</td>
+                      <td className="py-3 text-right text-gray-900">₹{item.menuItem.price.toFixed(2)}</td>
+                      <td className="py-3 text-right text-gray-900">₹{(item.menuItem.price * item.quantity).toFixed(2)}</td>
                     </tr>
                   ))
                 ) : (
@@ -214,10 +214,10 @@ const ReceiptGenerator: React.FC<ReceiptGeneratorProps> = ({ order, onClose }) =
               <div>
                 <p className="font-semibold text-gray-700">Payment Method:</p>
                 <p className="text-gray-900 capitalize">
-                  {order.paymentMethod 
+                  {order.paymentMethod
                     ? order.paymentMethod.replace(/-/g, ' ').replace(/_/g, ' ')
                     : 'Cash on Delivery'}
-                  {order.tip > 0 && <span className="text-green-600 ml-2">💝 ₹{order.tip}</span>}
+                  {order.pricing?.tip && order.pricing.tip > 0 && <span className="text-green-600 ml-2">💝 ₹{order.pricing.tip}</span>}
                 </p>
               </div>
               <div className="text-right">
