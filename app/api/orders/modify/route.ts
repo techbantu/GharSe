@@ -221,7 +221,8 @@ export async function POST(request: NextRequest) {
     );
     
     // Update order in database (transactional)
-    const updatedOrder = await prisma.$transaction(async (tx) => {
+    // Type assertion needed for Prisma Accelerate compatibility
+    const updatedOrder = await (prisma.$transaction as any)(async (tx: any) => {
       // Delete existing order items
       await tx.orderItem.deleteMany({
         where: { orderId: order.id },
