@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
     
     // Find admin by email (case-insensitive lookup)
     // Try exact match first, then lowercase match
-    // Type assertion needed for Prisma Accelerate compatibility
+    // Type assertion needed for Prisma Accelerate compatibility (fixes TypeScript union type issue)
     let admin = await (prisma.admin.findUnique as any)({
       where: { email: normalizedEmail },
     });
