@@ -221,7 +221,7 @@ export default function OrdersPage() {
             isAvailable: menuItem.isAvailable !== false,
             isVegetarian: menuItem.isVegetarian || false,
             isSpicy: menuItem.isSpicy || false,
-            prepTime: menuItem.prepTime || 20,
+            preparationTime: menuItem.preparationTime || 20,
             calories: menuItem.calories,
             ingredients: menuItem.ingredients || [],
             allergens: menuItem.allergens || [],
