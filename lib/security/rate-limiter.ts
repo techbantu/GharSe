@@ -271,7 +271,9 @@ export function getClientIP(request: NextRequest): string {
   }
 
   // Fallback to request IP (development environments)
-  return request.ip || 'unknown';
+  return request.headers.get('x-forwarded-for')?.split(',')[0].trim() || 
+         request.headers.get('x-real-ip') || 
+         'unknown';
 }
 
 /**
