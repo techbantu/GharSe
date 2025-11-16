@@ -262,12 +262,14 @@ export default function OrderDetailPage() {
                 const isCurrent = index === currentStepIndex;
 
                 // Define nice colors for each step
-                const colors = {
+                const colors: Record<string, string> = {
+                  PENDING_CONFIRMATION: '#6B7280', // Gray (waiting)
                   PENDING: '#10B981',      // Green
                   CONFIRMED: '#3B82F6',    // Blue
                   PREPARING: '#8B5CF6',    // Purple
                   OUT_FOR_DELIVERY: '#F97316', // Orange
                   DELIVERED: '#10B981',    // Green
+                  CANCELLED: '#EF4444',    // Red
                 };
 
                 return (

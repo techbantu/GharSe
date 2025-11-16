@@ -260,7 +260,8 @@ const KitchenOrders: React.FC<KitchenOrdersProps> = ({
   };
 
   const getStatusColor = (status: OrderStatus) => {
-    const colors = {
+    const colors: Record<string, { bg: string; text: string; border: string }> = {
+      'pending-confirmation': { bg: '#F3F4F6', text: '#6B7280', border: '#D1D5DB' },
       pending: { bg: '#FEF3C7', text: '#92400E', border: '#FCD34D' },
       confirmed: { bg: '#DBEAFE', text: '#1E40AF', border: '#60A5FA' },
       preparing: { bg: '#E9D5FF', text: '#6B21A8', border: '#A78BFA' },
@@ -271,11 +272,12 @@ const KitchenOrders: React.FC<KitchenOrdersProps> = ({
       cancelled: { bg: '#FEE2E2', text: '#991B1B', border: '#F87171' },
       refunded: { bg: '#FEE2E2', text: '#991B1B', border: '#F87171' },
     };
-    return colors[status] || colors.pending;
+    return colors[status.toLowerCase()] || colors.pending;
   };
 
   const getStatusIcon = (status: OrderStatus) => {
-    const icons = {
+    const icons: Record<string, any> = {
+      'pending-confirmation': Clock,
       pending: Clock,
       confirmed: CheckCircle,
       preparing: ChefHat,
@@ -286,7 +288,7 @@ const KitchenOrders: React.FC<KitchenOrdersProps> = ({
       cancelled: X,
       refunded: X,
     };
-    const Icon = icons[status];
+    const Icon = icons[status.toLowerCase()] || Clock;
     return <Icon size={18} />;
   };
 
