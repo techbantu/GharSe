@@ -1,0 +1,18 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/compliance",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/cache-cleanup",
+      "schedule": "0 3 * * *"
+    }
+  ],
+  "git": {
+    "deploymentEnabled": false
+  },
+  "ignoreCommand": "exit 1"
+}
+
+

@@ -20,7 +20,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquare, Send, X, Minimize2, Phone, Mail, RefreshCw, Trash2, Sparkles, ThumbsUp, ShoppingCart, Plus, Minus } from 'lucide-react';
+import { MessageSquare, Send, X, Minimize2, Phone, Mail, RefreshCw, Trash2, Sparkles, ThumbsUp, ShoppingCart, Plus, Minus, Package, UtensilsCrossed, Star, Truck, Leaf, Wheat } from 'lucide-react';
 import { useChat, useChatActions } from '@/context/ChatContext';
 import { useCart } from '@/context/CartContext';
 import { ActionButton } from '@/components/chat/ActionButton';
@@ -315,7 +315,7 @@ const LiveChat: React.FC<LiveChatProps> = ({ minimized = false, onMinimize, onRe
             }}
           >
             <Sparkles size={10} />
-            GPT-4
+            AI Assistant
           </div>
           {/* Unread messages indicator */}
           {messages.length > 0 && messages[messages.length - 1]?.role === 'assistant' && (
@@ -606,10 +606,10 @@ const LiveChat: React.FC<LiveChatProps> = ({ minimized = false, onMinimize, onRe
                 }}
               >
                 <Sparkles size={12} />
-                GPT-4
+                Powered by AI
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
               <div
                 style={{
                   width: '8px',
@@ -617,9 +617,10 @@ const LiveChat: React.FC<LiveChatProps> = ({ minimized = false, onMinimize, onRe
                   borderRadius: '9999px',
                   background: isConnected ? '#10b981' : '#ef4444',
                   boxShadow: `0 0 10px ${isConnected ? '#10b981' : '#ef4444'}`,
+                  flexShrink: 0,
                 }}
               />
-              <p style={{ fontSize: '0.875rem', color: 'rgba(255, 255, 255, 0.95)', lineHeight: '1.625' }}>
+              <p style={{ fontSize: '0.875rem', color: 'rgba(255, 255, 255, 0.95)', lineHeight: '1', margin: 0 }}>
                 {isConnected ? 'Connected • Real-time AI' : 'Reconnecting...'}
               </p>
             </div>
@@ -1044,10 +1045,15 @@ const LiveChat: React.FC<LiveChatProps> = ({ minimized = false, onMinimize, onRe
                 cursor: 'pointer',
                 flex: '1 1 calc(33.333% - 6px)',
                 minWidth: '110px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
               }}
               className="hover:bg-gradient-to-r hover:from-orange-50 hover:to-orange-100 hover:shadow-sm hover:text-[#f97316] hover:border-orange-200"
             >
-              📦 Order Status
+              <Package size={14} strokeWidth={2.5} />
+              Order Status
           </button>
             <button
               onClick={() => handleQuickAction(chatActions.askMenuHelp)}
@@ -1065,10 +1071,15 @@ const LiveChat: React.FC<LiveChatProps> = ({ minimized = false, onMinimize, onRe
                 cursor: 'pointer',
                 flex: '1 1 calc(33.333% - 6px)',
                 minWidth: '110px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
               }}
               className="hover:bg-gradient-to-r hover:from-orange-50 hover:to-orange-100 hover:shadow-sm hover:text-[#f97316] hover:border-orange-200"
             >
-              🍽️ Menu Help
+              <UtensilsCrossed size={14} strokeWidth={2.5} />
+              Menu Help
           </button>
             <button
               onClick={() => handleQuickAction(chatActions.askPopular)}
@@ -1085,11 +1096,19 @@ const LiveChat: React.FC<LiveChatProps> = ({ minimized = false, onMinimize, onRe
             whiteSpace: 'nowrap',
                 cursor: 'pointer',
                 flex: '1 1 calc(33.333% - 6px)',
-                minWidth: '110px',
+                minWidth: '120px',
+                maxWidth: '180px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
               }}
               className="hover:bg-gradient-to-r hover:from-orange-50 hover:to-orange-100 hover:shadow-sm hover:text-[#f97316] hover:border-orange-200"
             >
-              ⭐ Popular Dishes
+              <Star size={14} strokeWidth={2.5} style={{ flexShrink: 0 }} />
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>Popular Dishes</span>
           </button>
             <button
               onClick={() => handleQuickAction(chatActions.askDeliveryInfo)}
@@ -1107,10 +1126,15 @@ const LiveChat: React.FC<LiveChatProps> = ({ minimized = false, onMinimize, onRe
                 cursor: 'pointer',
                 flex: '1 1 calc(33.333% - 6px)',
                 minWidth: '110px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
               }}
               className="hover:bg-gradient-to-r hover:from-orange-50 hover:to-orange-100 hover:shadow-sm hover:text-[#f97316] hover:border-orange-200"
             >
-              🚚 Delivery Time
+              <Truck size={14} strokeWidth={2.5} />
+              Delivery Time
           </button>
             <button
               onClick={() => handleQuickAction(chatActions.askVegetarian)}
@@ -1128,10 +1152,15 @@ const LiveChat: React.FC<LiveChatProps> = ({ minimized = false, onMinimize, onRe
                 cursor: 'pointer',
                 flex: '1 1 calc(33.333% - 6px)',
                 minWidth: '110px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
               }}
               className="hover:bg-gradient-to-r hover:from-orange-50 hover:to-orange-100 hover:shadow-sm hover:text-[#f97316] hover:border-orange-200"
             >
-              🥗 Vegetarian
+              <Leaf size={14} strokeWidth={2.5} />
+              Vegetarian
           </button>
             <button
               onClick={() => handleQuickAction(chatActions.askGlutenFree)}
@@ -1149,10 +1178,15 @@ const LiveChat: React.FC<LiveChatProps> = ({ minimized = false, onMinimize, onRe
                 cursor: 'pointer',
                 flex: '1 1 calc(33.333% - 6px)',
                 minWidth: '110px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
               }}
               className="hover:bg-gradient-to-r hover:from-orange-50 hover:to-orange-100 hover:shadow-sm hover:text-[#f97316] hover:border-orange-200"
             >
-              🌾 Gluten-Free
+              <Wheat size={14} strokeWidth={2.5} />
+              Gluten-Free
           </button>
         </div>
 
@@ -1234,7 +1268,7 @@ const LiveChat: React.FC<LiveChatProps> = ({ minimized = false, onMinimize, onRe
                 <span style={{ fontWeight: 600 }}>Call</span>
           </a>
           <a 
-            href="mailto:orders@bantuskitchen.com" 
+            href="mailto:orders@gharse.app" 
             style={{
               display: 'flex',
               alignItems: 'center',

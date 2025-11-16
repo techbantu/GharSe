@@ -119,7 +119,7 @@ ADMIN_DEFAULT_PASSWORD="StrongPassword123!"
 
 # Email (Gmail)
 EMAIL_PROVIDER="smtp"
-SMTP_USER="orders@bantuskitchen.com"
+SMTP_USER="orders@gharse.app"
 SMTP_PASSWORD="your-app-password"
 
 # Payments (Razorpay for India)

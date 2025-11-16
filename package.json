@@ -46,6 +46,8 @@
     "migrate:to-prisma-postgres": "ts-node scripts/migrate-supabase-to-prisma-postgres.ts",
     "verify:migration": "ts-node scripts/verify-migration.ts",
     "check:admin": "ts-node scripts/check-admin.ts",
+    "retention:check": "tsx scripts/run-retention-check.ts",
+    "compliance:check": "tsx scripts/compliance-cron.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {

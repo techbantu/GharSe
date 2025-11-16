@@ -107,7 +107,7 @@ const ReceiptGenerator: React.FC<ReceiptGeneratorProps> = ({ order, onClose }) =
             <div className="mt-4 text-xs text-gray-500">
               <p>Plot no 17, Road no 3, Padmalaya Nagar, Hayatnagar</p>
               <p>Pedda Amberpet (Kalan), Hayathnagar, Rangareddy, Telangana - 501505</p>
-              <p className="mt-2">Phone: +91 90104 60964 | Email: orders@gharse.com</p>
+              <p className="mt-2">Phone: +91 90104 60964 | Email: orders@gharse.app</p>
             </div>
             <p className="text-xs text-gray-400 mt-3 italic">Technology by TechBantu IT Solutions LLC</p>
           </div>
@@ -238,7 +238,7 @@ const ReceiptGenerator: React.FC<ReceiptGeneratorProps> = ({ order, onClose }) =
             <p className="font-semibold mb-2">Thank you for your order!</p>
             <p>We hope you enjoy your meal. Please visit us again!</p>
             <p className="mt-4 text-xs text-gray-500">
-              For any queries, contact us at orders@gharse.com or +91 90104 60964
+              For any queries, contact us at orders@gharse.app or +91 90104 60964
             </p>
           </div>
 

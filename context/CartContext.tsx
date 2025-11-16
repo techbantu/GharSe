@@ -10,9 +10,11 @@
 
 'use client';
 
-import React, { createContext, useContext, useReducer, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useState, useRef, ReactNode } from 'react';
 import { Cart, CartItem, MenuItem } from '@/types';
 import { restaurantInfo } from '@/data/menuData';
+import { useAuth } from '@/context/AuthContext';
+import { getFirstOrderDiscountStatus } from '@/lib/first-order-discount';
 
 /**
  * Cart Actions - All possible cart mutations
@@ -61,8 +63,14 @@ const initialCart: Cart = {
  * - Free delivery over threshold
  * - Tax calculated on subtotal only
  * - Discount applied before tax
+ * - First-order discount auto-applied for eligible users
  */
-const calculateTotals = (items: CartItem[], promoCode?: string, discount?: number): Cart => {
+const calculateTotals = (
+  items: CartItem[], 
+  promoCode?: string, 
+  discount?: number,
+  firstOrderDiscount?: number
+): Cart => {
   const subtotal = items.reduce((sum, item) => sum + item.subtotal, 0);
   
   // Apply delivery fee (free over threshold)
@@ -70,8 +78,8 @@ const calculateTotals = (items: CartItem[], promoCode?: string, discount?: numbe
     ? 0
     : restaurantInfo.settings.deliveryFee;
   
-  // Apply discount
-  const discountAmount = discount || 0;
+  // Combine manual discount + first-order discount
+  const discountAmount = (discount || 0) + (firstOrderDiscount || 0);
   
   // Calculate tax on discounted subtotal
   const taxableAmount = Math.max(0, subtotal - discountAmount);
@@ -230,13 +238,60 @@ const cartReducer = (state: Cart, action: CartAction): Cart => {
  * - Persists cart to localStorage
  * - Loads cart from localStorage on mount
  * - Provides cart API to children
+ * - CROSS-TAB SYNC via BroadcastChannel + localStorage events
  */
 export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [cart, dispatch] = useReducer(cartReducer, initialCart);
   const [isMounted, setIsMounted] = useState(false);
   const [sessionId, setSessionId] = useState<string>('');
+  const [firstOrderDiscount, setFirstOrderDiscount] = useState<number>(0);
+  const [firstOrderEligible, setFirstOrderEligible] = useState(false);
+  const { user } = useAuth();
+  
+  // Cross-tab sync infrastructure
+  const broadcastChannel = useRef<BroadcastChannel | null>(null);
+  const CART_CHANNEL_NAME = 'bantu_cart_sync';
+  const CART_SYNC_KEY = 'bantu_cart_sync_event';
+  
+  // Check for first-order discount eligibility when user logs in
+  useEffect(() => {
+    if (!isMounted || !user?.id) {
+      setFirstOrderDiscount(0);
+      setFirstOrderEligible(false);
+      return;
+    }
+    
+    const checkFirstOrderEligibility = async () => {
+      try {
+        const status = await getFirstOrderDiscountStatus(user.id);
+        
+        if (status.available && cart.subtotal > 0) {
+          // Calculate 20% discount on current subtotal
+          const discount = Math.round(cart.subtotal * 0.2 * 100) / 100;
+          setFirstOrderDiscount(discount);
+          setFirstOrderEligible(true);
+          
+          console.log('[First Order Discount] Auto-applied', {
+            discountPercent: status.discountPercent,
+            discountAmount: discount,
+            subtotal: cart.subtotal,
+          });
+        } else {
+          setFirstOrderDiscount(0);
+          setFirstOrderEligible(false);
+        }
+      } catch (error) {
+        console.error('[First Order Discount] Failed to check eligibility:', error);
+        setFirstOrderDiscount(0);
+        setFirstOrderEligible(false);
+      }
+    };
+    
+    checkFirstOrderEligibility();
+  }, [isMounted, user, cart.subtotal]);
   
   // Mark as mounted (client-side only)
+  // Setup cross-tab sync
   useEffect(() => {
     setIsMounted(true);
     
@@ -251,6 +306,50 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
     
     setSessionId(generateSessionId());
+    
+    // Setup BroadcastChannel for cross-tab sync (modern browsers)
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      try {
+        const channel = new BroadcastChannel(CART_CHANNEL_NAME);
+        broadcastChannel.current = channel;
+        
+        channel.onmessage = (event) => {
+          if (event.data.type === 'CART_UPDATED') {
+            console.log('[Cart Sync] Received cart update from another tab');
+            dispatch({ type: 'LOAD_CART', payload: event.data.cart });
+          }
+        };
+        
+        console.log('[Cart Sync] BroadcastChannel initialized');
+      } catch (error) {
+        console.error('[Cart Sync] Failed to initialize BroadcastChannel:', error);
+      }
+    }
+    
+    // Fallback: localStorage event listener for older browsers
+    const handleStorageEvent = (e: StorageEvent) => {
+      if (e.key === CART_SYNC_KEY && e.newValue) {
+        try {
+          const data = JSON.parse(e.newValue);
+          if (data.type === 'CART_UPDATED') {
+            console.log('[Cart Sync] Received cart update via localStorage event');
+            dispatch({ type: 'LOAD_CART', payload: data.cart });
+          }
+        } catch (error) {
+          console.error('[Cart Sync] Failed to parse storage event:', error);
+        }
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageEvent);
+    
+    // Cleanup
+    return () => {
+      if (broadcastChannel.current) {
+        broadcastChannel.current.close();
+      }
+      window.removeEventListener('storage', handleStorageEvent);
+    };
   }, []);
   
   // Load cart from localStorage on mount (client-side only)
@@ -269,10 +368,38 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [isMounted]);
   
   // Save cart to localStorage whenever it changes (client-side only)
+  // ALSO broadcast to other tabs
   useEffect(() => {
     if (!isMounted) return;
     
     localStorage.setItem('bantusKitchenCart', JSON.stringify(cart));
+    
+    // Broadcast cart update to other tabs
+    if (broadcastChannel.current) {
+      try {
+        broadcastChannel.current.postMessage({
+          type: 'CART_UPDATED',
+          cart,
+          timestamp: Date.now(),
+        });
+        console.log('[Cart Sync] Broadcasted cart update to other tabs');
+      } catch (error) {
+        console.error('[Cart Sync] BroadcastChannel error:', error);
+      }
+    }
+    
+    // Fallback: localStorage event for older browsers
+    try {
+      const payload = {
+        type: 'CART_UPDATED',
+        cart,
+        timestamp: Date.now(),
+      };
+      localStorage.setItem(CART_SYNC_KEY, JSON.stringify(payload));
+      localStorage.removeItem(CART_SYNC_KEY); // Trigger storage event
+    } catch (error) {
+      console.error('[Cart Sync] localStorage sync error:', error);
+    }
   }, [cart, isMounted]);
   
   // Sync cart to backend for inventory tracking (GENIUS URGENCY SYSTEM)
@@ -362,7 +489,13 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const itemCount = cart.items.reduce((sum, item) => sum + item.quantity, 0);
   
   const value: CartContextValue = {
-    cart,
+    cart: {
+      ...cart,
+      // Add first-order discount to total discount
+      discount: (cart.discount || 0) + firstOrderDiscount,
+      // Recalculate total with first-order discount
+      total: cart.total - firstOrderDiscount,
+    },
     addItem,
     removeItem,
     updateQuantity,

@@ -19,7 +19,7 @@ interface EmailOptions {
   from?: string;
 }
 
-const FROM_EMAIL = process.env.EMAIL_FROM || 'noreply@gharse.com';
+const FROM_EMAIL = process.env.EMAIL_FROM || 'noreply@gharse.app';
 const EMAIL_PROVIDER = process.env.EMAIL_PROVIDER || 'console'; // 'resend', 'smtp', or 'console'
 
 /**
@@ -162,7 +162,7 @@ export function getEmailLegalFooter(): string {
         Pedda Amberpet (Kalan), Hayathnagar, Rangareddy, Telangana - 501505
       </p>
       <p style="font-size: 11px; color: #9CA3AF; margin-top: 12px;">
-        Phone: +91 90104 60964 | Email: orders@gharse.com
+        Phone: +91 90104 60964 | Email: orders@gharse.app
       </p>
       <p style="font-size: 10px; color: #9CA3AF; margin-top: 16px; font-style: italic;">
         Technology services provided by TechBantu IT Solutions LLC (zero food liability)

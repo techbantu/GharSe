@@ -121,7 +121,7 @@ export default function TermsOfServicePage() {
           <List>
             <Li>Maintaining confidentiality of your password and account credentials</Li>
             <Li>All activities that occur under your account, including unauthorized access</Li>
-            <Li>Immediately notifying us of any suspected breach via <a href="mailto:security@gharse.com" style={{ color: '#FF6B35' }}>security@gharse.com</a></Li>
+            <Li>Immediately notifying us of any suspected breach via <a href="mailto:security@gharse.app" style={{ color: '#FF6B35' }}>security@gharse.app</a></Li>
           </List>
           <P>
             We will NOT be liable for losses arising from unauthorized use of your account unless proven to be our direct negligence.
@@ -503,7 +503,7 @@ export default function TermsOfServicePage() {
 
         <Subsection title="8.4 Amicable Resolution (First Step - Mandatory Good Faith Effort)">
           <P>
-            Before initiating any legal action or arbitration, you <Bold>MUST</Bold> contact the Independent Home Chef's grievance officer at <a href="mailto:grievance@gharse.com" style={{ color: '#FF6B35' }}>grievance@gharse.com</a> to attempt good-faith resolution within <Bold>15 business days</Bold>.
+            Before initiating any legal action or arbitration, you <Bold>MUST</Bold> contact the Independent Home Chef's grievance officer at <a href="mailto:grievance@gharse.app" style={{ color: '#FF6B35' }}>grievance@gharse.app</a> to attempt good-faith resolution within <Bold>15 business days</Bold>.
           </P>
           <P>
             Failure to comply with this mandatory pre-litigation requirement may result in dismissal of claims under Indian Contract Act principles of good faith and fair dealing.
@@ -587,7 +587,7 @@ export default function TermsOfServicePage() {
       <Section title="10. ACCOUNT TERMINATION">
         <Subsection title="10.1 Termination by You">
           <P>
-            You may terminate your account at any time by contacting <a href="mailto:support@gharse.com" style={{ color: '#FF6B35' }}>support@gharse.com</a>. Upon termination:
+            You may terminate your account at any time by contacting <a href="mailto:support@gharse.app" style={{ color: '#FF6B35' }}>support@gharse.app</a>. Upon termination:
           </P>
           <List>
             <Li>Your data will be anonymized after 30 days (see Privacy Policy)</Li>
@@ -680,8 +680,8 @@ export default function TermsOfServicePage() {
             Address: Plot no 17, Road no 3, Padmalaya Nagar, Hayatnagar<br />
             Pedda Amberpet (Kalan), Hayathnagar, Rangareddy, Telangana - 501505, India<br /><br />
             
-            Email: <a href="mailto:orders@gharse.com" style={{ color: '#FF6B35' }}>orders@gharse.com</a> (orders, delivery, food inquiries)<br />
-            Email: <a href="mailto:grievance@gharse.com" style={{ color: '#FF6B35' }}>grievance@gharse.com</a> (complaints, refunds, dispute resolution)<br />
+            Email: <a href="mailto:orders@gharse.app" style={{ color: '#FF6B35' }}>orders@gharse.app</a> (orders, delivery, food inquiries)<br />
+            Email: <a href="mailto:grievance@gharse.app" style={{ color: '#FF6B35' }}>grievance@gharse.app</a> (complaints, refunds, dispute resolution)<br />
             Phone: +91 90104 60964<br />
             Grievance Officer: Designated officer responding to consumer complaints<br />
             Response Time: Within 15 business days for grievances; 48 hours for order inquiries<br /><br />
@@ -698,8 +698,8 @@ export default function TermsOfServicePage() {
             <Bold>TechBantu IT Solutions LLC</Bold><br />
             Entity Type: California Limited Liability Company (LLC)<br />
             Principal Place of Business: California, United States of America<br />
-            Email: <a href="mailto:legal@gharse.com" style={{ color: '#FF6B35' }}>legal@gharse.com</a> (legal inquiries, intellectual property matters)<br />
-            Email: <a href="mailto:support@gharse.com" style={{ color: '#FF6B35' }}>support@gharse.com</a> (technical support, platform issues)<br />
+            Email: <a href="mailto:legal@gharse.app" style={{ color: '#FF6B35' }}>legal@gharse.app</a> (legal inquiries, intellectual property matters)<br />
+            Email: <a href="mailto:support@gharse.app" style={{ color: '#FF6B35' }}>support@gharse.app</a> (technical support, platform issues)<br />
             Role: Provides software-as-a-service (SaaS) technology platform only<br />
             Liability: <Bold>ZERO liability for food operations, food quality, food safety, or food business matters</Bold>
           </ContactBox>
@@ -709,11 +709,11 @@ export default function TermsOfServicePage() {
           <Warning>
             <Bold>IMPORTANT - CONTACT THE CORRECT ENTITY:</Bold><br /><br />
             
-            • <Bold>Food orders, delivery, quality, refunds, food complaints:</Bold> Contact Independent Home Chef at <a href="mailto:orders@gharse.com" style={{ color: '#FF6B35' }}>orders@gharse.com</a> or <a href="mailto:grievance@gharse.com" style={{ color: '#FF6B35' }}>grievance@gharse.com</a><br /><br />
+            • <Bold>Food orders, delivery, quality, refunds, food complaints:</Bold> Contact Independent Home Chef at <a href="mailto:orders@gharse.app" style={{ color: '#FF6B35' }}>orders@gharse.app</a> or <a href="mailto:grievance@gharse.app" style={{ color: '#FF6B35' }}>grievance@gharse.app</a><br /><br />
             
-            • <Bold>Website technical issues, payment gateway problems, software bugs:</Bold> Contact TechBantu at <a href="mailto:support@gharse.com" style={{ color: '#FF6B35' }}>support@gharse.com</a><br /><br />
+            • <Bold>Website technical issues, payment gateway problems, software bugs:</Bold> Contact TechBantu at <a href="mailto:support@gharse.app" style={{ color: '#FF6B35' }}>support@gharse.app</a><br /><br />
             
-            • <Bold>Legal notices, intellectual property claims, privacy inquiries:</Bold> Contact TechBantu at <a href="mailto:legal@gharse.com" style={{ color: '#FF6B35' }}>legal@gharse.com</a><br /><br />
+            • <Bold>Legal notices, intellectual property claims, privacy inquiries:</Bold> Contact TechBantu at <a href="mailto:legal@gharse.app" style={{ color: '#FF6B35' }}>legal@gharse.app</a><br /><br />
             
             <Bold>DO NOT send food-related complaints to TechBantu.</Bold> TechBantu provides only technology services and cannot resolve food business matters.
           </Warning>

@@ -366,7 +366,7 @@ export default function ReferralTermsPage() {
       <Section title="10. DISPUTE RESOLUTION">
         <P>Disputes regarding reward eligibility or fraud accusations shall be resolved as follows:</P>
         <List>
-          <Li><Bold>Step 1:</Bold> Email <a href="mailto:referrals@gharse.com" style={{ color: '#FF6B35' }}>referrals@gharse.com</a> with subject "Referral Dispute"</Li>
+          <Li><Bold>Step 1:</Bold> Email <a href="mailto:referrals@gharse.app" style={{ color: '#FF6B35' }}>referrals@gharse.app</a> with subject "Referral Dispute"</Li>
           <Li><Bold>Step 2:</Bold> Provide evidence (screenshot of referee, order history, etc.)</Li>
           <Li><Bold>Step 3:</Bold> Our compliance team reviews within 7 business days</Li>
           <Li><Bold>Step 4:</Bold> Final decision communicated via email (our decision is final and binding)</Li>
@@ -379,7 +379,7 @@ export default function ReferralTermsPage() {
         <ContactBox>
           <Bold>Referral Program Officer:</Bold><br />
           Name: [To be designated]<br />
-          Email: <a href="mailto:referrals@gharse.com" style={{ color: '#FF6B35' }}>referrals@gharse.com</a><br />
+          Email: <a href="mailto:referrals@gharse.app" style={{ color: '#FF6B35' }}>referrals@gharse.app</a><br />
           Phone: +91 90104 60964 (Mon-Sat, 10 AM - 6 PM)<br />
           Address: GharSe, Hayatnagar, Hyderabad, Telangana - 501505<br />
           Response Time: Within 48 hours (7 days for fraud investigations)

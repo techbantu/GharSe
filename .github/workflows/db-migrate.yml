@@ -1,0 +1,156 @@
+# Database Migrations - GitHub Actions Workflow
+# Purpose: Auto-apply Prisma migrations on push to main branch
+# Security: Uses DATABASE_URL secret from GitHub repository settings
+#
+# Setup Instructions:
+# 1. Go to repository Settings → Secrets and variables → Actions
+# 2. Add secret: DATABASE_URL = your production/staging database URL
+# 3. Push to main branch to trigger migration
+
+name: Database Migrations
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'prisma/schema.prisma'
+      - 'prisma/migrations/**'
+      - '.github/workflows/db-migrate.yml'
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    
+    # Only run on main branch to prevent accidental dev migrations
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Apply Prisma Migrations
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          echo "🔄 Applying Prisma migrations..."
+          npx prisma migrate deploy
+          echo "✅ Prisma migrations completed"
+
+      - name: Apply Manual SQL Migrations
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          echo "🔄 Applying manual SQL migrations..."
+          
+          # Check if manual migrations directory exists
+          if [ -d "prisma/migrations/manual" ]; then
+            for file in prisma/migrations/manual/*.sql; do
+              if [ -f "$file" ]; then
+                echo "📄 Applying $file..."
+                psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$file"
+              fi
+            done
+            echo "✅ Manual migrations completed"
+          else
+            echo "ℹ️  No manual migrations directory found"
+          fi
+
+      - name: Apply Database Audit Triggers
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          echo "🔄 Applying database audit triggers..."
+          
+          if [ -f "prisma/migrations/manual_database_audit_triggers.sql" ]; then
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "prisma/migrations/manual_database_audit_triggers.sql"
+            echo "✅ Audit triggers applied"
+          else
+            echo "ℹ️  Audit triggers file not found"
+          fi
+
+      - name: Log Migration to Database
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          echo "📝 Logging migration to audit.database_changes..."
+          
+          # Get commit info
+          COMMIT_SHA="${{ github.sha }}"
+          COMMIT_MSG="${{ github.event.head_commit.message }}"
+          AUTHOR="${{ github.actor }}"
+          
+          # Escape single quotes in commit message
+          COMMIT_MSG_ESCAPED=$(echo "$COMMIT_MSG" | sed "s/'/''/g")
+          
+          # Log to audit table
+          psql "$DATABASE_URL" -c "
+            INSERT INTO database_changes (
+              id,
+              \"occurredAt\",
+              actor,
+              \"appName\",
+              \"changeKind\",
+              \"commandTag\",
+              \"objectType\",
+              statement,
+              details
+            ) VALUES (
+              gen_random_uuid()::TEXT,
+              NOW(),
+              '$AUTHOR',
+              'github-actions',
+              'ddl',
+              'MIGRATE',
+              'schema',
+              'GitHub Actions auto-migration',
+              jsonb_build_object(
+                'commit', '$COMMIT_SHA',
+                'message', '$COMMIT_MSG_ESCAPED',
+                'workflow', 'db-migrate.yml',
+                'ref', '${{ github.ref }}'
+              )
+            );
+          " || echo "⚠️  Could not log to audit table (may not exist yet)"
+
+      - name: Verify Migration Success
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          echo "🔍 Verifying database connection..."
+          psql "$DATABASE_URL" -c "SELECT version();"
+          echo "✅ Database connection verified"
+
+      - name: Send Success Notification
+        if: success()
+        run: |
+          echo "✅ All migrations completed successfully!"
+          echo "📊 Commit: ${{ github.sha }}"
+          echo "👤 Author: ${{ github.actor }}"
+          echo "💬 Message: ${{ github.event.head_commit.message }}"
+
+      - name: Send Failure Notification
+        if: failure()
+        run: |
+          echo "❌ Migration failed!"
+          echo "🔥 Action required: Review migration logs"
+          echo "📊 Commit: ${{ github.sha }}"
+          # In production, send email/Slack notification here
+

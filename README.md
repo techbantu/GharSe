@@ -459,7 +459,7 @@ This project is proprietary software. Unauthorized copying, distribution, or mod
 
 ### For Business
 - **Website**: [Coming Soon]
-- **Email**: orders@bantuskitchen.com
+- **Email**: orders@gharse.app
 - **Phone**: +1 (555) 123-4567
 
 ---

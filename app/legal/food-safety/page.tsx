@@ -340,7 +340,7 @@ export default function FoodSafetyPage() {
           <P><Bold>What to Do:</Bold></P>
           <List>
             <Li><Bold>FIRST:</Bold> Seek medical attention immediately (call 108 for ambulance or visit nearest hospital)</Li>
-            <Li><Bold>SECOND:</Bold> Inform us within 24 hours at <a href="mailto:foodsafety@gharse.com" style={{ color: '#FF6B35' }}>foodsafety@gharse.com</a> with subject "URGENT: Food Illness"</Li>
+            <Li><Bold>SECOND:</Bold> Inform us within 24 hours at <a href="mailto:foodsafety@gharse.app" style={{ color: '#FF6B35' }}>foodsafety@gharse.app</a> with subject "URGENT: Food Illness"</Li>
             <Li><Bold>THIRD:</Bold> Preserve remaining food in refrigerator (do NOT throw away - needed for lab testing)</Li>
             <Li><Bold>FOURTH:</Bold> Obtain medical certificate from treating doctor stating suspected cause</Li>
           </List>
@@ -420,7 +420,7 @@ export default function FoodSafetyPage() {
           <Bold>Food Safety Officer:</Bold><br />
           Name: [To be designated]<br />
           Emergency Hotline: +91 90104 60964 (24/7)<br />
-          Email: <a href="mailto:foodsafety@gharse.com" style={{ color: '#FF6B35' }}>foodsafety@gharse.com</a><br />
+          Email: <a href="mailto:foodsafety@gharse.app" style={{ color: '#FF6B35' }}>foodsafety@gharse.app</a><br />
           <br />
           <Bold>In Case of Emergency (Medical):</Bold><br />
           Ambulance: <Bold>108</Bold> (Government Emergency Services)<br />

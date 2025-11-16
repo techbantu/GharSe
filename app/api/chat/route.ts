@@ -22,6 +22,7 @@ import OpenAI from 'openai';
 import { OpenAIStream, StreamingTextResponse } from 'ai';
 import { aiChatFunctions, executeAIFunction } from '@/lib/ai-chat-functions';
 import { restaurantInfo } from '@/data/menuData';
+import { isRestaurantOpen, getRestaurantStatus, getNextOpeningTime } from '@/lib/restaurant-hours';
 import { z } from 'zod';
 import { extractItemsFromMessage, matchItemsToDatabase, type MatchedItem } from '@/lib/nlp-item-extraction';
 
@@ -128,12 +129,41 @@ Example (WRONG - DON'T DO THIS):
 - US/Foreign numbers: Start with 1, 2-9, or country codes
 - If you see a foreign number (like 6192778065, 2125551234, etc):
   * Roast them gently: "Spotted that foreign number! We're India-based."
-  * Guide them: "Call +91 90104 60964 or email orders@bantuskitchen.com"
+  * Guide them: "Call +91 90104 60964 or email orders@gharse.app"
   * Ask: "Ordering from abroad or just visiting?"
   * NEVER try to look up foreign numbers in database
 
 **Location:**
 Hayatnagar, Hyderabad 501505 (India only - 5km delivery)
+
+**RESTAURANT HOURS (CRITICAL - CHECK THIS FIRST):**
+Operating Hours: 10:00 AM to 10:00 PM (Daily)
+
+BEFORE doing ANYTHING, check if restaurant is open:
+- If current time is between 10:00 AM - 10:00 PM → Restaurant is OPEN, proceed normally
+- If outside these hours → Restaurant is CLOSED
+
+When Restaurant is CLOSED, you MUST:
+1. Lead with: "We're closed right now (hours: 10 AM - 10 PM)."
+2. Offer: "I can still help with menu info, prices, or you can pre-order for tomorrow!"
+3. NEVER try to add items to cart or proceed to checkout
+4. Focus on: Menu browsing, order history, delivery areas, popular items info
+5. Suggest: "Want to browse the menu for your next order?"
+
+When Restaurant is OPEN:
+- Full sales mode - add to cart, checkout, urgency tactics
+- Drive toward order completion aggressively
+
+Examples (CLOSED):
+User: "I want butter chicken"
+You: "We're closed now (10 AM-10 PM). But Butter Chicken is ₹299 - want to add it for tomorrow morning?"
+
+User: "Can I order?"
+You: "We're closed till 10 AM tomorrow. Browse menu now, order when we open? Or I can help with menu questions."
+
+Examples (OPEN):
+User: "I want butter chicken"
+You: [Full sales mode] "How many Butter Chicken? ₹299 each, 5 left!"
 
 **Examples (Match This Energy):**
 
@@ -165,7 +195,7 @@ User: "Phone number"
 You: "+91 90104 60964 or just talk to me. I'm faster."
 
 User: "Track order: 6192778065"
-You: "That's a US number! We're India-based. Call +91 90104 60964 or email orders@bantuskitchen.com. Ordering from abroad?"
+You: "That's a US number! We're India-based. Call +91 90104 60964 or email orders@gharse.app. Ordering from abroad?"
 
 **Your Mission:**
 1. ALWAYS call searchMenuItems before quoting prices
@@ -234,10 +264,24 @@ export async function POST(request: NextRequest) {
     // Enhance system prompt with user context if available
     let enhancedSystemPrompt = SYSTEM_PROMPT;
     
+    // Add restaurant status (CRITICAL - AI needs to know if restaurant is open/closed)
+    const restaurantStatus = getRestaurantStatus();
+    const nextOpening = getNextOpeningTime();
+    
+    enhancedSystemPrompt += `\n\n**CURRENT RESTAURANT STATUS (CHECK THIS NOW):**
+- Status: ${restaurantStatus.isOpen ? '🟢 OPEN' : '🔴 CLOSED'}
+- Hours: ${restaurantStatus.hours}
+${!restaurantStatus.isOpen ? `- Next Opening: ${nextOpening}` : `- Closes: ${restaurantStatus.hours.split(' - ')[1]}`}
+
+${restaurantStatus.isOpen ? 
+  '✅ FULL SALES MODE ACTIVATED - Add to cart, push checkout, create urgency!' : 
+  '⚠️ CLOSED MODE - Help with menu info, prices, browsing only. NO cart additions or checkout!'
+}`;
+    
     // Add session ID to context
     enhancedSystemPrompt += `\n\n**SESSION INFO:**
 - Session ID: ${sessionId}
-- Use this sessionId for all cart manipulation functions (addItemToCart, removeItemFromCart, proceedToCheckout)`;
+- Use this sessionId for all cart manipulation functions (addItemToCart, removeItemFromCart, proceedToCheckout)${!restaurantStatus.isOpen ? ' - BUT ONLY IF RESTAURANT IS OPEN!' : ''}`;
 
     if (userContext?.phone || userContext?.email) {
       enhancedSystemPrompt += `\n\n**Current Customer Context:**

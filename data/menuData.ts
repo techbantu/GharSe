@@ -26,7 +26,7 @@ export const restaurantInfo: Restaurant = {
   logo: "/logo.png",
   contact: {
     phone: "+91 90104 60964",
-    email: "orders@gharse.com",
+    email: "orders@gharse.app",
     whatsapp: "+91 90104 60964",
   },
   address: {

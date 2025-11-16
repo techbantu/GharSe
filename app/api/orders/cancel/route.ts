@@ -217,7 +217,7 @@ async function processRefund(orderId: string, refundAmount?: number): Promise<bo
  */
 function getEmailTransporter() {
   const EMAIL_CONFIG = {
-    from: process.env.EMAIL_FROM || `${restaurantInfo.name} <orders@bantuskitchen.com>`,
+    from: process.env.EMAIL_FROM || `${restaurantInfo.name} <orders@gharse.app>`,
     smtp: {
       host: process.env.SMTP_HOST || 'smtp.gmail.com',
       port: parseInt(process.env.SMTP_PORT || '587'),
@@ -263,7 +263,7 @@ async function sendCancellationNotifications(
         ${refundText ? `<p style="color: #10b981;"><strong>${refundText}</strong></p>` : ''}
       </div>
       
-      <p>If you have any questions, please contact us at orders@bantuskitchen.com or call +91 90104 60964.</p>
+      <p>If you have any questions, please contact us at orders@gharse.app or call +91 90104 60964.</p>
       <p>We apologize for any inconvenience.</p>
     `;
 
@@ -273,7 +273,7 @@ async function sendCancellationNotifications(
     try {
       const transporter = getEmailTransporter();
       await transporter.sendMail({
-        from: process.env.EMAIL_FROM || `${restaurantInfo.name} <orders@bantuskitchen.com>`,
+        from: process.env.EMAIL_FROM || `${restaurantInfo.name} <orders@gharse.app>`,
         to: order.customerEmail,
         subject: emailSubject,
         html: emailBody,

@@ -117,7 +117,7 @@ export default function IPProtectionPage() {
             <Li><Bold>Academic Research:</Bold> Citing in research papers with full citation</Li>
             <Li><Bold>Personal Use:</Bold> Saving a recipe screenshot for your personal cooking (NOT sharing publicly)</Li>
           </List>
-          <P>All other uses require <Bold>written permission</Bold> via <a href="mailto:legal@gharse.com" style={{ color: '#FF6B35' }}>legal@gharse.com</a>.</P>
+          <P>All other uses require <Bold>written permission</Bold> via <a href="mailto:legal@gharse.app" style={{ color: '#FF6B35' }}>legal@gharse.app</a>.</P>
         </Subsection>
       </Section>
 
@@ -152,7 +152,7 @@ export default function IPProtectionPage() {
         </Subsection>
 
         <Subsection title="3.3 Authorized Uses (With Permission)">
-          <P>If you wish to use our trademark for legitimate purposes (review website, food blog, affiliate marketing), contact us at <a href="mailto:trademark@gharse.com" style={{ color: '#FF6B35' }}>trademark@gharse.com</a>. We may grant a limited license with conditions:</P>
+          <P>If you wish to use our trademark for legitimate purposes (review website, food blog, affiliate marketing), contact us at <a href="mailto:trademark@gharse.app" style={{ color: '#FF6B35' }}>trademark@gharse.app</a>. We may grant a limited license with conditions:</P>
           <List>
             <Li>Proper attribution and disclaimer (e.g., "GharSe is a registered trademark...")</Li>
             <Li>No misleading use implying endorsement</Li>
@@ -273,7 +273,7 @@ export default function IPProtectionPage() {
         </Subsection>
 
         <Subsection title="6.4 Legitimate Data Access">
-          <P>If you need our data for legitimate purposes (academic research, food tech development), contact us at <a href="mailto:data@gharse.com" style={{ color: '#FF6B35' }}>data@gharse.com</a> to discuss:</P>
+          <P>If you need our data for legitimate purposes (academic research, food tech development), contact us at <a href="mailto:data@gharse.app" style={{ color: '#FF6B35' }}>data@gharse.app</a> to discuss:</P>
           <List>
             <Li>Data licensing agreements (paid access to sanitized data)</Li>
             <Li>API partnerships (structured data access with authentication)</Li>
@@ -289,7 +289,7 @@ export default function IPProtectionPage() {
         </P>
 
         <Subsection title="7.1 Reporting Infringement of Our Content">
-          <P>Email <a href="mailto:dmca@gharse.com" style={{ color: '#FF6B35' }}>dmca@gharse.com</a> with:</P>
+          <P>Email <a href="mailto:dmca@gharse.app" style={{ color: '#FF6B35' }}>dmca@gharse.app</a> with:</P>
           <List>
             <Li>URL of infringing content</Li>
             <Li>Original content URL on our website</Li>
@@ -370,7 +370,7 @@ export default function IPProtectionPage() {
             <Li><Bold>Royalty:</Bold> 6% of monthly gross revenue</Li>
             <Li><Bold>Benefits:</Bold> Brand name, recipes, operations manual, training, marketing support</Li>
           </List>
-          <P>Contact: <a href="mailto:franchise@gharse.com" style={{ color: '#FF6B35' }}>franchise@gharse.com</a></P>
+          <P>Contact: <a href="mailto:franchise@gharse.app" style={{ color: '#FF6B35' }}>franchise@gharse.app</a></P>
         </Subsection>
       </Section>
 
@@ -378,13 +378,13 @@ export default function IPProtectionPage() {
       <Section title="10. INTELLECTUAL PROPERTY INQUIRIES">
         <ContactBox>
           <Bold>IP Legal Department:</Bold><br />
-          Email: <a href="mailto:legal@gharse.com" style={{ color: '#FF6B35' }}>legal@gharse.com</a><br />
+          Email: <a href="mailto:legal@gharse.app" style={{ color: '#FF6B35' }}>legal@gharse.app</a><br />
           Phone: +91 90104 60964<br />
           Address: GharSe, Hayatnagar, Hyderabad, Telangana - 501505<br />
           <br />
-          <Bold>Trademark Inquiries:</Bold> <a href="mailto:trademark@gharse.com" style={{ color: '#FF6B35' }}>trademark@gharse.com</a><br />
-          <Bold>Licensing Requests:</Bold> <a href="mailto:licensing@gharse.com" style={{ color: '#FF6B35' }}>licensing@gharse.com</a><br />
-          <Bold>DMCA Notices:</Bold> <a href="mailto:dmca@gharse.com" style={{ color: '#FF6B35' }}>dmca@gharse.com</a><br />
+          <Bold>Trademark Inquiries:</Bold> <a href="mailto:trademark@gharse.app" style={{ color: '#FF6B35' }}>trademark@gharse.app</a><br />
+          <Bold>Licensing Requests:</Bold> <a href="mailto:licensing@gharse.app" style={{ color: '#FF6B35' }}>licensing@gharse.app</a><br />
+          <Bold>DMCA Notices:</Bold> <a href="mailto:dmca@gharse.app" style={{ color: '#FF6B35' }}>dmca@gharse.app</a><br />
           <br />
           Response Time: Within 5-7 business days (urgent matters within 48 hours)
         </ContactBox>
