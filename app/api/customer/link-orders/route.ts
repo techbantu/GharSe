@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
       customerId: customer.id,
       customerEmail: customer.email,
       linkedCount: result.count,
-      orderNumbers: orphanOrders.map(o => o.orderNumber).join(', '),
+      orderNumbers: orphanOrders.map((o: any) => o.orderNumber).join(', '),
     });
 
     return NextResponse.json({
