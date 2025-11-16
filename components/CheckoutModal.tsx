@@ -456,6 +456,8 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
         specialInstructions: '',
         orderType: 'delivery',
         paymentMethod: 'cash-on-delivery',
+        paymentMethodDetails: '',
+        tip: 0,
         scheduledTime: '',
       });
     }
