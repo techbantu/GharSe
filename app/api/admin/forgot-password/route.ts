@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
               </p>
 
               <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: #374151;">
-                We received a request to reset your admin password for <strong>Bantu's Kitchen</strong>. 
+                We received a request to reset your admin password for <strong>GharSe</strong>. 
                 Click the button below to create a new password:
               </p>
 
@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
           <tr>
             <td style="padding: 30px 40px; text-align: center; background-color: #F9FAFB; border-radius: 0 0 16px 16px;">
               <p style="margin: 0 0 10px; font-size: 14px; color: #6B7280;">
-                <strong>Bantu's Kitchen</strong> Admin Dashboard
+                <strong>GharSe</strong> Admin Dashboard
               </p>
               <p style="margin: 0; font-size: 12px; color: #9CA3AF;">
                 This is an automated email. Please do not reply.
@@ -146,7 +146,7 @@ export async function POST(request: NextRequest) {
 
     await sendEmail({
       to: admin.email,
-      subject: '🔐 Reset Your Admin Password - Bantu\'s Kitchen',
+      subject: '🔐 Reset Your Admin Password - GharSe',
       html: emailHtml,
     });
 
