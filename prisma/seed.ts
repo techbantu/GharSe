@@ -23,7 +23,7 @@ async function main() {
   const passwordHash = await bcrypt.hash(process.env.ADMIN_DEFAULT_PASSWORD || 'Sailaja@2025', 10);
   
   const admin = await prisma.admin.upsert({
-    where: { email: 'admin@bantuskitchen.com' },
+    where: { email: process.env.ADMIN_DEFAULT_EMAIL || 'bantusailaja@gmail.com' },
     update: {
       // Update password if changed
       passwordHash,
@@ -31,7 +31,7 @@ async function main() {
       isActive: true, // Ensure admin is active
     },
     create: {
-      email: process.env.ADMIN_DEFAULT_EMAIL || 'admin@bantuskitchen.com',
+      email: process.env.ADMIN_DEFAULT_EMAIL || 'bantusailaja@gmail.com',
       name: process.env.ADMIN_DEFAULT_NAME || 'Sailaja Admin',
       passwordHash,
       role: 'OWNER',
