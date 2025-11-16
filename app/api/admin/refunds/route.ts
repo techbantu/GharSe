@@ -102,7 +102,7 @@ export async function GET(request: NextRequest) {
     ).length;
 
     // Combine refunded orders with payment details
-    const refundedOrders = refundedPayments.map((payment) => ({
+    const refundedOrders = refundedPayments.map((payment: any) => ({
       orderId: payment.order.orderNumber,
       orderDbId: payment.order.id,
       customerName: payment.order.customerName,
