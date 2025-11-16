@@ -515,7 +515,6 @@ const LiveChat: React.FC<LiveChatProps> = ({ minimized = false, onMinimize, onRe
           flexDirection: 'column',
           overflow: 'hidden',
           marginLeft: 'auto',
-          position: 'relative',
         }}
       >
         {/* Header with AI Badge */}
