@@ -100,7 +100,7 @@ async function createRazorpayOrder(amount: number, currency: string, metadata: a
     });
 
     // Save payment record to database
-    await prisma.payment.create({
+    await (prisma.payment.create as any)({
       data: {
         orderId: metadata.orderId,
         paymentGateway: 'razorpay',
@@ -170,7 +170,7 @@ async function createStripeIntent(amount: number, currency: string, metadata: an
     });
 
     // Save payment record to database
-    await prisma.payment.create({
+    await (prisma.payment.create as any)({
       data: {
         orderId: metadata.orderId,
         paymentGateway: 'stripe',

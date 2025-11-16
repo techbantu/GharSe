@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     const data = validationResult.data;
 
     // Get current user
-    const user = await prisma.customer.findUnique({
+    const user = await (prisma.customer.findUnique as any)({
       where: { id: payload.customerId },
     });
 
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
     const newPasswordHash = await hashPassword(data.newPassword);
 
     // Update password
-    await prisma.customer.update({
+    await (prisma.customer.update as any)({
       where: { id: payload.customerId },
       data: {
         passwordHash: newPasswordHash,

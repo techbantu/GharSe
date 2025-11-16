@@ -69,7 +69,7 @@ export async function PUT(
     const dbStatus = statusMap[status.toLowerCase()] || status.toUpperCase();
     
     // Get the order from database
-    const dbOrder = await prisma.order.findUnique({
+    const dbOrder = await (prisma.order.findUnique as any)({
       where: { id: orderId },
       include: {
         items: {
@@ -93,7 +93,7 @@ export async function PUT(
     const oldStatus = dbOrder.status;
     
     // Update status in database
-    const updatedDbOrder = await prisma.order.update({
+    const updatedDbOrder = await (prisma.order.update as any)({
       where: { id: orderId },
       data: {
         status: dbStatus as any,

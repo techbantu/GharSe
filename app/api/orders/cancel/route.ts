@@ -165,7 +165,7 @@ function canCancelOrder(
 async function processRefund(orderId: string, refundAmount?: number): Promise<boolean> {
   try {
     // Find the payment record
-    const payment = await prisma.payment.findFirst({
+    const payment = await (prisma.payment.findFirst as any)({
       where: { orderId },
     });
 
@@ -185,7 +185,7 @@ async function processRefund(orderId: string, refundAmount?: number): Promise<bo
     const amountToRefund = refundAmount || payment.amount;
 
     // Update payment record to refunded (use enum value REFUNDED, not lowercase string)
-    await prisma.payment.update({
+    await (prisma.payment.update as any)({
       where: { id: payment.id },
       data: {
         status: 'REFUNDED', // Prisma enum value (uppercase)
@@ -385,7 +385,7 @@ export async function POST(request: NextRequest) {
     const data: CancelOrderData = validation.data;
 
     // Find the order
-    const order = await prisma.order.findUnique({
+    const order = await (prisma.order.findUnique as any)({
       where: { id: data.orderId },
       include: {
         items: {
@@ -434,7 +434,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Update order status (use enum value CANCELLED, not lowercase string)
-    const updatedOrder = await prisma.order.update({
+    const updatedOrder = await (prisma.order.update as any)({
       where: { id: data.orderId },
       data: {
         status: 'CANCELLED', // Prisma enum value (uppercase)

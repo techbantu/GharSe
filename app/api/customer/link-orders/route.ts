@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get customer info
-    const customer = await prisma.customer.findUnique({
+    const customer = await (prisma.customer.findUnique as any)({
       where: {
         id: payload.customerId,
       },
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Find orders with matching email but no customerId
-    const orphanOrders = await prisma.order.findMany({
+    const orphanOrders = await (prisma.order.findMany as any)({
       where: {
         customerEmail: customer.email,
         customerId: null, // Orders not yet linked
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Link all orders to this customer
-    const result = await prisma.order.updateMany({
+    const result = await (prisma.order.updateMany as any)({
       where: {
         customerEmail: customer.email,
         customerId: null,

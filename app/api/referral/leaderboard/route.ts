@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
         startOfMonth.setDate(1);
         startOfMonth.setHours(0, 0, 0, 0);
 
-        const userReferralCount = await prisma.referral.count({
+        const userReferralCount = await (prisma.referral.count as any)({
           where: {
             referrerId: customerId,
             status: 'COMPLETED',
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
 
         if (userReferralCount > 0) {
           // Count users with more referrals
-          const usersAbove = await prisma.referral.groupBy({
+          const usersAbove = await (prisma.referral.groupBy as any)({
             by: ['referrerId'],
             where: {
               status: 'COMPLETED',
@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
             },
           });
 
-          const totalEarned = await prisma.referral.aggregate({
+          const totalEarned = await (prisma.referral.aggregate as any)({
             where: {
               referrerId: customerId,
               status: 'COMPLETED',

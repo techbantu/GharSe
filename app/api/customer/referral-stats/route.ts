@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
     logger.info('Fetching referral stats', { customerId });
 
     // Count completed referrals
-    const friendsReferred = await prisma.referral.count({
+    const friendsReferred = await (prisma.referral.count as any)({
       where: {
         referrerId: customerId,
         status: 'COMPLETED',

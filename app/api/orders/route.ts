@@ -400,7 +400,7 @@ async function createOrderLogic(body: unknown): Promise<Result<Order, AppError>>
       // Update customer statistics if logged in
       if (data.customerId) {
         try {
-          await prisma.customer.update({
+          await (prisma.customer.update as any)({
             where: { id: data.customerId },
             data: {
               totalOrders: { increment: 1 },
@@ -419,7 +419,7 @@ async function createOrderLogic(body: unknown): Promise<Result<Order, AppError>>
       
       // CRITICAL FIX: Fetch the complete order from DB with all relations
       // This ensures frontend gets gracePeriodExpiresAt and full MenuItem data
-      const dbOrder = await prisma.order.findUnique({
+      const dbOrder = await (prisma.order.findUnique as any)({
         where: { id: orderId },
         include: {
           items: {
@@ -798,7 +798,7 @@ export async function GET(request: NextRequest) {
     }
     
     // Fetch all orders first, then filter out sample/test orders
-    const allDbOrders = await prisma.order.findMany({
+    const allDbOrders = await (prisma.order.findMany as any)({
       where: whereClause,
       include: {
         items: {

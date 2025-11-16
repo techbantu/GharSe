@@ -55,7 +55,7 @@ export async function GET(
 
     const { slug } = await params;
 
-    const chef = await prisma.chef.findUnique({
+    const chef = await (prisma.chef.findUnique as any)({
       where: { slug },
       include: {
         menuItems: {
@@ -97,7 +97,7 @@ export async function GET(
     }
 
     // Get chef analytics summary
-    const analytics = await prisma.chefAnalytics.findFirst({
+    const analytics = await (prisma.chefAnalytics.findFirst as any)({
       where: { chefId: chef.id },
       orderBy: { date: 'desc' },
     });
@@ -180,7 +180,7 @@ export async function PATCH(
     const data = validation.data;
 
     // Check if chef exists
-    const existingChef = await prisma.chef.findUnique({
+    const existingChef = await (prisma.chef.findUnique as any)({
       where: { slug },
     });
 
@@ -213,7 +213,7 @@ export async function PATCH(
     if (data.gstNumber) updateData.gstNumber = data.gstNumber;
 
     // Update chef
-    const updatedChef = await prisma.chef.update({
+    const updatedChef = await (prisma.chef.update as any)({
       where: { slug },
       data: {
         ...updateData,
@@ -277,7 +277,7 @@ export async function DELETE(
     // TODO: Add authentication check - only admin can deactivate
 
     // Check if chef exists
-    const chef = await prisma.chef.findUnique({
+    const chef = await (prisma.chef.findUnique as any)({
       where: { slug },
     });
 
@@ -289,7 +289,7 @@ export async function DELETE(
     }
 
     // Soft delete: Set status to INACTIVE instead of deleting
-    await prisma.chef.update({
+    await (prisma.chef.update as any)({
       where: { slug },
       data: {
         status: 'INACTIVE',

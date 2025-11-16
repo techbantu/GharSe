@@ -30,7 +30,7 @@ export async function GET() {
       const { PrismaClient } = await import('@prisma/client');
       const prisma = new PrismaClient();
       await prisma.$connect();
-      const count = await prisma.customer.count();
+      const count = await (prisma.customer.count as any)();
       diagnostics.prisma = {
         status: '✅ Connected',
         customerCount: count,

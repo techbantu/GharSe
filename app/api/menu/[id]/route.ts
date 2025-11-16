@@ -14,7 +14,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const item = await prisma.menuItem.findUnique({
+    const item = await (prisma.menuItem.findUnique as any)({
       where: { id },
     });
 
@@ -55,7 +55,7 @@ export async function PUT(
       );
     }
 
-    const item = await prisma.menuItem.update({
+    const item = await (prisma.menuItem.update as any)({
       where: { id },
       data: {
         name: body.name,
@@ -115,7 +115,7 @@ export async function DELETE(
     const { id } = await params;
     
     // Check if item exists
-    const item = await prisma.menuItem.findUnique({
+    const item = await (prisma.menuItem.findUnique as any)({
       where: { id },
       include: {
         orderItems: {
@@ -145,7 +145,7 @@ export async function DELETE(
     }
 
     // Safe to delete - no order history
-    await prisma.menuItem.delete({
+    await (prisma.menuItem.delete as any)({
       where: { id },
     });
 

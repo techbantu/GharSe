@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
     // Fetch customer data
     let customer;
     try {
-      customer = await prisma.customer.findUnique({
+      customer = await (prisma.customer.findUnique as any)({
         where: { id: customerId },
         select: {
           totalSpent: true,
@@ -104,7 +104,7 @@ export async function GET(request: NextRequest) {
     // Fetch orders with items
     let orders: any[];
     try {
-      orders = await prisma.order.findMany({
+      orders = await (prisma.order.findMany as any)({
         where: {
           customerId,
           status: { in: ['DELIVERED', 'CONFIRMED', 'PREPARING', 'READY', 'OUT_FOR_DELIVERY'] },

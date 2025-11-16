@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
     const stats = await getReferralStats(customerId);
 
     // Get achieved milestones
-    const achievedMilestones = await prisma.referralMilestone.findMany({
+    const achievedMilestones = await (prisma.referralMilestone.findMany as any)({
       where: {
         customerId,
         status: 'PAID',

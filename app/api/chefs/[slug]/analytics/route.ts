@@ -35,7 +35,7 @@ export async function GET(
     const endDate = searchParams.get('endDate');
 
     // Find chef
-    const chef = await prisma.chef.findUnique({
+    const chef = await (prisma.chef.findUnique as any)({
       where: { slug },
       select: { id: true, businessName: true },
     });
@@ -72,7 +72,7 @@ export async function GET(
     const toDate = endDate ? new Date(endDate) : new Date();
 
     // Fetch analytics data
-    const analytics = await prisma.chefAnalytics.findMany({
+    const analytics = await (prisma.chefAnalytics.findMany as any)({
       where: {
         chefId: chef.id,
         date: {

@@ -63,7 +63,7 @@ export async function PUT(request: NextRequest) {
     const data = validationResult.data;
 
     // Get current user
-    const currentUser = await prisma.customer.findUnique({
+    const currentUser = await (prisma.customer.findUnique as any)({
       where: { id: payload.customerId },
     });
 
@@ -79,7 +79,7 @@ export async function PUT(request: NextRequest) {
 
     // Check if new email is already taken
     if (emailChanged) {
-      const existingUser = await prisma.customer.findUnique({
+      const existingUser = await (prisma.customer.findUnique as any)({
         where: { email: data.email },
       });
 
@@ -93,7 +93,7 @@ export async function PUT(request: NextRequest) {
 
     // Check if new phone is already taken
     if (currentUser.phone !== data.phone) {
-      const existingUser = await prisma.customer.findUnique({
+      const existingUser = await (prisma.customer.findUnique as any)({
         where: { phone: data.phone },
       });
 
@@ -106,7 +106,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Update user
-    const updatedUser = await prisma.customer.update({
+    const updatedUser = await (prisma.customer.update as any)({
       where: { id: payload.customerId },
       data: {
         name: data.name,

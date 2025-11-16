@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
     const passwordHash = await hashPassword(data.password);
     
     // Update password and remove token
-    await prisma.customer.update({
+    await (prisma.customer.update as any)({
       where: { id: tokenResult.customerId },
       data: {
         passwordHash,

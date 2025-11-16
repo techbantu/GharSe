@@ -29,7 +29,7 @@ export async function GET(
   try {
     const { id } = await params;
 
-    const payout = await prisma.payout.findUnique({
+    const payout = await (prisma.payout.findUnique as any)({
       where: { id },
       include: {
         chef: {
@@ -117,7 +117,7 @@ export async function PATCH(
     // TODO: Add admin authentication check
 
     // Check if payout exists
-    const payout = await prisma.payout.findUnique({
+    const payout = await (prisma.payout.findUnique as any)({
       where: { id },
     });
 
@@ -135,7 +135,7 @@ export async function PATCH(
     if (status === 'PAID' && paymentMethod && transactionId) {
       await processPayout(id, paymentMethod, transactionId);
     } else {
-      await prisma.payout.update({
+      await (prisma.payout.update as any)({
         where: { id },
         data: {
           status,

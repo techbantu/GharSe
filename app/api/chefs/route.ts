@@ -96,7 +96,7 @@ export async function GET(request: NextRequest) {
 
     // Fetch chefs with pagination
     const [chefs, totalCount] = await Promise.all([
-      prisma.chef.findMany({
+      (prisma.chef.findMany as any)({
         where,
         skip,
         take: limit,
@@ -129,7 +129,7 @@ export async function GET(request: NextRequest) {
           },
         },
       }),
-      prisma.chef.count({ where }),
+      (prisma.chef.count as any)({ where }),
     ]);
 
     // Transform chefs to include parsed JSON fields
@@ -221,7 +221,7 @@ export async function POST(request: NextRequest) {
     const data = validation.data;
 
     // Check for duplicate phone or email
-    const existingChef = await prisma.chef.findFirst({
+    const existingChef = await (prisma.chef.findFirst as any)({
       where: {
         OR: [{ phone: data.phone }, { email: data.email }],
       },
@@ -246,13 +246,13 @@ export async function POST(request: NextRequest) {
     // Ensure slug is unique
     let slug = baseSlug;
     let counter = 1;
-    while (await prisma.chef.findUnique({ where: { slug } })) {
+    while (await (prisma.chef.findUnique as any)({ where: { slug } })) {
       slug = `${baseSlug}-${counter}`;
       counter++;
     }
 
     // Create chef with PENDING status (requires admin approval)
-    const chef = await prisma.chef.create({
+    const chef = await (prisma.chef.create as any)({
       data: {
         name: data.name,
         businessName: data.businessName,

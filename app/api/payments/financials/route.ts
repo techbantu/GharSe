@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get all successful payments
-    const successfulPayments = await prisma.payment.findMany({
+    const successfulPayments = await (prisma.payment.findMany as any)({
       where: {
         status: 'PAID',
         createdAt: { gte: startDate },
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
 
     // Get pending payments (orders not yet paid)
     // CRITICAL FIX: Only count COD orders as "pending collection" - card/online payments are handled by gateways
-    const pendingOrders = await prisma.order.findMany({
+    const pendingOrders = await (prisma.order.findMany as any)({
       where: {
         paymentStatus: 'PENDING',
         status: { not: 'CANCELLED' },

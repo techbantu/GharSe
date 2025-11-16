@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
 
     if (itemId) {
       // Forecast for specific item
-      const menuItem = await prisma.menuItem.findUnique({
+      const menuItem = await (prisma.menuItem.findUnique as any)({
         where: { id: itemId },
         select: { id: true, name: true },
       });
@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
       });
     } else {
       // Forecast for all popular items
-      const popularItems = await prisma.menuItem.findMany({
+      const popularItems = await (prisma.menuItem.findMany as any)({
         where: {
           isPopular: true,
           isAvailable: true,

@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
     const data: ModifyOrderData = validation.data;
     
     // Find the order
-    const order = await prisma.order.findUnique({
+    const order = await (prisma.order.findUnique as any)({
       where: { id: data.orderId },
       include: {
         items: {
@@ -387,7 +387,7 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    const order = await prisma.order.findUnique({
+    const order = await (prisma.order.findUnique as any)({
       where: { id: orderId },
       include: {
         items: {
