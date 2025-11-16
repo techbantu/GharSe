@@ -694,8 +694,8 @@ const LiveChat: React.FC<LiveChatProps> = ({ minimized = false, onMinimize, onRe
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px' }}>
                     {message.actions.map((action, index) => {
                       // Render menu item cards for add_to_cart actions
-                      if (action.type === 'add_to_cart' && action.menuItem) {
-                        const item = action.menuItem;
+                      if (action.type === 'add_to_cart' && (action as any).menuItem) {
+                        const item = (action as any).menuItem;
                         const itemId = item.id;
                         const quantity = getItemQuantity(itemId); // GENIUS FIX: Now syncs with cart
                         const isAdding = addingToCart[itemId];
