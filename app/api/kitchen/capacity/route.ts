@@ -103,13 +103,13 @@ export async function POST(request: NextRequest) {
     const peakHours = await kitchenMonitor.getPeakHours(7);
 
     return NextResponse.json({
-      history: history.map(h => ({
+      history: history.map((h: any) => ({
         timestamp: h.timestamp.toISOString(),
         utilization: h.utilizationPercent,
         orders: h.currentOrders,
         waitTime: h.estimatedWaitMinutes,
       })),
-      peakHours: peakHours.slice(0, 5).map(p => ({
+      peakHours: peakHours.slice(0, 5).map((p: any) => ({
         hour: p.hour,
         hourFormatted: `${p.hour}:00`,
         avgUtilization: Math.round(p.avgUtilization),

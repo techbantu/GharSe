@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
     const lowStockAlerts = await ingredientTracker.getLowStockAlerts();
 
     // Format critical alerts (< 2 hours)
-    const criticalAlerts = riskSummary.criticalAlerts.map(risk => ({
+    const criticalAlerts = riskSummary.criticalAlerts.map((risk: any) => ({
       ingredientId: risk.ingredientId,
       ingredientName: risk.name,
       hoursUntilExpiry: Math.round(risk.hoursUntilExpiry * 10) / 10, // 1 decimal
@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
     }));
 
     // Format high priority alerts (2-4 hours)
-    const highPriorityAlerts = riskSummary.highPriorityAlerts.map(risk => ({
+    const highPriorityAlerts = riskSummary.highPriorityAlerts.map((risk: any) => ({
       ingredientId: risk.ingredientId,
       ingredientName: risk.name,
       hoursUntilExpiry: Math.round(risk.hoursUntilExpiry * 10) / 10,
@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
     }));
 
     // Format medium priority alerts (4-8 hours)
-    const mediumPriorityAlerts = riskSummary.mediumPriorityAlerts.map(risk => ({
+    const mediumPriorityAlerts = riskSummary.mediumPriorityAlerts.map((risk: any) => ({
       ingredientId: risk.ingredientId,
       ingredientName: risk.name,
       hoursUntilExpiry: Math.round(risk.hoursUntilExpiry * 10) / 10,
@@ -102,7 +102,7 @@ export async function GET(request: NextRequest) {
       mediumPriorityAlerts,
       
       // Low stock warnings (different concern)
-      lowStockAlerts: lowStockAlerts.map(alert => ({
+      lowStockAlerts: lowStockAlerts.map((alert: any) => ({
         ingredientId: alert.ingredientId,
         ingredientName: alert.name,
         currentStock: alert.currentStock,
