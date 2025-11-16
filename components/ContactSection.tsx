@@ -111,7 +111,7 @@ const ContactSection: React.FC = () => {
                       />
                     </svg>
                   ) : (
-                  <Icon size={24} className={`${method.color} sm:w-8 sm:h-8`} style={{ width: '24px', height: '24px', display: 'block' }} />
+                  <Icon size={24} className={`${method.color} sm:w-8 sm:h-8`} />
                   )}
                 </div>
                 <h3 className="text-base sm:text-lg lg:text-xl font-bold text-gray-900 mb-1 sm:mb-2" style={{ width: '100%', textAlign: 'center' }}>
