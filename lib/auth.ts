@@ -8,7 +8,7 @@
  * - Role-based access control
  */
 
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { Admin, AdminRole } from '@prisma/client';
@@ -46,9 +46,11 @@ export function generateToken(admin: Admin): string {
     role: admin.role,
   };
 
-  return jwt.sign(payload, JWT_SECRET!, {
+  const options: SignOptions = {
     expiresIn: JWT_EXPIRES_IN,
-  });
+  };
+
+  return jwt.sign(payload, JWT_SECRET!, options);
 }
 
 /**
