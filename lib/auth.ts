@@ -46,8 +46,8 @@ export function generateToken(admin: Admin): string {
     role: admin.role,
   };
 
-  return jwt.sign(payload, JWT_SECRET as string, {
-    expiresIn: JWT_EXPIRES_IN as string,
+  return jwt.sign(payload, JWT_SECRET!, {
+    expiresIn: JWT_EXPIRES_IN,
   });
 }
 
