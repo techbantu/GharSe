@@ -64,7 +64,7 @@ async function sendWithResend(options: EmailOptions): Promise<boolean> {
     const resend = new Resend(process.env.RESEND_API_KEY);
 
     const { data, error } = await resend.emails.send({
-      from: options.from,
+      from: options.from || FROM_EMAIL,
       to: options.to,
       subject: options.subject,
       html: options.html,
