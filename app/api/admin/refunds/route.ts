@@ -98,7 +98,7 @@ export async function GET(request: NextRequest) {
     const totalCancelledCount = cancelledOrders.length;
     const cancelledWithRefund = refundedPayments.length;
     const cancelledWithoutRefund = cancelledOrders.filter(
-      (order) => !refundedPayments.some((p) => p.orderId === order.id)
+      (order: any) => !refundedPayments.some((p: any) => p.orderId === order.id)
     ).length;
 
     // Combine refunded orders with payment details
