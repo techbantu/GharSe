@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user
-    const user = await prisma.customer.findUnique({
+    const user = await (prisma.customer.findUnique as any)({
       where: { id: payload.customerId },
     });
 

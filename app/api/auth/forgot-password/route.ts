@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
 
     if (result.success) {
       // Fetch customer to get the reset token for development convenience
-      const customer = await prisma.customer.findUnique({
+      const customer = await (prisma.customer.findUnique as any)({
         where: { email: data.email },
         select: { passwordResetToken: true }
       });

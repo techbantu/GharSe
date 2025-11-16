@@ -139,7 +139,7 @@ async function handleRazorpayWebhook(body: any): Promise<NextResponse> {
       // Send payment confirmation notification
       try {
         const { notificationManager } = await import('@/lib/notifications/notification-manager');
-        const order = await prisma.order.findUnique({
+        const order = await (prisma.order.findUnique as any)({
           where: { id: orderId },
           include: { items: { include: { menuItem: true } } },
         });
@@ -352,7 +352,7 @@ async function handleStripeWebhook(body: string, signature: string): Promise<Nex
       const paymentIntentId = charge.payment_intent as string;
 
       if (paymentIntentId) {
-        const payment = await prisma.payment.findFirst({
+        const payment = await (prisma.payment.findFirst as any)({
           where: { paymentIntentId },
         });
 

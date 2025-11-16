@@ -285,7 +285,7 @@ export async function POST(request: NextRequest) {
     // Update menu item if itemId provided and exists
     if (itemId && itemId !== 'item') {
       try {
-        const menuItem = await prisma.menuItem.findUnique({
+        const menuItem = await (prisma.menuItem.findUnique as any)({
           where: { id: itemId },
         });
 
@@ -307,7 +307,7 @@ export async function POST(request: NextRequest) {
           }
 
           // Update menu item with new image
-          await prisma.menuItem.update({
+          await (prisma.menuItem.update as any)({
             where: { id: itemId },
             data: {
               image: result.url,
@@ -389,7 +389,7 @@ export async function DELETE(request: NextRequest) {
     // Update menu item if itemId provided
     if (itemId) {
       try {
-        await prisma.menuItem.update({
+        await (prisma.menuItem.update as any)({
           where: { id: itemId },
           data: {
             image: null,

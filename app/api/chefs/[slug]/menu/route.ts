@@ -59,7 +59,7 @@ export async function GET(
     const isVegan = searchParams.get('vegan');
 
     // Find chef
-    const chef = await prisma.chef.findUnique({
+    const chef = await (prisma.chef.findUnique as any)({
       where: { slug },
       select: { id: true },
     });
@@ -82,7 +82,7 @@ export async function GET(
     if (isVegan !== null) where.isVegan = isVegan === 'true';
 
     // Fetch menu items
-    const menuItems = await prisma.menuItem.findMany({
+    const menuItems = await (prisma.menuItem.findMany as any)({
       where,
       orderBy: [{ isPopular: 'desc' }, { createdAt: 'desc' }],
     });
@@ -154,7 +154,7 @@ export async function POST(
     const data = validation.data;
 
     // Find chef
-    const chef = await prisma.chef.findUnique({
+    const chef = await (prisma.chef.findUnique as any)({
       where: { slug },
     });
 
@@ -168,7 +168,7 @@ export async function POST(
     // TODO: Add authentication check - only chef owner can add items
 
     // Create menu item
-    const menuItem = await prisma.menuItem.create({
+    const menuItem = await (prisma.menuItem.create as any)({
       data: {
         name: data.name,
         description: data.description,

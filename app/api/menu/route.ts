@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
       where.isAvailable = true;
     }
 
-    const items = await prisma.menuItem.findMany({
+    const items = await (prisma.menuItem.findMany as any)({
       where,
       orderBy: [
         { isPopular: 'desc' },
@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const item = await prisma.menuItem.create({
+    const item = await (prisma.menuItem.create as any)({
       data: {
         name: body.name,
         description: body.description,

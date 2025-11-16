@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Fetch menu item details
-        const menuItem = await prisma.menuItem.findUnique({
+        const menuItem = await (prisma.menuItem.findUnique as any)({
           where: { id: itemId },
           select: {
             id: true,

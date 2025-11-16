@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
       now: now.toISOString(),
     });
     
-    const pendingOrders = await prisma.order.findMany({
+    const pendingOrders = await (prisma.order.findMany as any)({
       where: {
         status: 'PENDING_CONFIRMATION',
         gracePeriodExpiresAt: {

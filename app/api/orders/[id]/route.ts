@@ -47,7 +47,7 @@ export async function GET(
     }
 
     // Fetch the order with all details
-    const order = await prisma.order.findUnique({
+    const order = await (prisma.order.findUnique as any)({
       where: {
         id: id,
         customerId: userId, // Ensure user can only access their own orders
@@ -158,7 +158,7 @@ export async function PATCH(
     const { action } = body;
 
     // Verify order belongs to user
-    const order = await prisma.order.findUnique({
+    const order = await (prisma.order.findUnique as any)({
       where: {
         id: id,
         customerId: userId,
@@ -182,7 +182,7 @@ export async function PATCH(
         );
       }
 
-      const updatedOrder = await prisma.order.update({
+      const updatedOrder = await (prisma.order.update as any)({
         where: { id: id },
         data: {
           status: 'CANCELLED',

@@ -37,7 +37,8 @@ export async function GET(request: NextRequest) {
 
     // Fetch refunded payments
     // Note: PaymentStatus enum values are uppercase (PENDING, PAID, REFUNDED, etc.)
-    const refundedPayments = await prisma.payment.findMany({
+    // Type assertion needed for Prisma Accelerate compatibility
+    const refundedPayments = await (prisma.payment.findMany as any)({
       where: {
         status: 'REFUNDED', // Prisma enum value
         ...dateFilter,
@@ -65,7 +66,7 @@ export async function GET(request: NextRequest) {
     // Fetch cancelled orders (if requested)
     let cancelledOrders: any[] = [];
     if (includeCancelled) {
-      cancelledOrders = await prisma.order.findMany({
+      cancelledOrders = await (prisma.order.findMany as any)({
         where: {
           status: 'CANCELLED',
           ...dateFilter,

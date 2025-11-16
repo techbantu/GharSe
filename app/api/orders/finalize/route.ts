@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     const data: FinalizeOrderData = validation.data;
     
     // Find the order
-    const order = await prisma.order.findUnique({
+    const order = await (prisma.order.findUnique as any)({
       where: { id: data.orderId },
       include: {
         items: {
@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Update order status to PENDING (visible to kitchen)
-    const finalizedOrder = await prisma.order.update({
+    const finalizedOrder = await (prisma.order.update as any)({
       where: { id: data.orderId },
       data: {
         status: 'PENDING',

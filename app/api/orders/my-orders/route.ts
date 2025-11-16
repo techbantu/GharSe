@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch orders
-    const orders = await prisma.order.findMany({
+    const orders = await (prisma.order.findMany as any)({
       where: {
         customerId: payload.customerId,
       },
