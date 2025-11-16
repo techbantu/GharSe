@@ -46,9 +46,9 @@ export default function CompactOrderCard({
   const handleCall = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (onCall) {
-      onCall(order.customerPhone);
+      onCall(order.customer.phone);
     } else {
-      window.location.href = `tel:${order.customerPhone}`;
+      window.location.href = `tel:${order.customer.phone}`;
     }
   };
 
@@ -83,7 +83,7 @@ export default function CompactOrderCard({
             )}
           </div>
           <div className="order-details-row">
-            <span className="customer-name">{order.customerName}</span>
+            <span className="customer-name">{order.customer.name}</span>
             <span className="order-time">{getTimeAgo(order.createdAt)}</span>
           </div>
         </div>
@@ -150,8 +150,8 @@ export default function CompactOrderCard({
               <div className="items-list">
                 {order.items.map((item, idx) => (
                   <div key={idx} className="item-row">
-                    <span className="item-name">{item.quantity}x {item.name}</span>
-                    <span className="item-price">₹{item.total.toLocaleString('en-IN')}</span>
+                    <span className="item-name">{item.quantity}x {item.menuItem.name}</span>
+                    <span className="item-price">₹{item.subtotal.toLocaleString('en-IN')}</span>
                   </div>
                 ))}
               </div>
@@ -163,12 +163,16 @@ export default function CompactOrderCard({
               <div className="info-list">
                 <div className="info-row">
                   <Phone size={16} />
-                  <span>{order.customerPhone}</span>
+                  <span>{order.customer.phone}</span>
                 </div>
                 {order.deliveryAddress && (
                   <div className="info-row">
                     <MapPin size={16} />
-                    <span>{order.deliveryAddress}</span>
+                    <span>
+                      {order.deliveryAddress.street}
+                      {order.deliveryAddress.apartment && `, ${order.deliveryAddress.apartment}`}, 
+                      {order.deliveryAddress.city}, {order.deliveryAddress.state} {order.deliveryAddress.zipCode}
+                    </span>
                   </div>
                 )}
                 <div className="info-row">
@@ -192,7 +196,7 @@ export default function CompactOrderCard({
                     <span>₹{order.pricing.deliveryFee.toLocaleString('en-IN')}</span>
                   </div>
                 )}
-                {order.pricing.discount > 0 && (
+                {order.pricing.discount && order.pricing.discount > 0 && (
                   <div className="payment-row discount">
                     <span>Discount</span>
                     <span>-₹{order.pricing.discount.toLocaleString('en-IN')}</span>
@@ -206,7 +210,7 @@ export default function CompactOrderCard({
                   {order.paymentMethod 
                     ? order.paymentMethod.replace(/-/g, ' ').replace(/_/g, ' ')
                     : 'Cash on Delivery'}
-                  {order.pricing?.tip > 0 && (
+                  {order.pricing?.tip && order.pricing.tip > 0 && (
                     <span style={{ color: '#10B981', marginLeft: '8px' }}>
                       💝 ₹{order.pricing.tip}
                     </span>
