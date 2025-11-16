@@ -13,7 +13,7 @@
  */
 
 import { logger } from '@/lib/logger';
-import { sendEmailWithRetry } from '@/lib/email';
+import { sendEmail } from '@/lib/email-service';
 
 /**
  * Notify referrer when a friend signs up
@@ -54,7 +54,11 @@ export async function notifyReferrerFriendSignup(
       </div>
     `;
 
-    await sendEmailWithRetry(referrerEmail, subject, body);
+    await sendEmail({
+      to: referrerEmail,
+      subject,
+      html: body,
+    });
     
     logger.info('Referrer notified of friend signup', {
       referrerEmail,
@@ -115,7 +119,11 @@ export async function notifyReferrerRewardCredited(
       </div>
     `;
 
-    await sendEmailWithRetry(referrerEmail, subject, body);
+    await sendEmail({
+      to: referrerEmail,
+      subject,
+      html: body,
+    });
     
     logger.info('Referrer notified of reward credit', {
       referrerEmail,
@@ -196,7 +204,11 @@ export async function notifyMilestoneJackpot(
       </div>
     `;
 
-    await sendEmailWithRetry(email, subject, body);
+    await sendEmail({
+      to: email,
+      subject,
+      html: body,
+    });
     
     logger.info('Milestone jackpot notification sent', {
       email,
@@ -265,7 +277,11 @@ export async function notifyMonthlyChampion(
       </div>
     `;
 
-    await sendEmailWithRetry(email, subject, body);
+    await sendEmail({
+      to: email,
+      subject,
+      html: body,
+    });
     
     logger.info('Monthly champion notification sent', {
       email,
@@ -328,7 +344,11 @@ export async function notifyRefereeWelcomeDiscount(
       </div>
     `;
 
-    await sendEmailWithRetry(email, subject, body);
+    await sendEmail({
+      to: email,
+      subject,
+      html: body,
+    });
     
     logger.info('Referee welcome notification sent', {
       email,
