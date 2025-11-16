@@ -17,6 +17,7 @@ import React, { useState, useEffect } from 'react';
 import { Phone, Mail, MapPin, Clock, Facebook, Instagram, Heart, CreditCard, Smartphone, IndianRupee } from 'lucide-react';
 import { restaurantInfo } from '@/data/menuData';
 import { getBusinessStatusMessage, BUSINESS_HOURS } from '@/utils/business-hours';
+import Logo from './Logo';
 
 const FooterSimple: React.FC = () => {
   const currentYear = new Date().getFullYear();
@@ -47,30 +48,8 @@ const FooterSimple: React.FC = () => {
           
         {/* Brand Section */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
-              <div style={{
-            width: '48px',
-            height: '48px',
-                background: 'linear-gradient(to bottom right, #f97316, #ef4444)',
-            borderRadius: '10px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'white',
-                fontWeight: 700,
-            fontSize: '1.25rem',
-            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
-              }}>
-                GS
-              </div>
-          <div>
-            <h3 style={{ fontSize: '1.125rem', fontWeight: 700, lineHeight: '1.2', marginBottom: '0.25rem' }}>
-              GharSe
-            </h3>
-            <p style={{ color: '#9CA3AF', fontSize: '0.75rem', lineHeight: '1.2' }}>
-              From Real Homes To Your Hungry Heart
-            </p>
-          </div>
-            </div>
+          <Logo variant="small" showTagline={true} />
+        </div>
             
         {/* Tagline */}
         <div style={{ 

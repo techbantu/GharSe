@@ -192,8 +192,8 @@ const JourneyTimeline: React.FC<JourneyTimelineProps> = ({ orders, onReorder, on
       <div
         className="grid"
         style={{
-          gap: '0.75rem',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+          gap: '1rem',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))',
         }}
       >
         {orderCards.map((card, index) => {

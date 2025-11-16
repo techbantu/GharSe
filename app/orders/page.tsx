@@ -17,10 +17,12 @@ import {
   MapPin,
   Phone,
   MessageCircle,
+  X,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/context/ToastContext';
+import CustomerCancelOrderModal from '@/components/CustomerCancelOrderModal';
 
 // Order status configuration
 const ORDER_STATUS = {
@@ -103,6 +105,8 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
+  const [orderToCancel, setOrderToCancel] = useState<Order | null>(null);
+  const [showCancelModal, setShowCancelModal] = useState(false);
 
   useEffect(() => {
     fetchOrders();
@@ -120,6 +124,25 @@ export default function OrdersPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Check if order can be cancelled (before OUT_FOR_DELIVERY)
+  const canCancelOrder = (order: Order): boolean => {
+    const status = order.status?.toUpperCase();
+    // Can cancel if status is PENDING_CONFIRMATION, PENDING, CONFIRMED, or PREPARING
+    // Cannot cancel if OUT_FOR_DELIVERY, DELIVERED, or CANCELLED
+    return ['PENDING_CONFIRMATION', 'PENDING', 'CONFIRMED', 'PREPARING'].includes(status || '');
+  };
+
+  const handleCancelClick = (order: Order) => {
+    setOrderToCancel(order);
+    setShowCancelModal(true);
+  };
+
+  const handleCancelSuccess = () => {
+    fetchOrders(); // Refresh orders list
+    setShowCancelModal(false);
+    setOrderToCancel(null);
   };
 
   const handleReorder = async (orderId: string) => {
@@ -592,6 +615,43 @@ export default function OrdersPage() {
                           Receipt
                         </button>
 
+                        {/* Cancel Button - Show for cancellable orders */}
+                        {canCancelOrder(order) && (
+                          <button
+                            className="action-button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCancelClick(order);
+                            }}
+                            style={{
+                              flex: 1,
+                              padding: '0.5rem 0.875rem',
+                              border: 'none',
+                              borderRadius: '0.625rem',
+                              background: 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)',
+                              fontWeight: 600,
+                              fontSize: '0.8125rem',
+                              color: '#ffffff',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '0.375rem',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.opacity = '0.9';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.opacity = '1';
+                            }}
+                          >
+                            <X size={14} />
+                            Cancel
+                          </button>
+                        )}
+
+                        {/* Reorder Button - Show for delivered/cancelled orders */}
                         {(order.status === 'DELIVERED' || order.status === 'CANCELLED') && (
                           <button
                             className="action-button"
@@ -684,6 +744,28 @@ export default function OrdersPage() {
           }
         }
       `}</style>
+
+      {/* Cancel Order Modal */}
+      {orderToCancel && (
+        <CustomerCancelOrderModal
+          isOpen={showCancelModal}
+          onClose={() => {
+            setShowCancelModal(false);
+            setOrderToCancel(null);
+          }}
+          order={{
+            id: orderToCancel.id,
+            orderNumber: orderToCancel.orderNumber,
+            total: orderToCancel.total,
+            status: orderToCancel.status,
+            paymentStatus: (orderToCancel as any).paymentStatus || 'PENDING',
+            paymentMethod: (orderToCancel as any).paymentMethod, // CRITICAL FIX: Pass payment method
+            createdAt: orderToCancel.createdAt,
+            preparingAt: (orderToCancel as any).preparingAt,
+          }}
+          onSuccess={handleCancelSuccess}
+        />
+      )}
     </div>
   );
 }

@@ -21,6 +21,7 @@ import { useRouter } from 'next/navigation';
 import { Phone, Mail, MapPin, Clock, Facebook, Instagram, Heart, CreditCard, IndianRupee, Smartphone, Leaf, ChefHat, Truck, Star } from 'lucide-react';
 import { restaurantInfo } from '@/data/menuData';
 import { getBusinessStatusMessage, BUSINESS_HOURS } from '@/utils/business-hours';
+import Logo from './Logo';
 
 const Footer: React.FC = () => {
   const router = useRouter();
@@ -84,21 +85,7 @@ const Footer: React.FC = () => {
           <div className="lg:col-span-1 space-y-6">
             {/* Logo and Brand Name */}
             <div className="space-y-4">
-              <div className="flex items-center gap-4">
-                <div className="w-20 h-20 bg-gradient-to-br from-orange-500 via-red-500 to-orange-600 rounded-2xl flex items-center justify-center text-white font-bold text-3xl shadow-2xl shadow-orange-500/30">
-                  GS
-                </div>
-                <div>
-                  <h3 className="text-3xl font-black bg-gradient-to-r from-orange-400 to-red-400 bg-clip-text text-transparent leading-tight" style={{ WebkitTextFillColor: 'transparent', WebkitBackgroundClip: 'text', display: 'inline-block' }}>
-                    GharSe
-                  </h3>
-                </div>
-              </div>
-              
-              {/* Tagline */}
-              <p className="text-gray-300 text-base leading-relaxed font-medium">
-                From Real Homes To Your Hungry Heart
-              </p>
+              <Logo variant="medium" showTagline={true} />
               
               {/* Description */}
               <p className="text-gray-400 text-sm leading-relaxed">
@@ -385,11 +372,20 @@ const Footer: React.FC = () => {
                 <p className="text-gray-400 text-sm font-medium mb-2">
                   © {currentYear} <span className="text-white font-semibold">GharSe</span>. All rights reserved.
                 </p>
-                <p className="text-gray-500 text-xs">
-                  Operated by <span className="text-gray-300 font-medium">Sailaja</span>
+                <p className="text-gray-500 text-xs mb-1">
+                  Operated by <span className="text-gray-300 font-medium">Bantu'S kitchen</span> (Proprietor: Sailaja)
                 </p>
-                <p className="text-gray-500 text-xs">
-                  Powered by <span className="text-gray-300 font-medium">TechBantu IT Solutions LLC</span>
+                <p className="text-gray-500 text-xs mb-1">
+                  FSSAI Reg. No.: <span className="text-gray-300 font-medium">23625028002731</span> (Valid until: 23 June 2027)
+                </p>
+                <p className="text-gray-400 text-xs mt-2 border-t border-gray-700 pt-2">
+                  {restaurantInfo.address.street}
+                  {restaurantInfo.address.district && <><br />{restaurantInfo.address.district}</>}
+                  <br />
+                  {restaurantInfo.address.city}, {restaurantInfo.address.state} - {restaurantInfo.address.zipCode}
+                </p>
+                <p className="text-gray-500 text-xs mt-2">
+                  Technology by <span className="text-gray-300 font-medium">TechBantu IT Solutions LLC</span>
                 </p>
               </div>
 

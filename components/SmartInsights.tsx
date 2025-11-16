@@ -17,7 +17,42 @@
 'use client';
 
 import React from 'react';
-import { Heart, TrendingUp, Compass, Calendar, BarChart3, Sparkles, LucideIcon, UtensilsCrossed } from 'lucide-react';
+import { 
+  Heart, 
+  TrendingUp, 
+  Compass, 
+  Calendar, 
+  BarChart3, 
+  Sparkles, 
+  LucideIcon, 
+  UtensilsCrossed,
+  // Category Icons
+  Cookie,
+  Soup,
+  Wheat,
+  Cake,
+  CupSoda,
+  Popcorn,
+  Star,
+  Beef
+} from 'lucide-react';
+
+// Icon mapping function
+const getIconComponent = (iconName: string): LucideIcon => {
+  const iconMap: Record<string, LucideIcon> = {
+    'cookie': Cookie,
+    'soup': Soup,
+    'beef': Beef,
+    'wheat': Wheat,
+    'cake': Cake,
+    'cup-soda': CupSoda,
+    'popcorn': Popcorn,
+    'star': Star,
+    'utensils-crossed': UtensilsCrossed
+  };
+  
+  return iconMap[iconName] || UtensilsCrossed;
+};
 
 interface FavoriteDish {
   dishId: string;
@@ -37,6 +72,7 @@ interface CategoryExploration {
   orderCount: number;
   percentageOfTotal: number;
   icon?: LucideIcon;  // Icon component
+  iconName?: string;  // Icon name for mapping
   iconEmoji?: string; // Deprecated, kept for backward compatibility
 }
 
@@ -427,13 +463,20 @@ const SmartInsights: React.FC<SmartInsightsProps> = ({
                   justifyContent: 'center', 
                   marginBottom: '0.375rem' 
                 }}>
-                  {category.icon ? (
-                    <category.icon size={24} className="text-orange-600" />
-                  ) : category.iconEmoji ? (
-                    <span style={{ fontSize: '1.25rem' }}>{category.iconEmoji}</span>
-                  ) : (
-                    <UtensilsCrossed size={24} className="text-orange-600" />
-                  )}
+                  {(() => {
+                    // Priority: icon > iconName > iconEmoji > default
+                    if (category.icon) {
+                      const IconComponent = category.icon;
+                      return <IconComponent size={24} className="text-orange-600" />;
+                    } else if (category.iconName) {
+                      const IconComponent = getIconComponent(category.iconName);
+                      return <IconComponent size={24} className="text-orange-600" />;
+                    } else if (category.iconEmoji) {
+                      return <span style={{ fontSize: '1.25rem' }}>{category.iconEmoji}</span>;
+                    } else {
+                      return <UtensilsCrossed size={24} className="text-orange-600" />;
+                    }
+                  })()}
                 </div>
                 <p style={{ 
                   fontSize: '0.75rem',

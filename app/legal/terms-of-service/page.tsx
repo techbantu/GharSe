@@ -37,6 +37,7 @@ export default function TermsOfServicePage() {
         }}>
           Effective Date: January 13, 2025 | Version 2.0 (Comprehensive Legal Rewrite)<br />
           Governing Laws: Indian Contract Act, 1872 | Consumer Protection Act, 2019 | IT Act § 79 (India) | California Corporations Code | FSSAI Regulations (Food Operator Only)<br />
+          Food Business Operator: Bantu'S kitchen (FSSAI Reg: 23625028002731) | Technology Provider: TechBantu IT Solutions LLC<br />
           Jurisdiction: Hyderabad, Telangana, India (Food Disputes) | California, USA (Technology Disputes - TechBantu Discretion)
         </p>
       </div>
@@ -48,9 +49,10 @@ export default function TermsOfServicePage() {
           
           <Bold>I. FOOD BUSINESS OPERATOR (INDEPENDENT CONTRACTOR)</Bold><br /><br />
           
-          The food business accessible through the GharSe brand and platform is <Bold>operated exclusively and independently by an Independent Home Chef</Bold> ("Food Operator"), an individual sole proprietor located in Hyderabad, Telangana, India. The Food Operator:<br /><br />
+          The food business accessible through the GharSe brand and platform is <Bold>operated exclusively and independently by Bantu'S kitchen</Bold> ("Food Operator"), an individual sole proprietorship registered as a petty food retailer under FSSAI Registration Number 23625028002731, operated by Sailaja from Plot no 17, Road no 3, Padmalaya Nagar, Hayatnagar, Pedda Amberpet (Kalan), Hayathnagar, Rangareddy, Telangana - 501505, India. The Food Operator:<br /><br />
           
           <List>
+            <Li><Bold>FSSAI Registration:</Bold> 23625028002731 (Petty Retailer - Prepared Foods category, valid until 23 June 2027, annual turnover limit ₹12 Lakhs)</Li>
             <Li>Operates as an <Bold>independent business entity</Bold>, NOT as an employee, agent, partner, franchisee, or joint venturer of TechBantu IT Solutions LLC</Li>
             <Li>Bears <Bold>sole and exclusive responsibility</Bold> for all food preparation, ingredient sourcing, cooking, packaging, food safety compliance, FSSAI licensing, delivery logistics, customer refunds, order cancellations, and food-related customer service</Li>
             <Li>Is the <Bold>sole liable party</Bold> under the Food Safety and Standards Act, 2006 (India), Consumer Protection Act, 2019 (India), and all applicable Indian food safety, consumer protection, and commercial laws</Li>
@@ -664,20 +666,26 @@ export default function TermsOfServicePage() {
 
       {/* Contact */}
       <Section title="13. CONTACT INFORMATION - DUAL ENTITY STRUCTURE">
-        <Subsection title="13.1 Food Business Operator (Independent Home Chef)">
+        <Subsection title="13.1 Food Business Operator">
           <ContactBox>
             <Bold>For all food-related inquiries, orders, refunds, complaints, or food business matters:</Bold><br /><br />
             
-            <Bold>GharSe (Food Business)</Bold><br />
-            Operated by: Independent Home Chef<br />
-            Address: Hayatnagar, Hyderabad, Telangana - 501505, India<br />
+            <Bold>GharSe (Food Business Brand)</Bold><br />
+            Legal Operator: Bantu'S kitchen<br />
+            Proprietor: Sailaja<br />
+            FSSAI Registration: 23625028002731 (Valid until: 23 June 2027)<br />
+            Business Type: Petty Retailer of snacks/tea shops (Prepared Foods)<br />
+            Annual Turnover Limit: Up to ₹12 Lakhs<br /><br />
+            
+            Address: Plot no 17, Road no 3, Padmalaya Nagar, Hayatnagar<br />
+            Pedda Amberpet (Kalan), Hayathnagar, Rangareddy, Telangana - 501505, India<br /><br />
+            
             Email: <a href="mailto:orders@gharse.com" style={{ color: '#FF6B35' }}>orders@gharse.com</a> (orders, delivery, food inquiries)<br />
             Email: <a href="mailto:grievance@gharse.com" style={{ color: '#FF6B35' }}>grievance@gharse.com</a> (complaints, refunds, dispute resolution)<br />
             Phone: +91 90104 60964<br />
             Grievance Officer: Designated officer responding to consumer complaints<br />
             Response Time: Within 15 business days for grievances; 48 hours for order inquiries<br /><br />
             
-            <Bold>FSSAI License:</Bold> [Food Operator's FSSAI License Number - to be displayed]<br />
             <Bold>Business Type:</Bold> Individual Home Chef (sole proprietor), NOT a registered company<br />
             <Bold>Liability:</Bold> Food Operator bears sole responsibility for food safety, quality, delivery, refunds, and consumer disputes
           </ContactBox>

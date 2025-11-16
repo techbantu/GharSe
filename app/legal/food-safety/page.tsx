@@ -37,7 +37,8 @@ export default function FoodSafetyPage() {
         }}>
           Effective Date: January 13, 2025 | Version 2.0 (Comprehensive Legal Rewrite)<br />
           Governing Laws: Food Safety and Standards Act, 2006 | Consumer Protection Act, 2019 | IT Act § 79 (India)<br />
-          FSSAI License: [Independent Home Chef's FSSAI License Number] | Valid Until: [License Expiry Date]
+          FSSAI Registration: 23625028002731 | Valid Until: 23 June 2027<br />
+          Registered Food Business: Bantu'S kitchen | Operating Brand: GharSe | Proprietor: Sailaja
         </p>
       </div>
 
@@ -48,12 +49,14 @@ export default function FoodSafetyPage() {
           
           <Bold>I. FOOD BUSINESS OPERATOR (SOLE AND EXCLUSIVE FOOD SAFETY LIABILITY)</Bold><br /><br />
           
-          ALL food preparation, food safety compliance, FSSAI licensing, hygiene standards, allergen management, contamination prevention, and food-related health liabilities are the <Bold>ABSOLUTE AND EXCLUSIVE RESPONSIBILITY</Bold> of the <Bold>Independent Home Chef</Bold>, an individual sole proprietor operating the GharSe food business from a registered home kitchen in Hyderabad, Telangana, India.<br /><br />
+          ALL food preparation, food safety compliance, FSSAI licensing, hygiene standards, allergen management, contamination prevention, and food-related health liabilities are the <Bold>ABSOLUTE AND EXCLUSIVE RESPONSIBILITY</Bold> of <Bold>Bantu'S kitchen</Bold>, a petty food retailer (snacks/tea shop) registered as an individual sole proprietorship operated by Sailaja from a registered home kitchen located at Plot no 17, Road no 3, Padmalaya Nagar, Hayatnagar, Pedda Amberpet (Kalan), Hayathnagar, Rangareddy, Telangana - 501505, India.<br /><br />
           
-          The Independent Home Chef:<br /><br />
+          The Food Business Operator (Bantu'S kitchen):<br /><br />
           
           <List>
-            <Li><Bold>Holds FSSAI License:</Bold> [License Number to be displayed] issued under Food Safety and Standards Act, 2006, § 31 - MANDATORY licensing for food business operators</Li>
+            <Li><Bold>Holds FSSAI Registration:</Bold> 23625028002731 issued under Food Safety and Standards Act, 2006, § 31 - MANDATORY registration for food business operators (petty retailer category, valid until 23 June 2027)</Li>
+            <Li><Bold>Business Category:</Bold> Petty Retailer of snacks/tea shops under Category "16 - Prepared Foods" (as per FSSAI registration certificate)</Li>
+            <Li><Bold>Annual Turnover Limit:</Bold> Operates under petty food business registration with annual turnover up to ₹12 Lakhs only (FSSAI regulation)</Li>
             <Li><Bold>Bears ALL food safety liability:</Bold> Sole legal entity responsible under FSSAI Act for food contamination, foodborne illness, allergic reactions, foreign object presence, improper cooking, cross-contamination, expired ingredients, and ALL health consequences arising from food consumption</Li>
             <Li><Bold>Maintains kitchen hygiene:</Bold> Exclusive responsibility for compliance with Food Safety and Standards (Licensing and Registration) Regulations, 2011, Schedule 4 (General Hygiene and Sanitary Practices)</Li>
             <Li><Bold>Sources ingredients:</Bold> Sole responsibility for ingredient quality, supplier vetting, expiration date monitoring, storage conditions, and cold chain maintenance</Li>
@@ -61,7 +64,7 @@ export default function FoodSafetyPage() {
             <Li><Bold>Subject to FSSAI enforcement:</Bold> Food Safety Officers may inspect kitchen, seize samples, suspend operations, or prosecute for violations under FSSAI §§ 63-68 (criminal penalties including imprisonment up to life + fines up to ₹10 lakhs)</Li>
           </List>
           
-          <Bold>Legal Status:</Bold> Independent Home Chef is the <Bold>"FOOD BUSINESS OPERATOR" (FBO)</Bold> under FSSAI Act § 3(1)(o), bearing ALL statutory food safety obligations.<br /><br />
+          <Bold>Legal Status:</Bold> Bantu'S kitchen is the <Bold>"FOOD BUSINESS OPERATOR" (FBO)</Bold> under FSSAI Act § 3(1)(o), bearing ALL statutory food safety obligations.<br /><br />
           
           <Bold>II. TECHNOLOGY PROVIDER (ABSOLUTE ZERO FOOD SAFETY LIABILITY)</Bold><br /><br />
           
@@ -89,10 +92,10 @@ export default function FoodSafetyPage() {
           By ordering food through this Platform, you <Bold>IRREVOCABLY AND UNCONDITIONALLY ACKNOWLEDGE, AGREE, AND COVENANT</Bold> that:<br /><br />
           
           <List>
-            <Li>Your food is prepared EXCLUSIVELY by the <Bold>Independent Home Chef</Bold>, who bears SOLE LIABILITY for food safety, quality, hygiene, and health consequences</Li>
+            <Li>Your food is prepared EXCLUSIVELY by <Bold>Bantu'S kitchen</Bold>, who bears SOLE LIABILITY for food safety, quality, hygiene, and health consequences</Li>
             <Li>TechBantu IT Solutions LLC is a <Bold>pure technology platform provider</Bold> with ZERO involvement in food preparation, food safety, or food business operations</Li>
             <Li>You <Bold>EXPRESSLY WAIVE, RELEASE, AND FOREVER DISCHARGE</Bold> TechBantu IT Solutions LLC from ANY AND ALL claims, demands, damages, liabilities, losses, costs, or expenses arising from food consumption, including but not limited to food poisoning, allergic reactions, choking, burns, contamination-related illness, hospitalization, long-term health complications, disability, or death</Li>
-            <Li>Any food safety complaints, FSSAI violations, health injury claims, or food-related lawsuits MUST be filed EXCLUSIVELY against the Independent Home Chef in Hyderabad, Telangana, India</Li>
+            <Li>Any food safety complaints, FSSAI violations, health injury claims, or food-related lawsuits MUST be filed EXCLUSIVELY against Bantu'S kitchen in Hyderabad, Telangana, India</Li>
             <Li>Filing food safety claims against TechBantu IT Solutions LLC is <Bold>VOID AB INITIO</Bold> for lack of subject matter jurisdiction under FSSAI Act (TechBantu is not FBO) and failure to state a cause of action under CPC Order VII Rule 11</Li>
           </List>
           
@@ -105,14 +108,14 @@ export default function FoodSafetyPage() {
             <Li><Bold>CPC § 35A:</Bold> Compensatory costs for frivolous litigation imposed on plaintiff</Li>
           </List>
           
-          <Bold>UNEQUIVOCAL FINAL STATEMENT: ALL FOOD SAFETY LIABILITY RESTS EXCLUSIVELY WITH THE INDEPENDENT HOME CHEF UNDER FSSAI ACT, 2006. TECHBANTU IT SOLUTIONS LLC BEARS ABSOLUTE ZERO FOOD SAFETY LIABILITY UNDER ANY THEORY OF LAW (STATUTORY, CONTRACTUAL, TORTIOUS, OR VICARIOUS).</Bold>
+          <Bold>UNEQUIVOCAL FINAL STATEMENT: ALL FOOD SAFETY LIABILITY RESTS EXCLUSIVELY WITH BANTU'S KITCHEN UNDER FSSAI ACT, 2006. TECHBANTU IT SOLUTIONS LLC BEARS ABSOLUTE ZERO FOOD SAFETY LIABILITY UNDER ANY THEORY OF LAW (STATUTORY, CONTRACTUAL, TORTIOUS, OR VICARIOUS).</Bold>
         </Warning>
       </Section>
       
       {/* FSSAI Compliance */}
       <Section title="2. PARTNER RESTAURANT FSSAI COMPLIANCE">
         <P>
-          All Sailaja (the food operator)s registered on our platform are required to hold valid <Bold>FSSAI (Food Safety and Standards Authority of India) Licenses</Bold> as mandated by the Food Safety and Standards Act, 2006. Sailaja (the food operator)s must comply with:
+          Bantu'S kitchen, the food operator registered on our platform, holds a valid <Bold>FSSAI (Food Safety and Standards Authority of India) Registration</Bold> as mandated by the Food Safety and Standards Act, 2006. Bantu'S kitchen complies with:
         </P>
         <List>
           <Li><Bold>Food Safety and Standards Act, 2006</Bold></Li>

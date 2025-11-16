@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GharSe Package Label - FSSAI Compliant</title>
+  <style>
+    /**
+     * Package Label Styling - FSSAI Compliant
+     * 
+     * Purpose: Printable label for food packaging that meets FSSAI
+     * Food Safety and Standards (Packaging and Labelling) Regulations, 2011
+     * 
+     * Print Size: 10cm x 7cm (standard adhesive label)
+     * Print Instructions: Print at 100% scale, use high-quality adhesive labels
+     */
+    
+    @page {
+      size: 10cm 7cm;
+      margin: 0;
+    }
+    
+    @media print {
+      body {
+        margin: 0;
+        padding: 0;
+      }
+    }
+    
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      width: 10cm;
+      height: 7cm;
+      margin: 0;
+      padding: 10mm;
+      box-sizing: border-box;
+      background: white;
+    }
+    
+    .brand {
+      font-size: 24px;
+      font-weight: bold;
+      color: #F97316;
+      margin-bottom: 5px;
+      text-align: center;
+    }
+    
+    .operator {
+      font-size: 11px;
+      color: #333;
+      margin-bottom: 3px;
+      text-align: center;
+    }
+    
+    .fssai {
+      font-size: 10px;
+      font-weight: bold;
+      color: #000;
+      margin: 5px 0;
+      text-align: center;
+    }
+    
+    .fssai-details {
+      font-size: 9px;
+      font-weight: normal;
+      color: #555;
+      text-align: center;
+    }
+    
+    .address {
+      font-size: 9px;
+      color: #666;
+      line-height: 1.3;
+      margin-top: 8px;
+      text-align: center;
+    }
+    
+    .order {
+      font-size: 12px;
+      font-weight: bold;
+      margin: 10px 0;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background: #f9f9f9;
+    }
+    
+    .order-label {
+      font-size: 10px;
+      color: #666;
+      font-weight: normal;
+    }
+    
+    .footer {
+      font-size: 8px;
+      color: #999;
+      margin-top: 10px;
+      border-top: 1px solid #ddd;
+      padding-top: 5px;
+      text-align: center;
+      line-height: 1.3;
+    }
+    
+    .divider {
+      border-top: 1px solid #e0e0e0;
+      margin: 8px 0;
+    }
+    
+    strong {
+      color: #000;
+    }
+  </style>
+</head>
+<body>
+  <!-- Brand Name -->
+  <div class="brand">GharSe</div>
+  
+  <!-- Legal Operator -->
+  <div class="operator">
+    Operated by: <strong>Bantu'S kitchen</strong> (Proprietor: Sailaja)
+  </div>
+  
+  <!-- FSSAI Registration -->
+  <div class="fssai">FSSAI Reg. No.: 23625028002731</div>
+  <div class="fssai-details">Valid until: 23 June 2027 | Category: Prepared Foods</div>
+  
+  <!-- Divider -->
+  <div class="divider"></div>
+  
+  <!-- Address -->
+  <div class="address">
+    Plot no 17, Road no 3, Padmalaya Nagar, Hayatnagar<br>
+    Pedda Amberpet (Kalan), Hayathnagar, Rangareddy, Telangana - 501505<br>
+    Phone: +91 90104 60964 | Email: orders@gharse.com
+  </div>
+  
+  <!-- Divider -->
+  <div class="divider"></div>
+  
+  <!-- Order Information (Fill in manually or programmatically) -->
+  <div class="order">
+    <div><span class="order-label">Order #:</span> __________</div>
+    <div><span class="order-label">Date:</span> __________</div>
+    <div><span class="order-label">Best Before:</span> ________ (within 24 hours)</div>
+  </div>
+  
+  <!-- Item Details (Fill in manually) -->
+  <div class="address" style="margin-top: 5px;">
+    <strong>Allergen Info:</strong> _________________________<br>
+    <strong>Contents:</strong> ____________________________
+  </div>
+  
+  <!-- Legal Footer -->
+  <div class="footer">
+    Consume within 2 hours of delivery or refrigerate immediately. 
+    Food safety is the responsibility of Bantu'S kitchen (FSSAI: 23625028002731). 
+    Technology services by TechBantu IT Solutions LLC.
+  </div>
+</body>
+</html>
+

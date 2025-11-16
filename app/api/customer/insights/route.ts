@@ -29,7 +29,7 @@ interface CategoryExploration {
   category: string;
   orderCount: number;
   percentageOfTotal: number;
-  iconEmoji: string;
+  iconName: string; // Icon name for Lucide icons
 }
 
 interface Savings {
@@ -258,16 +258,19 @@ function analyzeCategoryExploration(orders: any[]): CategoryExploration[] {
     });
   });
 
-  // Map categories to emojis
-  const categoryEmojis: Record<string, string> = {
-    'Appetizers': '🥟',
-    'Curries': '🍛',
-    'Biryanis': '🍚',
-    'Breads': '🫓',
-    'Rice': '🍚',
-    'Desserts': '🍰',
-    'Beverages': '🥤',
-    'Specials': '⭐',
+  // Map categories to Lucide icon names
+  const categoryIcons: Record<string, string> = {
+    'Appetizers': 'cookie',
+    'Curries': 'soup',
+    'Biryanis': 'beef',
+    'Biryani & Rice': 'beef',
+    'Rice': 'beef',
+    'Breads': 'wheat',
+    'Desserts': 'cake',
+    'Beverages': 'cup-soda',
+    'Snacks': 'popcorn',
+    'Specials': 'star',
+    'Default': 'utensils-crossed'
   };
 
   return Object.entries(categoryCount)
@@ -275,7 +278,7 @@ function analyzeCategoryExploration(orders: any[]): CategoryExploration[] {
       category,
       orderCount: count,
       percentageOfTotal: Math.round((count / totalItems) * 100),
-      iconEmoji: categoryEmojis[category] || '🍽️',
+      iconName: categoryIcons[category] || categoryIcons['Default'],
     }))
     .sort((a, b) => b.orderCount - a.orderCount);
 }
