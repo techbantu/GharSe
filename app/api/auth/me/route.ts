@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
     }
     
     // Get customer profile from database
-    const customer = await prisma.customer.findUnique({
+    const customer = await (prisma.customer.findUnique as any)({
       where: { id: decoded.customerId },
       include: {
         addresses: {

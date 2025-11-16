@@ -51,7 +51,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch admin from database
-    const admin = await prisma.admin.findUnique({
+    // Type assertion needed for Prisma Accelerate compatibility
+    const admin = await (prisma.admin.findUnique as any)({
       where: { id: decoded.adminId },
       select: {
         id: true,

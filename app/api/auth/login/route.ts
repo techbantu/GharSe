@@ -70,7 +70,8 @@ export async function POST(request: NextRequest) {
     const data = validationResult.data;
     
     // Find customer by email
-    const customer = await prisma.customer.findUnique({
+    // Type assertion needed for Prisma Accelerate compatibility
+    const customer = await (prisma.customer.findUnique as any)({
       where: { email: data.email },
     });
     
@@ -150,7 +151,7 @@ export async function POST(request: NextRequest) {
     
     // Update last login info
     const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
-    await prisma.customer.update({
+    await (prisma.customer.update as any)({
       where: { id: customer.id },
       data: {
         lastLoginIP: ipAddress,

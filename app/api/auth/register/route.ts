@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Check if email already exists
-    const existingEmail = await prisma.customer.findUnique({
+    const existingEmail = await (prisma.customer.findUnique as any)({
       where: { email: data.email },
     });
     
@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Check if phone already exists
-    const existingPhone = await prisma.customer.findUnique({
+    const existingPhone = await (prisma.customer.findUnique as any)({
       where: { phone: data.phone },
     });
     
@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
     const referralCode = await generateReferralCode(data.name);
     
     // Create customer account
-    const customer = await prisma.customer.create({
+    const customer = await (prisma.customer.create as any)({
       data: {
         name: data.name,
         email: data.email,
