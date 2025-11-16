@@ -37,8 +37,8 @@ export async function GET(
     // Verify token and get user ID
     let userId: string;
     try {
-      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
-      userId = decoded.userId;
+      const decoded = jwt.verify(token, JWT_SECRET) as { customerId: string };
+      userId = decoded.customerId;
     } catch (error) {
       return NextResponse.json(
         { success: false, error: 'Invalid token' },
@@ -145,8 +145,8 @@ export async function PATCH(
     // Verify token and get user ID
     let userId: string;
     try {
-      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
-      userId = decoded.userId;
+      const decoded = jwt.verify(token, JWT_SECRET) as { customerId: string };
+      userId = decoded.customerId;
     } catch (error) {
       return NextResponse.json(
         { success: false, error: 'Invalid token' },

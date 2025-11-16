@@ -34,8 +34,8 @@ export async function GET(request: Request) {
     let userId: string;
 
     try {
-      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
-      userId = decoded.userId;
+      const decoded = jwt.verify(token, JWT_SECRET) as { customerId: string };
+      userId = decoded.customerId;
     } catch (error) {
       return NextResponse.json(
         { error: 'Invalid token' },
