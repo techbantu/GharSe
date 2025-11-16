@@ -83,20 +83,21 @@ export async function POST(request: NextRequest) {
     
     // Find admin by email (case-insensitive lookup)
     // Try exact match first, then lowercase match
-    let admin = await prisma.admin.findUnique({
+    // Type assertion needed for Prisma Accelerate compatibility
+    let admin = await (prisma.admin.findUnique as any)({
       where: { email: normalizedEmail },
     });
     
     // If not found with normalized email, try original email (for backwards compatibility)
     if (!admin) {
-      admin = await prisma.admin.findUnique({
+      admin = await (prisma.admin.findUnique as any)({
         where: { email: data.email },
       });
     }
     
     // If still not found, try case-insensitive search
     if (!admin) {
-      admin = await prisma.admin.findFirst({
+      admin = await (prisma.admin.findFirst as any)({
         where: {
           email: normalizedEmail,
         },
@@ -212,7 +213,7 @@ export async function POST(request: NextRequest) {
     );
     
     // Update last login
-    await prisma.admin.update({
+    await (prisma.admin.update as any)({
       where: { id: admin.id },
       data: {
         lastLoginAt: new Date(),
