@@ -580,67 +580,47 @@ export default function AdminLoginPage() {
               pointerEvents: 'none'
             }} />
             
-            <div style={{ position: 'relative', zIndex: 1 }}>
+            {/* Forgot Password Link */}
+            <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+              <button
+                type="button"
+                onClick={() => router.push('/admin/forgot-password')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#F97316',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  textDecoration: 'none',
+                  transition: 'color 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.color = '#EA580C'}
+                onMouseLeave={(e) => e.currentTarget.style.color = '#F97316'}
+              >
+                🔑 Forgot Password?
+              </button>
+            </div>
+
+            {/* Security Note */}
+            <div style={{
+              marginTop: '1.5rem',
+              padding: '1rem',
+              background: 'linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%)',
+              borderRadius: '0.75rem',
+              border: '1px solid #FCD34D',
+            }}>
               <p style={{
-                fontSize: '0.8125rem',
-                fontWeight: 700,
-                color: '#1E40AF',
                 margin: 0,
-                marginBottom: '1rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem'
-              }}>
-                <span style={{ fontSize: '1rem' }}>🔐</span> Admin Login Credentials
-              </p>
-              <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '0.875rem',
-                fontSize: '0.8125rem',
-                fontFamily: 'monospace',
-                background: 'rgba(255, 255, 255, 0.9)',
-                backdropFilter: 'blur(10px)',
-                padding: '1.25rem',
-                borderRadius: '0.875rem',
-                border: '1.5px solid rgba(219, 234, 254, 0.8)',
-                boxShadow: '0 4px 12px rgba(59, 130, 246, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.6)'
-              }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  color: '#475569'
-                }}>
-                  <span style={{ fontSize: '0.875rem' }}>📧</span>
-                  <span style={{ color: '#64748B', minWidth: '60px' }}>Email:</span>
-                  <span style={{ fontWeight: 700, color: '#111827' }}>admin@bantuskitchen.com</span>
-                </div>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  color: '#475569'
-                }}>
-                  <span style={{ fontSize: '0.875rem' }}>🔑</span>
-                  <span style={{ color: '#64748B', minWidth: '60px' }}>Password:</span>
-                  <span style={{ fontWeight: 700, color: '#111827' }}>Sailaja@2025</span>
-                </div>
-              </div>
-              <p style={{
                 fontSize: '0.75rem',
-                color: '#475569',
-                margin: 0,
-                marginTop: '0.875rem',
-                paddingTop: '0.875rem',
-                borderTop: '1px solid #BFDBFE',
+                color: '#92400E',
                 display: 'flex',
-                alignItems: 'start',
+                alignItems: 'flex-start',
                 gap: '0.5rem'
               }}>
-                <span style={{ fontSize: '0.875rem', flexShrink: 0 }}>💡</span>
+                <span style={{ fontSize: '0.875rem' }}>🔒</span>
                 <span>
-                  <strong style={{ color: '#1E40AF' }}>Note:</strong> Change password after first login. See ADMIN_ACCESS_GUIDE.md for staff account setup.
+                  <strong>First time?</strong> Contact the restaurant owner to receive your admin credentials via email.
                 </span>
               </p>
             </div>

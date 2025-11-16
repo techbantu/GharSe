@@ -667,18 +667,6 @@ export default function MenuManagerDashboard() {
                     </p>
                   </div>
                   
-                  <div style={{ marginBottom: '0.75rem', paddingBottom: '0.75rem', borderBottom: '1px solid #E5E7EB' }}>
-                    <p style={{ fontSize: '0.75rem', fontWeight: 700, color: '#111827', margin: 0, marginBottom: '0.5rem' }}>
-                      🔐 Login Credentials:
-                    </p>
-                    <div style={{ fontSize: '0.75rem', color: '#374151', fontFamily: 'monospace', background: '#F9FAFB', padding: '0.5rem', borderRadius: '0.25rem' }}>
-                      <p style={{ margin: '0.25rem 0', color: '#6B7280' }}>Email:</p>
-                      <p style={{ margin: '0 0 0.5rem 0', fontWeight: 600, color: '#111827' }}>admin@bantuskitchen.com</p>
-                      <p style={{ margin: '0.25rem 0', color: '#6B7280' }}>Password:</p>
-                      <p style={{ margin: 0, fontWeight: 600, color: '#111827' }}>Sailaja@2025</p>
-                    </div>
-                  </div>
-                  
                   <button
                     onClick={handleLogout}
                     style={{
