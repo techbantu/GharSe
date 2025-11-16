@@ -133,7 +133,7 @@ async function createOrderLogic(body: unknown): Promise<Result<Order, AppError>>
         data.pricing.promoCode,
         data.customerId,
         data.pricing.subtotal,
-        data.items.map(item => ({
+        data.items.map((item: any) => ({
           category: item.menuItem.category,
           price: item.menuItem.price,
           quantity: item.quantity,
@@ -439,7 +439,7 @@ async function createOrderLogic(body: unknown): Promise<Result<Order, AppError>>
         id: dbOrder.id,
         orderNumber: dbOrder.orderNumber,
         customer: data.customer as CustomerInfo,
-        items: dbOrder.items.map(item => ({
+        items: dbOrder.items.map((item: any) => ({
           id: item.id,
           menuItemId: item.menuItemId,
           menuItem: {
@@ -504,7 +504,7 @@ async function createOrderLogic(body: unknown): Promise<Result<Order, AppError>>
           pricing: order.pricing,
           status: order.status,
           createdAt: order.createdAt,
-          items: order.items.map(item => ({
+          items: order.items.map((item: any) => ({
             menuItem: { name: item.menuItem.name },
             quantity: item.quantity,
           })),
@@ -744,14 +744,14 @@ export async function GET(request: NextRequest) {
     let statusFilter: string | undefined;
     if (statusParam) {
       // Split by comma and filter
-      const statuses = statusParam.split(',').map(s => s.trim());
+      const statuses = statusParam.split(',').map((s: string) => s.trim());
       const validStatuses: OrderStatus[] = [
         'pending-confirmation', 'pending', 'confirmed', 'preparing', 'ready',
         'out-for-delivery', 'delivered', 'picked-up', 'cancelled', 'refunded'
       ];
       
       // Validate all statuses
-      const invalidStatuses = statuses.filter(s => !validStatuses.includes(s as OrderStatus));
+      const invalidStatuses = statuses.filter((s: string) => !validStatuses.includes(s as OrderStatus));
       if (invalidStatuses.length > 0) {
         return NextResponse.json(
           {
@@ -814,7 +814,7 @@ export async function GET(request: NextRequest) {
     
     // SIMPLIFIED FILTERING: Only filter OBVIOUS test/sample orders
     // Be conservative - we'd rather show a test order than hide a real one!
-    const dbOrders = allDbOrders.filter(order => {
+    const dbOrders = allDbOrders.filter((order: any) => {
       const email = order.customerEmail.toLowerCase();
       const name = order.customerName.toLowerCase();
       
@@ -845,7 +845,7 @@ export async function GET(request: NextRequest) {
     });
     
     // Transform database orders to frontend Order format
-    const transformedOrders: Order[] = dbOrders.map(dbOrder => {
+    const transformedOrders: Order[] = dbOrders.map((dbOrder: any) => {
       // Map database status to frontend status (lowercase)
       // Note: Database enum only has: PENDING, CONFIRMED, PREPARING, READY, OUT_FOR_DELIVERY, DELIVERED, CANCELLED
       const statusMap: Record<string, OrderStatus> = {
@@ -883,7 +883,7 @@ export async function GET(request: NextRequest) {
       const frontendPaymentMethod = paymentMethodMap[dbOrder.paymentMethod?.toLowerCase() || 'cash'] || 'cash-on-delivery';
       
       // Transform order items
-      const transformedItems: CartItem[] = dbOrder.items.map(item => ({
+      const transformedItems: CartItem[] = dbOrder.items.map((item: any) => ({
         id: item.id,
         menuItem: {
           id: item.menuItem.id,
@@ -954,8 +954,8 @@ export async function GET(request: NextRequest) {
     // If multiple statuses were provided, filter here
     let filteredOrders = transformedOrders;
     if (statusParam && statusParam.includes(',')) {
-      const statuses = statusParam.split(',').map(s => s.trim());
-      filteredOrders = transformedOrders.filter(o => statuses.includes(o.status));
+      const statuses = statusParam.split(',').map((s: string) => s.trim());
+      filteredOrders = transformedOrders.filter((o: any) => statuses.includes(o.status));
     }
     
     const duration = Date.now() - startTime;

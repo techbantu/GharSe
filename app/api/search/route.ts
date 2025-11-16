@@ -31,11 +31,11 @@ export async function GET(request: NextRequest) {
     const popular = searchParams.get('popular') === 'true';
     const limit = parseInt(searchParams.get('limit') || '20');
     
-    let results = menuItems.filter(item => item.isAvailable);
+    let results = menuItems.filter((item: any) => item.isAvailable);
     
     // Text search (fuzzy matching)
     if (query) {
-      results = results.filter(item => 
+      results = results.filter((item: any) => 
         item.name.toLowerCase().includes(query) ||
         item.description.toLowerCase().includes(query) ||
         item.category.toLowerCase().includes(query)
@@ -51,22 +51,22 @@ export async function GET(request: NextRequest) {
     
     // Category filter
     if (category && category !== 'All') {
-      results = results.filter(item => item.category === category);
+      results = results.filter((item: any) => item.category === category);
     }
     
     // Dietary filters
     if (vegetarian) {
-      results = results.filter(item => item.isVegetarian);
+      results = results.filter((item: any) => item.isVegetarian);
     }
     
     if (vegan) {
-      results = results.filter(item => item.isVegan);
+      results = results.filter((item: any) => item.isVegan);
     }
     
     // Spice level filter
     if (maxSpiceLevel) {
       const max = parseInt(maxSpiceLevel);
-      results = results.filter(item => 
+      results = results.filter((item: any) => 
         (item.spicyLevel || 0) <= max
       );
     }
@@ -74,17 +74,17 @@ export async function GET(request: NextRequest) {
     // Price range filter
     if (minPrice) {
       const min = parseFloat(minPrice);
-      results = results.filter(item => item.price >= min);
+      results = results.filter((item: any) => item.price >= min);
     }
     
     if (maxPrice) {
       const max = parseFloat(maxPrice);
-      results = results.filter(item => item.price <= max);
+      results = results.filter((item: any) => item.price <= max);
     }
     
     // Popular items filter
     if (popular) {
-      results = results.filter(item => item.isPopular);
+      results = results.filter((item: any) => item.isPopular);
     }
     
     // Limit results
@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
     
     // Get recommendations (popular items if no query)
     const recommendations = query ? [] : menuItems
-      .filter(item => item.isPopular && item.isAvailable)
+      .filter((item: any) => item.isPopular && item.isAvailable)
       .slice(0, 5);
     
     return NextResponse.json({

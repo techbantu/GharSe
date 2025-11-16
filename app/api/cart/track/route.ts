@@ -186,7 +186,7 @@ export async function GET(request: NextRequest) {
 
     // Calculate demand pressure for each item
     const urgencyData = await Promise.all(
-      itemIds.map(itemId => cartTracker.calculateDemandPressure(itemId))
+      itemIds.map((itemId: string) => cartTracker.calculateDemandPressure(itemId))
     );
 
     return NextResponse.json({
