@@ -121,8 +121,8 @@ export async function GET(request: NextRequest) {
 
     // Format cancelled orders (without refunds)
     const cancelledOrdersFormatted = cancelledOrders
-      .filter((order) => !refundedPayments.some((p) => p.orderId === order.id))
-      .map((order) => ({
+      .filter((order: any) => !refundedPayments.some((p: any) => p.orderId === order.id))
+      .map((order: any) => ({
         orderId: order.orderNumber,
         orderDbId: order.id,
         customerName: order.customerName,
@@ -157,7 +157,7 @@ export async function GET(request: NextRequest) {
       refundedOrders,
       cancelledOrders: cancelledOrdersFormatted,
       allOrders: [...refundedOrders, ...cancelledOrdersFormatted].sort(
-        (a, b) =>
+        (a: any, b: any) =>
           new Date(b.cancelledDate || b.orderDate).getTime() -
           new Date(a.cancelledDate || a.orderDate).getTime()
       ),
