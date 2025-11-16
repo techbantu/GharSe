@@ -230,7 +230,7 @@ async function createOrderLogic(body: unknown): Promise<Result<Order, AppError>>
     
     // Save to database and decrement inventory (with transaction)
     try {
-      await prisma.$transaction(async (tx) => {
+      await (prisma.$transaction as any)(async (tx: any) => {
         // Create order in database
         await tx.order.create({
           data: {

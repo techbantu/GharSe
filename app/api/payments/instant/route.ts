@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
         // For now, simulate instant verification
         
         // Update order payment status immediately (optimistic)
-        await prisma.$transaction(async (tx) => {
+        await (prisma.$transaction as any)(async (tx: any) => {
           // Update order
           await tx.order.update({
             where: { id: orderId },

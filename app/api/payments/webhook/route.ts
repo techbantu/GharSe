@@ -75,7 +75,7 @@ async function handleRazorpayWebhook(body: any): Promise<NextResponse> {
       const netAmount = amount - gatewayFee;
 
       // Record payment in database
-      await prisma.$transaction(async (tx) => {
+      await (prisma.$transaction as any)(async (tx: any) => {
         // Check if payment already recorded (idempotency)
         const existingPayment = await tx.payment.findFirst({
           where: { transactionId: payload.id },
@@ -161,7 +161,7 @@ async function handleRazorpayWebhook(body: any): Promise<NextResponse> {
       const orderId = payload.notes?.orderId;
 
       if (orderId) {
-        await prisma.$transaction(async (tx) => {
+        await (prisma.$transaction as any)(async (tx: any) => {
           await tx.payment.create({
             data: {
               orderId,
@@ -265,7 +265,7 @@ async function handleStripeWebhook(body: string, signature: string): Promise<Nex
       const paymentMethodDetails = paymentIntent.payment_method_types?.[0] || 'card';
 
       // Record payment in database
-      await prisma.$transaction(async (tx) => {
+      await (prisma.$transaction as any)(async (tx: any) => {
         // Get order to extract tip
         const order = await tx.order.findUnique({
           where: { id: orderId },
@@ -315,7 +315,7 @@ async function handleStripeWebhook(body: string, signature: string): Promise<Nex
       const orderId = paymentIntent.metadata.orderId;
 
       if (orderId) {
-        await prisma.$transaction(async (tx) => {
+        await (prisma.$transaction as any)(async (tx: any) => {
           await tx.payment.create({
             data: {
               orderId,
@@ -357,7 +357,7 @@ async function handleStripeWebhook(body: string, signature: string): Promise<Nex
         });
 
         if (payment) {
-          await prisma.$transaction(async (tx) => {
+          await (prisma.$transaction as any)(async (tx: any) => {
             await tx.payment.update({
               where: { id: payment.id },
               data: {
