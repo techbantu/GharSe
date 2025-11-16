@@ -46,6 +46,21 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ['lucide-react', 'framer-motion'],
   },
   
+  // Server components external packages (for optional dependencies like redis)
+  serverComponentsExternalPackages: ['redis'],
+  
+  // Webpack configuration to handle optional dependencies (fallback for non-Turbopack)
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      // Mark redis as external (optional dependency)
+      config.externals = config.externals || [];
+      config.externals.push({
+        'redis': 'commonjs redis',
+      });
+    }
+    return config;
+  },
+  
   // Compression for better performance (SEO factor)
   compress: true,
   
