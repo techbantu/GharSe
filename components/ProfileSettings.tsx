@@ -245,7 +245,6 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({
                     onBlur={(e) => {
                       e.currentTarget.style.borderColor = '#e5e7eb';
                     }}
-                    disabled={!isEditingProfile}
                   />
                 </div>
               </div>

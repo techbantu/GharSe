@@ -558,7 +558,7 @@ const MenuManagement: React.FC<MenuManagementProps> = ({ initialItems = [] }) =>
                       <Leaf size={14} className="text-green-600" />
                     </span>
                   )}
-                  {item.spicyLevel > 0 && (
+                  {item.spicyLevel && item.spicyLevel > 0 && (
                     <span className="w-6 h-6 bg-red-100 rounded-full flex items-center justify-center">
                       <Flame size={14} className="text-red-600" />
                     </span>

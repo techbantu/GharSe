@@ -194,7 +194,7 @@ const PendingOrderModification: React.FC<PendingOrderModificationProps> = ({
       item.menuItem.name.toLowerCase().includes('butter chicken')
     );
     const hasCurry = items.some(item => 
-      item.menuItem.category === 'Mains' && item.menuItem.name.toLowerCase().includes('curry')
+      item.menuItem.category === 'Curries' && item.menuItem.name.toLowerCase().includes('curry')
     );
     const hasBiryani = items.some(item => 
       item.menuItem.name.toLowerCase().includes('biryani')
@@ -307,7 +307,7 @@ const PendingOrderModification: React.FC<PendingOrderModificationProps> = ({
     price: number;
     quantity: number;
   }> => {
-    const originalItemIds = new Set(order.items.map(item => item.menuItemId));
+    const originalItemIds = new Set(order.items.map(item => item.menuItem.id));
     return items
       .filter(item => !originalItemIds.has(item.menuItemId))
       .map(item => ({

@@ -54,7 +54,7 @@ export function ActionButton({ action, onExecute, sessionId }: ActionButtonProps
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false); // Track success state
   const [error, setError] = useState<string | null>(null);
-  const { addItem, openCart, cart } = useCart();
+  const { addItem, cart } = useCart();
   const router = useRouter();
   
   // GENIUS FIX: Check cart state on mount to persist success state across refreshes
@@ -108,15 +108,15 @@ export function ActionButton({ action, onExecute, sessionId }: ActionButtonProps
           // Fallback 1: Try matching by name (case-insensitive)
           if (!menuItem && action.itemName) {
             menuItem = data.items?.find((item: any) => 
-              item.name.toLowerCase() === action.itemName.toLowerCase()
+              item.name.toLowerCase() === action.itemName!.toLowerCase()
             );
           }
           
           // Fallback 2: Try fuzzy match on name
           if (!menuItem && action.itemName) {
             menuItem = data.items?.find((item: any) => 
-              item.name.toLowerCase().includes(action.itemName.toLowerCase()) ||
-              action.itemName.toLowerCase().includes(item.name.toLowerCase())
+              item.name.toLowerCase().includes(action.itemName!.toLowerCase()) ||
+              action.itemName!.toLowerCase().includes(item.name.toLowerCase())
             );
           }
 
