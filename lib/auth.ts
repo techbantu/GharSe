@@ -14,7 +14,7 @@ import crypto from 'crypto';
 import { Admin, AdminRole } from '@prisma/client';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'change-this-secret-key-in-production';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+const JWT_EXPIRES_IN: string | number = process.env.JWT_EXPIRES_IN || '7d';
 
 export interface AuthTokenPayload {
   adminId: string;
