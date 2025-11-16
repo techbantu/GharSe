@@ -235,7 +235,7 @@ const KitchenOrders: React.FC<KitchenOrdersProps> = ({
             <h3 style="margin: 0 0 10px 0; font-size: 16px;">Items:</h3>
             ${order.items.map(item => `
               <div class="item">
-                <span class="item-name">${item.name}</span>
+                <span class="item-name">${item.menuItem.name}</span>
                 <span class="item-qty">Qty: ${item.quantity}</span>
               </div>
             `).join('')}
@@ -288,8 +288,7 @@ const KitchenOrders: React.FC<KitchenOrdersProps> = ({
       cancelled: X,
       refunded: X,
     };
-    const Icon = icons[status.toLowerCase()] || Clock;
-    return <Icon size={18} />;
+    return icons[status.toLowerCase()] || Clock;
   };
 
   if (loading && orders.length === 0) {
@@ -618,7 +617,7 @@ const KitchenOrders: React.FC<KitchenOrdersProps> = ({
                           color: '#1F2937',
                           fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif'
                         }}>
-                          {item.name}
+                          {item.menuItem.name}
                         </span>
                         <span style={{
                           fontWeight: 700,
