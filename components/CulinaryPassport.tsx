@@ -179,14 +179,14 @@ const CulinaryPassport: React.FC<CulinaryPassportProps> = ({
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
-          filter: 'brightness(1.0) contrast(1.2) saturate(1.5)',
+          filter: 'brightness(0.95) contrast(1.1) saturate(0.85)',
         }} />
         
-        {/* Subtle brand-colored overlay for depth */}
+        {/* Premium warm gold overlay - elegant and sophisticated */}
         <div style={{
           position: 'absolute',
           inset: 0,
-          background: 'linear-gradient(135deg, rgba(255, 107, 53, 0.25) 0%, rgba(247, 127, 0, 0.3) 50%, rgba(232, 90, 43, 0.35) 100%)',
+          background: 'linear-gradient(135deg, rgba(212, 175, 55, 0.12) 0%, rgba(245, 230, 211, 0.15) 30%, rgba(232, 213, 183, 0.18) 70%, rgba(201, 169, 97, 0.14) 100%)',
         }} />
       </div>
 
@@ -194,12 +194,12 @@ const CulinaryPassport: React.FC<CulinaryPassportProps> = ({
       <div style={{
         position: 'absolute',
         inset: 0,
-        backgroundColor: 'rgba(255, 255, 255, 0.18)',
-        backdropFilter: 'blur(16px) saturate(200%)',
-        WebkitBackdropFilter: 'blur(16px) saturate(200%)',
+        backgroundColor: 'rgba(255, 255, 255, 0.22)',
+        backdropFilter: 'blur(18px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(18px) saturate(180%)',
         borderRadius: '1rem',
-        border: '1px solid rgba(255, 255, 255, 0.35)',
-        boxShadow: 'inset 0 1px 2px rgba(255, 255, 255, 0.5), 0 8px 32px rgba(0, 0, 0, 0.12)',
+        border: '1px solid rgba(255, 255, 255, 0.4)',
+        boxShadow: 'inset 0 1px 2px rgba(255, 255, 255, 0.6), 0 8px 32px rgba(0, 0, 0, 0.1)',
         pointerEvents: 'none',
         zIndex: 1,
         overflow: 'hidden',
