@@ -124,7 +124,7 @@ export default function PrivacyPolicyPage() {
             By accessing or using this Platform, you ("User," "Customer," "Data Principal," "you," "your") hereby <Bold>irrevocably acknowledge and consent</Bold> that you have read, understood, and agree to be bound by this Privacy Policy.
           </P>
           <P>
-            <Bold>Withdrawal of Consent:</Bold> Under DPDPA 2023 § 6, you have the right to withdraw consent for non-essential data processing at any time by contacting <a href="mailto:privacy@gharse.com" style={{ color: '#FF6B35' }}>privacy@gharse.com</a>. However, withdrawal may limit your ability to use certain Platform features or food ordering services.
+            <Bold>Withdrawal of Consent:</Bold> Under DPDPA 2023 § 6, you have the right to withdraw consent for non-essential data processing at any time by contacting <a href="mailto:privacy@gharse.app" style={{ color: '#FF6B35' }}>privacy@gharse.app</a>. However, withdrawal may limit your ability to use certain Platform features or food ordering services.
           </P>
           <P>
             <Bold>Mandatory Rejection:</Bold> If you do not agree to this Policy, you <Bold>MUST immediately cease</Bold> using our services and delete your account. Continued use constitutes explicit consent under DPDPA 2023 § 6(1).
@@ -303,7 +303,7 @@ export default function PrivacyPolicyPage() {
           <Li><Bold>Right to Grievance Redressal:</Bold> File complaints with our Data Protection Officer (see Section 11)</Li>
         </List>
         <P>
-          <Bold>How to Exercise:</Bold> Email <a href="mailto:privacy@gharse.com" style={{ color: '#FF6B35' }}>privacy@gharse.com</a> with subject line "Data Rights Request" along with proof of identity (government ID).
+          <Bold>How to Exercise:</Bold> Email <a href="mailto:privacy@gharse.app" style={{ color: '#FF6B35' }}>privacy@gharse.app</a> with subject line "Data Rights Request" along with proof of identity (government ID).
         </P>
       </Section>
 
@@ -359,7 +359,7 @@ export default function PrivacyPolicyPage() {
             <Li>Right to opt-out of sale (not applicable - we don't sell)</Li>
             <Li>Right to non-discrimination for exercising rights</Li>
           </List>
-          <P>California Contact: <a href="mailto:privacy@gharse.com" style={{ color: '#FF6B35' }}>privacy@gharse.com</a></P>
+          <P>California Contact: <a href="mailto:privacy@gharse.app" style={{ color: '#FF6B35' }}>privacy@gharse.app</a></P>
         </Subsection>
       </Section>
 
@@ -368,7 +368,7 @@ export default function PrivacyPolicyPage() {
         <P><Bold>Data Protection Officer (DPO):</Bold></P>
         <ContactBox>
           Name: [To be designated]<br />
-          Email: <a href="mailto:dpo@gharse.com" style={{ color: '#FF6B35' }}>dpo@gharse.com</a><br />
+          Email: <a href="mailto:dpo@gharse.app" style={{ color: '#FF6B35' }}>dpo@gharse.app</a><br />
           Phone: +91 90104 60964<br />
           Address: GharSe, Hayatnagar, Hyderabad, Telangana - 501505<br />
           Response Time: Within 15 business days

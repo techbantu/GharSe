@@ -124,14 +124,14 @@ export default function LegalLayout({
           }}>
             <p style={{ marginBottom: '12px' }}>
               <strong>Food Business Operated By:</strong> Independent Home Chef<br />
-              For food orders, complaints, refunds: <a href="mailto:orders@gharse.com" style={{ color: '#FF6B35', textDecoration: 'none' }}>orders@gharse.com</a>
+              For food orders, complaints, refunds: <a href="mailto:orders@gharse.app" style={{ color: '#FF6B35', textDecoration: 'none' }}>orders@gharse.app</a>
             </p>
             <p style={{ marginBottom: '12px' }}>
               <strong>Technology Provider:</strong> TechBantu IT Solutions LLC (California, USA)<br />
-              For technical support, platform issues: <a href="mailto:support@gharse.com" style={{ color: '#FF6B35', textDecoration: 'none' }}>support@gharse.com</a>
+              For technical support, platform issues: <a href="mailto:support@gharse.app" style={{ color: '#FF6B35', textDecoration: 'none' }}>support@gharse.app</a>
             </p>
             <p>
-              For legal inquiries: <a href="mailto:legal@gharse.com" style={{ color: '#FF6B35', textDecoration: 'none' }}>legal@gharse.com</a>
+              For legal inquiries: <a href="mailto:legal@gharse.app" style={{ color: '#FF6B35', textDecoration: 'none' }}>legal@gharse.app</a>
             </p>
           </div>
           <p style={{

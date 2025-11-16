@@ -417,7 +417,7 @@ function DefaultErrorFallback({ error, errorInfo, errorCount, onReset }: ErrorFa
           fontStyle: 'italic',
         }}
       >
-        If this problem persists, please contact our support team at support@gharse.com
+        If this problem persists, please contact our support team at support@gharse.app
       </p>
     </div>
   );

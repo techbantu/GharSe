@@ -20,7 +20,7 @@ import { restaurantInfo } from '@/data/menuData';
 // Email provider configuration
 const EMAIL_CONFIG = {
   provider: process.env.EMAIL_PROVIDER || 'smtp', // 'sendgrid', 'resend', 'smtp'
-  from: process.env.EMAIL_FROM || `GharSe <orders@gharse.com>`,
+  from: process.env.EMAIL_FROM || `GharSe <orders@gharse.app>`,
   sendgridApiKey: process.env.SENDGRID_API_KEY,
   resendApiKey: process.env.RESEND_API_KEY,
   smtp: {

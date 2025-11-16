@@ -10,15 +10,41 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowRight, Star, Clock, TruckIcon } from 'lucide-react';
 import { restaurantInfo } from '@/data/menuData';
+import { useAuth } from '@/context/AuthContext';
+import { getFirstOrderDiscountStatus } from '@/lib/first-order-discount';
 
 interface HeroProps {
   onOrderNowClick: () => void;
 }
 
 const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
+  const { user } = useAuth();
+  const [showFirstOrderBanner, setShowFirstOrderBanner] = useState(true);
+  
+  // Check first-order eligibility
+  useEffect(() => {
+    if (!user?.id) {
+      // Show banner for logged-out users (encourages signup)
+      setShowFirstOrderBanner(true);
+      return;
+    }
+    
+    const checkEligibility = async () => {
+      try {
+        const status = await getFirstOrderDiscountStatus(user.id);
+        setShowFirstOrderBanner(status.available);
+      } catch (error) {
+        console.error('[Hero] Failed to check first-order eligibility:', error);
+        setShowFirstOrderBanner(false);
+      }
+    };
+    
+    checkEligibility();
+  }, [user]);
+  
   return (
     <>
       <style dangerouslySetInnerHTML={{__html: `
@@ -438,11 +464,15 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
             <div style={{ 
               position: 'absolute', 
               bottom: '-40px', 
-              left: '50%', 
-              transform: 'translateX(-50%)', 
-              zIndex: 10 
+              left: '0',
+              right: '0',
+              zIndex: 10,
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              padding: '0 16px'
             }}>
-              <div style={{ position: 'relative' }}>
+              <div style={{ position: 'relative', width: '100%', maxWidth: '200px' }}>
                 {/* Main Badge - Pill Shape (Not Circular) */}
                 <div style={{
                   background: 'linear-gradient(135deg, #F97316 0%, #EA580C 50%, #DC2626 100%)',
@@ -450,8 +480,8 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
                   borderRadius: '50px', // Pill shape instead of perfect circle
                   boxShadow: '0 8px 24px rgba(249, 115, 22, 0.4), 0 4px 12px rgba(0, 0, 0, 0.15)',
                   border: '3px solid white',
-                  padding: '12px 24px',
-                  minWidth: '140px',
+                  padding: '12px 20px',
+                  width: '100%',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',

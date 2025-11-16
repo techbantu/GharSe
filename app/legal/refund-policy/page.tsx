@@ -85,7 +85,7 @@ export default function RefundPolicyPage() {
           By placing an order through this Platform, you <Bold>IRREVOCABLY ACKNOWLEDGE AND AGREE</Bold> that:
           <List>
             <Li>Your food purchase contract is ONLY with the <Bold>Independent Home Chef</Bold>, NOT with TechBantu IT Solutions LLC</Li>
-            <Li>ALL refund requests must be directed to the Independent Home Chef via <a href="mailto:refunds@gharse.com" style={{ color: '#FF6B35' }}>refunds@gharse.com</a></Li>
+            <Li>ALL refund requests must be directed to the Independent Home Chef via <a href="mailto:refunds@gharse.app" style={{ color: '#FF6B35' }}>refunds@gharse.app</a></Li>
             <Li>TechBantu IT Solutions LLC provides ONLY website/app technology and bears <Bold>ZERO financial, legal, or moral responsibility</Bold> for refunds, food quality, or food business operations</Li>
             <Li>Filing refund claims against TechBantu is <Bold>VOID AB INITIO</Bold> (void from inception) for lack of contractual privity and subject matter jurisdiction</Li>
             <Li>You <Bold>UNCONDITIONALLY WAIVE</Bold> any right to hold TechBantu IT Solutions LLC liable for food orders, refunds, or food business matters</Li>
@@ -319,7 +319,7 @@ export default function RefundPolicyPage() {
           <P><Bold>Step 1:</Bold> Contact us immediately via:</P>
           <List>
             <Li>In-app "Report Issue" button on your order page (fastest)</Li>
-            <Li>Email: <a href="mailto:refunds@gharse.com" style={{ color: '#FF6B35' }}>refunds@gharse.com</a></Li>
+            <Li>Email: <a href="mailto:refunds@gharse.app" style={{ color: '#FF6B35' }}>refunds@gharse.app</a></Li>
             <Li>Phone: +91 90104 60964 (9 AM - 9 PM)</Li>
           </List>
           <P><Bold>Step 2:</Bold> Provide required evidence:</P>
@@ -360,7 +360,7 @@ export default function RefundPolicyPage() {
           <P>If you experience food poisoning or illness after consuming our food:</P>
           <List>
             <Li><Bold>FIRST:</Bold> Seek immediate medical attention (call ambulance: 108 or go to nearest hospital)</Li>
-            <Li><Bold>SECOND:</Bold> Inform us within 24 hours at <a href="mailto:foodsafety@gharse.com" style={{ color: '#FF6B35' }}>foodsafety@gharse.com</a> with subject "URGENT: Food Illness"</Li>
+            <Li><Bold>SECOND:</Bold> Inform us within 24 hours at <a href="mailto:foodsafety@gharse.app" style={{ color: '#FF6B35' }}>foodsafety@gharse.app</a> with subject "URGENT: Food Illness"</Li>
             <Li><Bold>THIRD:</Bold> Preserve the remaining food in refrigerator (do not throw away)</Li>
           </List>
         </Subsection>
@@ -435,7 +435,7 @@ export default function RefundPolicyPage() {
           <Li>We charged you multiple times for same order (technical error)</Li>
           <Li>We refused to process a legitimate refund</Li>
         </List>
-        <P><Bold>Before initiating a chargeback:</Bold> Contact us at <a href="mailto:billing@gharse.com" style={{ color: '#FF6B35' }}>billing@gharse.com</a>. We resolve 99% of billing disputes within 48 hours.</P>
+        <P><Bold>Before initiating a chargeback:</Bold> Contact us at <a href="mailto:billing@gharse.app" style={{ color: '#FF6B35' }}>billing@gharse.app</a>. We resolve 99% of billing disputes within 48 hours.</P>
       </Section>
 
       {/* Consumer Rights */}
@@ -461,7 +461,7 @@ export default function RefundPolicyPage() {
         <ContactBox>
           <Bold>Refund Grievance Officer:</Bold><br />
           Name: [To be designated]<br />
-          Email: <a href="mailto:refunds@gharse.com" style={{ color: '#FF6B35' }}>refunds@gharse.com</a><br />
+          Email: <a href="mailto:refunds@gharse.app" style={{ color: '#FF6B35' }}>refunds@gharse.app</a><br />
           Phone: +91 90104 60964<br />
           Address: GharSe, Hayatnagar, Hyderabad, Telangana - 501505<br />
           Response Time: Within 24-48 hours for standard claims, up to 7 days for medical/legal verification

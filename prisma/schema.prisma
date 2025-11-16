@@ -505,6 +505,9 @@ model Customer {
   totalSpent    Float @default(0)
   loyaltyPoints Int   @default(0)
 
+  // First Order Discount (NEW!)
+  firstOrderEligible Boolean @default(true) // Auto-20% discount on first order
+
   // Terms and Conditions Acceptance (NEW!)
   termsAccepted              Boolean @default(false)
   termsAcceptedAt            DateTime?
@@ -990,4 +993,195 @@ model OrderMetrics {
   @@index([orderId])
   @@index([timestamp])
   @@index([orderPlacedHour, orderPlacedDay])
+}
+
+// ===== LEGAL COMPLIANCE & DATA PROTECTION =====
+
+// Legal acceptance tracking (mandatory before usage)
+model LegalAcceptance {
+  id            String   @id @default(cuid())
+  userId        String?
+  sessionId     String   // For non-logged-in users
+  documentType  String   // "TERMS", "PRIVACY", "REFUND", "FOOD_SAFETY"
+  version       String   // "2.0", "3.0"
+  acceptedAt    DateTime @default(now())
+  ipAddress     String
+  userAgent     String
+  acceptMethod  String   // "MODAL", "CHECKBOX", "SIGNUP"
+  
+  @@index([userId])
+  @@index([sessionId])
+  @@index([documentType, version])
+}
+
+// Data retention for tax compliance (7 years)
+model ArchivedOrder {
+  id              String   @id @default(cuid())
+  originalOrderId String   @unique
+  orderData       Json     // Complete order snapshot
+  archivedAt      DateTime @default(now())
+  retainUntil     DateTime // 7 years from order date
+  taxYear         String   // "FY2024-25"
+  financialPeriod String   // "Q1", "Q2", "Q3", "Q4"
+  
+  @@index([retainUntil])
+  @@index([taxYear])
+}
+
+// Data retention audit log
+model DataRetentionLog {
+  id          String   @id @default(cuid())
+  recordType  String   // "order", "payment", "user"
+  recordId    String
+  action      String   // "archived", "deleted", "retained", "reviewed"
+  reason      String   // "tax_compliance", "legal_hold", "gdpr_request"
+  performedAt DateTime @default(now())
+  performedBy String?  // Admin ID if manual
+  details     Json?    // Additional context
+  
+  @@index([recordType])
+  @@index([performedAt])
+}
+
+// Security breach tracking (72-hour notification)
+model SecurityBreach {
+  id              String   @id @default(cuid())
+  severity        String   // "CRITICAL", "HIGH", "MEDIUM", "LOW"
+  breachType      String   // "unauthorized_access", "data_leak", "sql_injection"
+  affectedRecords Int
+  affectedUsers   Json     // Array of user IDs/emails
+  detectedAt      DateTime @default(now())
+  notifiedAt      DateTime? // Must be within 72 hours
+  resolvedAt      DateTime?
+  dpbReportedAt   DateTime? // Data Protection Board notification
+  description     String
+  rootCause       String?
+  mitigationSteps Json
+  
+  @@index([detectedAt])
+  @@index([severity])
+  @@index([notifiedAt])
+}
+
+// DPO request tracking (30-day SLA)
+model DPORequest {
+  id              String   @id @default(cuid())
+  userId          String?
+  email           String
+  phone           String?
+  requestType     String   // "DATA_ACCESS", "DATA_DELETION", "DATA_CORRECTION", "CONSENT_WITHDRAWAL"
+  description     String
+  requestedAt     DateTime @default(now())
+  dueDate         DateTime // 30 days from request (DPDPA § 12(2))
+  acknowledgedAt  DateTime?
+  respondedAt     DateTime?
+  status          String   @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED, REJECTED
+  response        String?
+  rejectionReason String?
+  isOverdue       Boolean  @default(false)
+  escalatedAt     DateTime?
+  
+  @@index([requestType])
+  @@index([dueDate])
+  @@index([isOverdue])
+  @@index([status])
+}
+
+// Cookie consent tracking (GDPR/DPDPA)
+model CookieConsent {
+  id               String   @id @default(cuid())
+  userId           String?
+  sessionId        String
+  essential        Boolean  @default(true)  // Always true (required)
+  analytics        Boolean  @default(false)
+  marketing        Boolean  @default(false)
+  consentedAt      DateTime @default(now())
+  lastUpdated      DateTime @updatedAt
+  ipAddress        String?
+  userAgent        String?
+  withdrawnAt      DateTime?
+  
+  @@index([userId])
+  @@index([sessionId])
+  @@index([consentedAt])
+}
+
+// User deletion requests (Right to Erasure)
+model UserDeletionRequest {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  reason          String?
+  requestedAt     DateTime @default(now())
+  gracePeriodEnds DateTime // 30 days from request
+  cancelledAt     DateTime?
+  executedAt      DateTime?
+  hasLegalHold    Boolean  @default(false) // Pending litigation
+  hasActiveOrders Boolean  @default(false) // Orders not yet delivered
+  legalHoldReason String?
+  
+  @@index([userId])
+  @@index([gracePeriodEnds])
+  @@index([executedAt])
+}
+
+// Compliance alerts and notifications
+model ComplianceAlert {
+  id          String   @id @default(cuid())
+  alertType   String   // "RETENTION_DUE", "BREACH_DETECTED", "DPO_OVERDUE", "LICENSE_EXPIRING"
+  severity    String   // "CRITICAL", "HIGH", "MEDIUM", "LOW"
+  title       String
+  description String
+  createdAt   DateTime @default(now())
+  resolvedAt  DateTime?
+  assignedTo  String?  // Admin ID
+  
+  @@index([alertType])
+  @@index([severity])
+  @@index([resolvedAt])
+}
+
+// Comprehensive audit log for all compliance actions
+model AuditLog {
+  id          String   @id @default(cuid())
+  action      String   // "LOGIN_FAILED", "DATA_ACCESSED", "LEGAL_ACCEPTED", "BREACH_DETECTED", etc.
+  entityType  String   // "user", "order", "security_breach", "dpo_request", etc.
+  entityId    String?  // ID of affected entity
+  userId      String?  // User who performed action (if applicable)
+  sessionId   String?  // Session ID for anonymous actions
+  ipAddress   String?
+  userAgent   String?
+  details     Json?    // Additional context
+  createdAt   DateTime @default(now())
+  
+  @@index([action])
+  @@index([entityType])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([ipAddress])
+}
+
+// ===== DATABASE-LEVEL AUDIT TRAIL (GENIUS ARCHITECTURE) =====
+
+// Database change tracking - logs all DDL/DML operations for complete audit trail
+// This provides defense-in-depth: even if app-level logging fails, database changes are captured
+model DatabaseChange {
+  id              String   @id @default(cuid())
+  occurredAt      DateTime @default(now())
+  actor           String?  // User ID or system role
+  clientAddr      String?  // IP address
+  appName         String   @default("bantus-kitchen") // Application identifier
+  txId            String?  // Transaction ID for grouping related changes
+  changeKind      String   // 'ddl', 'dml', 'storage'
+  commandTag      String?  // 'CREATE TABLE', 'INSERT', 'UPDATE', 'DELETE', etc.
+  objectType      String?  // 'table', 'column', 'index', 'trigger'
+  objectIdentity  String?  // Fully qualified name (schema.table)
+  statement       String?  @db.Text // SQL statement text (when available)
+  details         Json?    // Additional metadata (old/new values, row count, etc.)
+  
+  @@index([occurredAt])
+  @@index([changeKind])
+  @@index([objectType])
+  @@index([actor])
+  @@index([commandTag])
+  @@map("database_changes")
 }

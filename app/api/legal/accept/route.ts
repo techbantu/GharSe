@@ -1,126 +1,127 @@
 /**
- * NEW FILE: Legal Acceptance API Route
- * Purpose: Record user acceptance of legal documents with IP and user agent tracking
- * Security: Requires authentication, validates document types
+ * NEW FILE: Legal Acceptance API
+ * Purpose: Record user acceptance of legal documents with full audit trail
+ * Compliance: DPDPA 2023 § 7 (Consent), GDPR Art. 7 (Conditions for consent)
+ * 
+ * This endpoint ensures:
+ * - Every acceptance is logged with IP, timestamp, user agent
+ * - Cannot accept outdated versions (enforces latest)
+ * - Supports both logged-in users and guest sessions
+ * - Complete audit trail for legal defense
  */
 
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import jwt from 'jsonwebtoken';
+import { NextRequest, NextResponse } from 'next/server';
+import {
+  recordLegalAcceptance,
+  getSessionId,
+  getClientIp,
+  getUserAgent,
+  LEGAL_VERSIONS,
+  type LegalDocumentType,
+} from '@/lib/legal-compliance';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
-
-const VALID_DOCUMENT_TYPES = [
-  'privacy',
-  'terms',
-  'refund',
-  'referral',
-  'food_safety',
-  'ip_protection',
-];
-
-export async function POST(request: Request) {
+export async function POST(req: NextRequest) {
   try {
-    // Authenticate user
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const body = await req.json();
+    const { userId, sessionId: providedSessionId, documentTypes, acceptMethod, acceptAll } = body;
+
+    // Get session and tracking info
+    const sessionId = providedSessionId || getSessionId(req);
+    const ipAddress = getClientIp(req);
+    const userAgent = getUserAgent(req);
+
+    // Determine accept method
+    const method = acceptMethod || 'MODAL';
+
+    // Determine which documents to accept
+    let docsToAccept: LegalDocumentType[] = [];
+    
+    if (acceptAll) {
+      // Accept all mandatory documents
+      const { MANDATORY_DOCUMENTS } = await import('@/lib/legal-compliance');
+      docsToAccept = [...MANDATORY_DOCUMENTS];
+    } else if (documentTypes && Array.isArray(documentTypes)) {
+      docsToAccept = documentTypes;
+    } else {
       return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.split(' ')[1];
-    let userId: string;
-
-    try {
-      const decoded = jwt.verify(token, JWT_SECRET) as { customerId: string };
-      userId = decoded.customerId;
-    } catch (error) {
-      return NextResponse.json(
-        { error: 'Invalid token' },
-        { status: 401 }
-      );
-    }
-
-    // Parse request body
-    const body = await request.json();
-    const { documents } = body;
-
-    if (!Array.isArray(documents) || documents.length === 0) {
-      return NextResponse.json(
-        { error: 'Invalid documents array' },
+        { error: 'Missing documentTypes or acceptAll parameter' },
         { status: 400 }
       );
     }
 
-    // Validate document types
-    for (const doc of documents) {
-      if (!VALID_DOCUMENT_TYPES.includes(doc.type)) {
+    if (docsToAccept.length === 0) {
+      return NextResponse.json(
+        { error: 'No documents to accept' },
+        { status: 400 }
+      );
+    }
+
+    // Record acceptance for each document
+    const acceptances = [];
+    for (const docType of docsToAccept) {
+      if (!LEGAL_VERSIONS[docType as LegalDocumentType]) {
         return NextResponse.json(
-          { error: `Invalid document type: ${doc.type}` },
+          { error: `Invalid document type: ${docType}` },
           { status: 400 }
         );
       }
+
+      const acceptance = await recordLegalAcceptance({
+        userId: userId || null,
+        sessionId,
+        documentType: docType as LegalDocumentType,
+        ipAddress,
+        userAgent,
+        acceptMethod: method as 'MODAL' | 'CHECKBOX' | 'SIGNUP',
+      });
+
+      acceptances.push(acceptance);
     }
-
-    // Get IP address and user agent for audit trail
-    const ipAddress = request.headers.get('x-forwarded-for') || 
-                     request.headers.get('x-real-ip') || 
-                     'unknown';
-    const userAgent = request.headers.get('user-agent') || 'unknown';
-
-    // Record acceptance for each document
-    const acceptances = await Promise.all(
-      documents.map(async (doc: any) => {
-        // Check if already accepted this version
-        const existing = await prisma.$queryRaw<Array<{ id: string }>>`
-          SELECT id FROM legal_acceptances
-          WHERE customer_id = ${userId}
-          AND document_type = ${doc.type}
-          AND version = ${doc.version}
-        `;
-
-        if (existing.length > 0) {
-          // Already accepted this version
-          return { type: doc.type, status: 'already_accepted' };
-        }
-
-        // Insert new acceptance record
-        await prisma.$executeRaw`
-          INSERT INTO legal_acceptances (
-            customer_id,
-            document_type,
-            version,
-            ip_address,
-            user_agent,
-            accepted_at
-          ) VALUES (
-            ${userId},
-            ${doc.type},
-            ${doc.version},
-            ${ipAddress},
-            ${userAgent},
-            CURRENT_TIMESTAMP
-          )
-        `;
-
-        return { type: doc.type, status: 'accepted' };
-      })
-    );
 
     return NextResponse.json({
       success: true,
-      acceptances,
-      message: 'Legal documents accepted successfully',
+      acceptances: acceptances.map((a) => ({
+        id: a.id,
+        documentType: a.documentType,
+        version: a.version,
+        acceptedAt: a.acceptedAt,
+      })),
     });
-
   } catch (error) {
-    console.error('Legal acceptance error:', error);
+    console.error('[Legal Acceptance API] Error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Failed to record legal acceptance' },
       { status: 500 }
     );
   }
 }
 
+/**
+ * GET endpoint: Check user's acceptance status
+ * 
+ * CRITICAL FIX: Accept sessionId from query params (client localStorage)
+ * instead of generating a new one on every request (which causes mismatch)
+ */
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get('userId');
+    const sessionId = searchParams.get('sessionId') || getSessionId(req); // Use client's sessionId
+
+    const { hasAcceptedAllLegalDocuments, getOutdatedAcceptances } = await import('@/lib/legal-compliance');
+
+    const hasAccepted = await hasAcceptedAllLegalDocuments(userId, sessionId);
+    const outdated = await getOutdatedAcceptances(userId, sessionId);
+
+    return NextResponse.json({
+      hasAccepted,
+      outdatedDocuments: outdated,
+    });
+  } catch (error) {
+    console.error('[Legal Acceptance API] Error:', error);
+    return NextResponse.json(
+      { error: 'Failed to check acceptance status' },
+      { status: 500 }
+    );
+  }
+}

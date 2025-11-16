@@ -18,6 +18,7 @@ import { ToastProvider } from "@/context/ToastContext";
 import { CartProvider } from "@/context/CartContext";
 import CacheBuster from "@/components/CacheBuster";
 import LegalAcceptanceModal from "@/components/legal/LegalAcceptanceModal";
+import CookieConsentBanner from "@/components/legal/CookieConsentBanner";
 import { restaurantInfo } from "@/data/menuData";
 
 const inter = Inter({
@@ -28,7 +29,7 @@ const inter = Inter({
 
 // Comprehensive SEO metadata targeting Hyderabad, India market
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://gharse.com'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://gharse.app'),
   title: {
     default: "GharSe - Home-Cooked Indian Food Delivery in Hayatnagar, Hyderabad | Order Online",
     template: "%s | GharSe - From Real Homes To Your Hungry Heart"
@@ -69,7 +70,7 @@ export const metadata: Metadata = {
     "family-style home cooking",
     "gharse home food",
   ],
-  authors: [{ name: "GharSe", url: "https://gharse.com" }],
+  authors: [{ name: "GharSe", url: "https://gharse.app" }],
   creator: "GharSe - Operated by Sailaja",
   publisher: "GharSe",
   formatDetection: {
@@ -80,7 +81,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_IN",
-    url: "https://gharse.com",
+    url: "https://gharse.app",
     siteName: "GharSe",
     title: "GharSe - Best Indian Restaurant in Hayatnagar, Hyderabad",
     description: "Order authentic Indian home cooking delivered fresh to your door in Hyderabad. Biryani, curry, tandoori dishes and more. Free delivery over ₹499.",
@@ -112,7 +113,7 @@ export const metadata: Metadata = {
     },
   },
   alternates: {
-    canonical: "https://gharse.com",
+    canonical: "https://gharse.app",
   },
   verification: {
     // Add Google Search Console verification when available
@@ -130,7 +131,7 @@ export const metadata: Metadata = {
 
 // Generate structured data (JSON-LD) for SEO
 function generateStructuredData() {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://gharse.com';
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://gharse.app';
   
   // Restaurant/LocalBusiness schema
   const restaurantSchema = {
@@ -294,6 +295,7 @@ export default function RootLayout({
             <CartProvider>
             <ChatProvider>
               <LegalAcceptanceModal />
+              <CookieConsentBanner />
               {children}
             </ChatProvider>
             </CartProvider>

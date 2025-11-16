@@ -66,13 +66,67 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [isMounted, setIsMounted] = useState(false);
   const lastUserMessageRef = useRef<string>('');
   const router = useRouter();
+  
+  // Cross-tab sync infrastructure
+  const broadcastChannel = useRef<BroadcastChannel | null>(null);
+  const CHAT_CHANNEL_NAME = 'bantu_chat_sync';
+  const CHAT_SYNC_KEY = 'bantu_chat_sync_event';
 
   // Initialize conversationId and load history only on client side
+  // Setup cross-tab sync
   useEffect(() => {
     setIsMounted(true);
     
     // Generate conversationId only on client
     setConversationId(`conv_${Date.now()}_${Math.random().toString(36).substring(7)}`);
+    
+    // Setup BroadcastChannel for cross-tab sync (modern browsers)
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      try {
+        const channel = new BroadcastChannel(CHAT_CHANNEL_NAME);
+        broadcastChannel.current = channel;
+        
+        channel.onmessage = (event) => {
+          if (event.data.type === 'MESSAGES_UPDATED') {
+            console.log('[Chat Sync] Received messages update from another tab');
+            setMessages(event.data.messages.map((msg: any) => ({
+              ...msg,
+              timestamp: new Date(msg.timestamp),
+            })));
+          } else if (event.data.type === 'CONTEXT_UPDATED') {
+            console.log('[Chat Sync] Received context update from another tab');
+            setUserContextState(event.data.context);
+          }
+        };
+        
+        console.log('[Chat Sync] BroadcastChannel initialized');
+      } catch (error) {
+        console.error('[Chat Sync] Failed to initialize BroadcastChannel:', error);
+      }
+    }
+    
+    // Fallback: localStorage event listener for older browsers
+    const handleStorageEvent = (e: StorageEvent) => {
+      if (e.key === CHAT_SYNC_KEY && e.newValue) {
+        try {
+          const data = JSON.parse(e.newValue);
+          if (data.type === 'MESSAGES_UPDATED') {
+            console.log('[Chat Sync] Received messages update via localStorage event');
+            setMessages(data.messages.map((msg: any) => ({
+              ...msg,
+              timestamp: new Date(msg.timestamp),
+            })));
+          } else if (data.type === 'CONTEXT_UPDATED') {
+            console.log('[Chat Sync] Received context update via localStorage event');
+            setUserContextState(data.context);
+          }
+        } catch (error) {
+          console.error('[Chat Sync] Failed to parse storage event:', error);
+        }
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageEvent);
     
     // Load conversation history from localStorage
     const loadHistory = () => {
@@ -112,9 +166,18 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     };
 
     loadHistory();
+    
+    // Cleanup
+    return () => {
+      if (broadcastChannel.current) {
+        broadcastChannel.current.close();
+      }
+      window.removeEventListener('storage', handleStorageEvent);
+    };
   }, []);
 
   // Save conversation history to localStorage (only after mount)
+  // ALSO broadcast to other tabs
   useEffect(() => {
     if (!isMounted) return;
     
@@ -124,17 +187,70 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     try {
       // Save all messages (not just last 20) for full persistence
       localStorage.setItem('bantu_chat_history', JSON.stringify(messages));
+      
+      // Broadcast messages update to other tabs
+      if (broadcastChannel.current) {
+        try {
+          broadcastChannel.current.postMessage({
+            type: 'MESSAGES_UPDATED',
+            messages,
+            timestamp: Date.now(),
+          });
+        } catch (error) {
+          console.error('[Chat Sync] BroadcastChannel error:', error);
+        }
+      }
+      
+      // Fallback: localStorage event for older browsers
+      try {
+        const payload = {
+          type: 'MESSAGES_UPDATED',
+          messages,
+          timestamp: Date.now(),
+        };
+        localStorage.setItem(CHAT_SYNC_KEY, JSON.stringify(payload));
+        localStorage.removeItem(CHAT_SYNC_KEY); // Trigger storage event
+      } catch (error) {
+        console.error('[Chat Sync] localStorage sync error:', error);
+      }
     } catch (error) {
       console.error('Failed to save chat history:', error);
     }
   }, [messages, isMounted]);
 
   // Save user context (only after mount)
+  // ALSO broadcast to other tabs
   useEffect(() => {
     if (!isMounted) return;
     
     try {
       localStorage.setItem('bantu_chat_context', JSON.stringify(userContext));
+      
+      // Broadcast context update to other tabs
+      if (broadcastChannel.current) {
+        try {
+          broadcastChannel.current.postMessage({
+            type: 'CONTEXT_UPDATED',
+            context: userContext,
+            timestamp: Date.now(),
+          });
+        } catch (error) {
+          console.error('[Chat Sync] BroadcastChannel error:', error);
+        }
+      }
+      
+      // Fallback: localStorage event for older browsers
+      try {
+        const payload = {
+          type: 'CONTEXT_UPDATED',
+          context: userContext,
+          timestamp: Date.now(),
+        };
+        localStorage.setItem(CHAT_SYNC_KEY, JSON.stringify(payload));
+        localStorage.removeItem(CHAT_SYNC_KEY); // Trigger storage event
+      } catch (error) {
+        console.error('[Chat Sync] localStorage sync error:', error);
+      }
     } catch (error) {
       console.error('Failed to save user context:', error);
     }
@@ -234,7 +350,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       const errorMessage: ChatMessage = {
         id: `error_${Date.now()}_${Math.random().toString(36).substring(7)}`,
         role: 'assistant',
-        content: 'I\'m sorry, I\'m having trouble connecting right now. Please try again in a moment, or you can:\n\n• Call us at +91 90104 60964\n• Email orders@bantuskitchen.com\n• Visit our restaurant directly',
+        content: 'I\'m sorry, I\'m having trouble connecting right now. Please try again in a moment, or you can:\n\n• Call us at +91 90104 60964\n• Email orders@gharse.app\n• Visit our restaurant directly',
         timestamp: new Date(),
         isError: true,
       };

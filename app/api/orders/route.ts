@@ -25,7 +25,9 @@ import { broadcastNewOrderToAdmin } from '@/lib/websocket-server';
 import { validateCoupon, applyCouponToOrder, checkReferralEligibility, completeReferral } from '@/lib/coupon-validator';
 import { extractTokenFromHeader, extractTokenFromCookie, verifyToken } from '@/lib/auth-customer';
 import { checkRefereeDiscount, applyRefereeDiscount } from '@/lib/referral-engine';
+import { calculateFirstOrderDiscount, markFirstOrderUsed } from '@/lib/first-order-discount';
 import { getMaxWalletUsage, debitWallet } from '@/lib/wallet-manager';
+import { withIdempotency } from '@/lib/idempotency';
 
 /**
  * Validation Schema for Order Creation
@@ -127,7 +129,29 @@ async function createOrderLogic(body: unknown): Promise<Result<Order, AppError>>
       }
     }
     
-    // Check for promo code/coupon (on top of referral discount if applicable)
+    // Check for FIRST ORDER DISCOUNT (auto-applied, no code needed!)
+    // 20% off automatically for first-time customers
+    let firstOrderDiscountApplied = false;
+    
+    if (data.customerId) {
+      const firstOrderDiscount = await calculateFirstOrderDiscount(
+        data.pricing.subtotal,
+        data.customerId
+      );
+      
+      if (firstOrderDiscount > 0) {
+        finalDiscount += firstOrderDiscount;
+        firstOrderDiscountApplied = true;
+        
+        logger.info('First order discount auto-applied', {
+          customerId: data.customerId,
+          discount: firstOrderDiscount,
+          subtotal: data.pricing.subtotal,
+        });
+      }
+    }
+    
+    // Check for promo code/coupon (on top of first-order and referral discounts if applicable)
     if (data.pricing.promoCode && data.customerId) {
       const couponResult = await validateCoupon(
         data.pricing.promoCode,
@@ -541,6 +565,25 @@ async function createOrderLogic(body: unknown): Promise<Result<Order, AppError>>
         }
       })();
       
+      // Mark first-order discount as used (async, don't block response)
+      if (firstOrderDiscountApplied && data.customerId) {
+        (async () => {
+          try {
+            await markFirstOrderUsed(data.customerId!);
+            logger.info('First order discount marked as used', {
+              customerId: data.customerId,
+              orderId: order.id,
+            });
+          } catch (error) {
+            logger.error('Failed to mark first order as used', {
+              customerId: data.customerId,
+              orderId: order.id,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
+        })();
+      }
+      
     } catch (dbError: any) {
       logger.error('Failed to save order to database', {
         orderId,
@@ -607,13 +650,20 @@ async function createOrderLogic(body: unknown): Promise<Result<Order, AppError>>
  * 3. Business logic validation
  * 4. Create order
  * 5. Return result or error
+ * 
+ * IDEMPOTENCY PROTECTION:
+ * - Include 'Idempotency-Key' header (UUID v4) in request
+ * - Duplicate requests return cached result
+ * - Prevents double-charging and duplicate orders
  */
 export async function POST(request: NextRequest) {
-  const startTime = Date.now();
+  // Wrap entire handler with idempotency protection
+  return withIdempotency(request, async (req) => {
+    const startTime = Date.now();
   
-  try {
-    // Step 1: Rate limiting
-    const rateLimitResult = applyRateLimit(request, RATE_LIMITS.CREATE_ORDER);
+    try {
+      // Step 1: Rate limiting
+      const rateLimitResult = applyRateLimit(req, RATE_LIMITS.CREATE_ORDER);
     
     if (rateLimitResult.isErr()) {
       return NextResponse.json(
@@ -632,98 +682,99 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Step 2: Parse request body
-    let body: unknown;
-    try {
-      body = await request.json();
-    } catch (error) {
-      logger.warn('Invalid JSON in request body', {
-        error: error instanceof Error ? error.message : String(error),
-      });
-      
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Invalid JSON in request body',
-          code: 'VALIDATION_ERROR',
-        },
-        { status: 400 }
-      );
-    }
-    
-    // Step 2.5: Extract customer ID from auth token if present
-    const authHeader = request.headers.get('authorization');
-    const cookieHeader = request.headers.get('cookie');
-    const token = extractTokenFromHeader(authHeader) || extractTokenFromCookie(cookieHeader);
-    
-    if (token) {
-      const decoded = verifyToken(token);
-      if (decoded && decoded.customerId) {
-        // Add customerId to body if user is logged in
-        (body as any).customerId = decoded.customerId;
+      // Step 2: Parse request body
+      let body: unknown;
+      try {
+        body = await req.json();
+      } catch (error) {
+        logger.warn('Invalid JSON in request body', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+        
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Invalid JSON in request body',
+            code: 'VALIDATION_ERROR',
+          },
+          { status: 400 }
+        );
       }
-    }
+      
+      // Step 2.5: Extract customer ID from auth token if present
+      const authHeader = req.headers.get('authorization');
+      const cookieHeader = req.headers.get('cookie');
+      const token = extractTokenFromHeader(authHeader) || extractTokenFromCookie(cookieHeader);
     
-    // Step 3: Create order (with validation and business logic)
-    const result = await createOrderLogic(body);
-    
-    const duration = Date.now() - startTime;
-    
-    if (result.isErr()) {
-      logger.warn('Order creation failed', {
-        error: result.error.message,
-        errorType: result.error.constructor.name,
+      if (token) {
+        const decoded = verifyToken(token);
+        if (decoded && decoded.customerId) {
+          // Add customerId to body if user is logged in
+          (body as any).customerId = decoded.customerId;
+        }
+      }
+      
+      // Step 3: Create order (with validation and business logic)
+      const result = await createOrderLogic(body);
+      
+      const duration = Date.now() - startTime;
+      
+      if (result.isErr()) {
+        logger.warn('Order creation failed', {
+          error: result.error.message,
+          errorType: result.error.constructor.name,
+          duration,
+        });
+        
+        const statusCode =
+          result.error instanceof ValidationError ? 400 :
+          result.error instanceof ServerError ? 500 : 500;
+        
+        return NextResponse.json(
+          {
+            success: false,
+            error: result.error.message,
+            code: result.error.code,
+            field: 'field' in result.error ? result.error.field : undefined,
+          },
+          { status: statusCode }
+        );
+      }
+      
+      // Step 4: Success response
+      logger.info('Order created', {
+        orderId: result.value.id,
+        orderNumber: result.value.orderNumber,
         duration,
       });
       
-      const statusCode =
-        result.error instanceof ValidationError ? 400 :
-        result.error instanceof ServerError ? 500 : 500;
+      return NextResponse.json(
+        {
+          success: true,
+          order: result.value,
+          message: 'Order created successfully',
+        },
+        { status: 201 }
+      );
+      
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      
+      logger.error('Unexpected error in POST /api/orders', {
+        error: error instanceof Error ? error.message : String(error),
+        duration,
+      }, error instanceof Error ? error : undefined);
       
       return NextResponse.json(
         {
           success: false,
-          error: result.error.message,
-          code: result.error.code,
-          field: 'field' in result.error ? result.error.field : undefined,
+          error: 'Internal server error',
+          code: 'SERVER_ERROR',
         },
-        { status: statusCode }
+        { status: 500 }
       );
     }
-    
-    // Step 4: Success response
-    logger.info('Order created', {
-      orderId: result.value.id,
-      orderNumber: result.value.orderNumber,
-      duration,
-    });
-    
-    return NextResponse.json(
-      {
-        success: true,
-        order: result.value,
-        message: 'Order created successfully',
-      },
-      { status: 201 }
-    );
-    
-  } catch (error) {
-    const duration = Date.now() - startTime;
-    
-    logger.error('Unexpected error in POST /api/orders', {
-      error: error instanceof Error ? error.message : String(error),
-      duration,
-    }, error instanceof Error ? error : undefined);
-    
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Internal server error',
-        code: 'SERVER_ERROR',
-      },
-      { status: 500 }
-    );
-  }
+  }); // End withIdempotency wrapper
 }
 
 /**
