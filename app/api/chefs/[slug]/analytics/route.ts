@@ -85,7 +85,7 @@ export async function GET(
 
     // Calculate totals
     const totals = analytics.reduce(
-      (acc, day) => ({
+      (acc: any, day: any) => ({
         ordersCount: acc.ordersCount + day.ordersCount,
         revenue: acc.revenue + day.revenue,
         platformFee: acc.platformFee + day.platformFee,
