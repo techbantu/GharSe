@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const customerId = decoded.userId;
+    const customerId = decoded.customerId;
 
     // Get referral stats
     const stats = await getReferralStats(customerId);

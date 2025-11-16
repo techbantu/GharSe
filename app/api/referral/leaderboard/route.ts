@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     if (token) {
       const decoded = verifyToken(token);
       if (decoded) {
-        customerId = decoded.userId;
+        customerId = decoded.customerId;
       }
     }
 

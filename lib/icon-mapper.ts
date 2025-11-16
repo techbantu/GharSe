@@ -7,6 +7,7 @@
  * and provides a single source of truth for icon replacements.
  */
 
+import React from 'react';
 import {
   MapPin,
   Target,
@@ -96,16 +97,25 @@ export function hasIconForEmoji(emoji: string): boolean {
 }
 
 /**
- * Render an icon component for an emoji string
- * This is a helper function for components that need to render icons
+ * Get props for rendering an icon component for an emoji string
+ * This returns the icon component and props rather than rendering directly
+ * Usage: const { Icon, props } = getIconPropsForEmoji('🎯', 24, 'text-blue-500');
+ *        return <Icon {...props} />;
  */
-export function renderIconForEmoji(
+export function getIconPropsForEmoji(
   emoji: string,
   size: number = 24,
   className?: string,
   color?: string
-): React.ReactElement {
+) {
   const IconComponent = getIconForEmoji(emoji);
-  return <IconComponent size={size} className={className} style={color ? { color } : undefined} />;
+  return {
+    Icon: IconComponent,
+    props: {
+      size,
+      className,
+      style: color ? { color } : undefined,
+    },
+  };
 }
 
