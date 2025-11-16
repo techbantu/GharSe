@@ -12,9 +12,15 @@ import { MenuItem, Restaurant } from '@/types';
 
 /**
  * Restaurant Information - Brand Identity and Operating Parameters
+ * Legal Compliance: FSSAI Registration 23625028002731
  */
 export const restaurantInfo: Restaurant = {
   name: "GharSe",
+  legalName: "Bantu'S kitchen",
+  proprietor: "Sailaja",
+  fssaiNumber: "23625028002731",
+  fssaiValidUntil: "2027-06-23",
+  fssaiCategory: "Petty Retailer - Prepared Foods",
   tagline: "From Real Homes To Your Hungry Heart",
   description: "GharSe is where real home kitchens become your favorite restaurant. We connect you with trusted home chefs who cook the kind of Indian food they serve their own families—fresh rotis, slow-simmered curries, biryanis, tiffins, snacks, and soulful comfort dishes you rarely find in regular takeout. Every meal is cooked to order in small batches, then packed and delivered from their home to yours.",
   logo: "/logo.png",
@@ -24,9 +30,10 @@ export const restaurantInfo: Restaurant = {
     whatsapp: "+91 90104 60964",
   },
   address: {
-    street: "Flat No:17, Padhmalayanagar Colony, Road No:03",
-    city: "Hayatnagar",
-    state: "Hyderabad",
+    street: "Plot no 17, Road no 3, Padmalaya Nagar, Hayatnagar",
+    city: "Hayathnagar",
+    district: "Rangareddy",
+    state: "Telangana",
     zipCode: "501505",
     country: "India",
   },

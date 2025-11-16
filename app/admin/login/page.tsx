@@ -9,6 +9,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Lock, Mail, Eye, EyeOff, ChefHat } from 'lucide-react';
+import Logo from '@/components/Logo';
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -214,44 +215,9 @@ export default function AdminLoginPage() {
           marginBottom: '3.5rem',
           animation: 'slideIn 0.6s ease-out'
         }}>
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '100px',
-            height: '100px',
-            background: 'linear-gradient(135deg, #F97316 0%, #EA580C 50%, #DC2626 100%)',
-            borderRadius: '50%',
-            marginBottom: '1.75rem',
-            boxShadow: '0 25px 50px rgba(249, 115, 22, 0.4), 0 0 0 10px rgba(249, 115, 22, 0.1), inset 0 2px 10px rgba(255, 255, 255, 0.3)',
-            position: 'relative',
-            animation: 'glow 3s ease-in-out infinite'
-          }}>
-            <ChefHat size={46} style={{ color: '#ffffff', fontWeight: 'bold', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }} />
-            <div style={{
-              position: 'absolute',
-              inset: '-6px',
-              borderRadius: '50%',
-              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, transparent 70%)',
-              animation: 'pulse 2.5s ease-in-out infinite',
-              pointerEvents: 'none'
-            }} />
+          <div style={{ marginBottom: '1.75rem' }}>
+            <Logo variant="large" />
           </div>
-          <h1 style={{
-            fontSize: '2.75rem',
-            fontWeight: 900,
-            color: '#111827',
-            margin: 0,
-            marginBottom: '0.625rem',
-            letterSpacing: '-0.03em',
-            background: 'linear-gradient(135deg, #F97316 0%, #EA580C 50%, #DC2626 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
-            filter: 'drop-shadow(0 2px 4px rgba(249, 115, 22, 0.1))'
-          }}>
-            Bantu's Kitchen
-          </h1>
           <p style={{
             fontSize: '1.0625rem',
             color: '#6B7280',

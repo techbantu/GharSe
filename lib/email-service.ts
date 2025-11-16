@@ -141,6 +141,37 @@ async function sendWithConsole(options: EmailOptions): Promise<boolean> {
 }
 
 /**
+ * Generate legal compliance footer for ALL customer emails
+ * REQUIRED: FSSAI display on every food business communication
+ * 
+ * Purpose: Ensures all email communications comply with FSSAI regulations
+ * by displaying the legal operator, FSSAI registration, and contact details.
+ */
+export function getEmailLegalFooter(): string {
+  return `
+    <div style="margin-top: 40px; padding-top: 20px; border-top: 2px solid #E5E7EB; text-align: center; background-color: #F9FAFB;">
+      <p style="font-size: 14px; color: #374151; font-weight: 600; margin-bottom: 8px;">GharSe</p>
+      <p style="font-size: 12px; color: #6B7280; margin-bottom: 4px;">
+        Operated by: <strong>Bantu'S kitchen</strong> (Proprietor: Sailaja)
+      </p>
+      <p style="font-size: 12px; color: #6B7280; margin-bottom: 4px;">
+        FSSAI Registration: <strong>23625028002731</strong> (Valid until: 23 June 2027)
+      </p>
+      <p style="font-size: 11px; color: #9CA3AF; margin-bottom: 4px;">
+        Plot no 17, Road no 3, Padmalaya Nagar, Hayatnagar<br />
+        Pedda Amberpet (Kalan), Hayathnagar, Rangareddy, Telangana - 501505
+      </p>
+      <p style="font-size: 11px; color: #9CA3AF; margin-top: 12px;">
+        Phone: +91 90104 60964 | Email: orders@gharse.com
+      </p>
+      <p style="font-size: 10px; color: #9CA3AF; margin-top: 16px; font-style: italic;">
+        Technology services provided by TechBantu IT Solutions LLC (zero food liability)
+      </p>
+    </div>
+  `;
+}
+
+/**
  * EMAIL TEMPLATES
  */
 
@@ -163,7 +194,7 @@ export function getVerificationEmailTemplate(name: string, verificationLink: str
               <tr>
                 <td style="background: linear-gradient(135deg, #f97316 0%, #ea580c 50%, #dc2626 100%); padding: 40px 40px 30px; text-align: center;">
                   <h1 style="margin: 0; color: white; font-size: 28px; font-weight: 800;">
-                    🏠 GharSe
+                    🍽️ Bantu's Kitchen
                   </h1>
                   <p style="margin: 8px 0 0; color: rgba(255,255,255,0.9); font-size: 14px;">
                     From Real Homes To Your Hungry Heart
@@ -179,7 +210,7 @@ export function getVerificationEmailTemplate(name: string, verificationLink: str
                   </h2>
                   
                   <p style="margin: 0 0 24px; font-size: 16px; line-height: 1.6; color: #4b5563;">
-                    Thank you for registering with <strong>GharSe</strong>! We're excited to have you join our community.
+                    Thank you for registering with <strong>Bantu's Kitchen</strong>! We're excited to have you join our community.
                   </p>
                   
                   <p style="margin: 0 0 32px; font-size: 16px; line-height: 1.6; color: #4b5563;">
@@ -212,12 +243,7 @@ export function getVerificationEmailTemplate(name: string, verificationLink: str
               <!-- Footer -->
               <tr>
                 <td style="background-color: #f9fafb; padding: 32px 40px; text-align: center; border-top: 1px solid #e5e7eb;">
-                  <p style="margin: 0 0 8px; font-size: 14px; color: #6b7280; font-weight: 600;">
-                    GharSe
-                  </p>
-                  <p style="margin: 0; font-size: 12px; color: #9ca3af;">
-                    © ${new Date().getFullYear()} All rights reserved
-                  </p>
+                  ${getEmailLegalFooter()}
                 </td>
               </tr>
               
@@ -249,7 +275,7 @@ export function getPasswordResetEmailTemplate(name: string, resetLink: string): 
               <tr>
                 <td style="background: linear-gradient(135deg, #f97316 0%, #ea580c 50%, #dc2626 100%); padding: 40px 40px 30px; text-align: center;">
                   <h1 style="margin: 0; color: white; font-size: 28px; font-weight: 800;">
-                    🔥 GharSe
+                    🍽️ Bantu's Kitchen
                   </h1>
                 </td>
               </tr>
@@ -295,12 +321,7 @@ export function getPasswordResetEmailTemplate(name: string, resetLink: string): 
               <!-- Footer -->
               <tr>
                 <td style="background-color: #f9fafb; padding: 32px 40px; text-align: center; border-top: 1px solid #e5e7eb;">
-                  <p style="margin: 0 0 8px; font-size: 14px; color: #6b7280; font-weight: 600;">
-                    GharSe
-                  </p>
-                  <p style="margin: 0; font-size: 12px; color: #9ca3af;">
-                    © ${new Date().getFullYear()} All rights reserved
-                  </p>
+                  ${getEmailLegalFooter()}
                 </td>
               </tr>
               

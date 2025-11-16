@@ -36,7 +36,8 @@ export default function PrivacyPolicyPage() {
           fontWeight: 500,
         }}>
           Effective Date: January 13, 2025 | Version 2.0 (Comprehensive Legal Rewrite)<br />
-          Governing Laws: Digital Personal Data Protection Act, 2023 (India) | GDPR (EU) | CCPA (California, USA) | IT Act 2000 § 43A, 72A (India)
+          Governing Laws: Digital Personal Data Protection Act, 2023 (India) | GDPR (EU) | CCPA (California, USA) | IT Act 2000 § 43A, 72A (India)<br />
+          Food Data Controller: Bantu'S kitchen (FSSAI: 23625028002731) | Technology Data Controller: TechBantu IT Solutions LLC
         </p>
       </div>
 
@@ -48,9 +49,9 @@ export default function PrivacyPolicyPage() {
           This Privacy Policy governs data collection, processing, and storage by <Bold>TWO INDEPENDENT DATA CONTROLLERS</Bold> with <Bold>NO joint data processing, NO shared databases, NO data partnership</Bold>:
         </Warning>
         
-        <Subsection title="1.1 Independent Home Chef (Food Business Data Controller)">
+        <Subsection title="1.1 Food Business Data Controller">
           <P>
-            The <Bold>Independent Home Chef</Bold>, an individual sole proprietor operating the GharSe food business from Hayatnagar, Hyderabad, Telangana, India, acts as <Bold>DATA FIDUCIARY</Bold> (under DPDPA 2023) / <Bold>DATA CONTROLLER</Bold> (under GDPR/CCPA) for:
+            <Bold>Bantu'S kitchen</Bold>, an individual sole proprietorship (FSSAI Registration: 23625028002731) operated by Sailaja from Hayathnagar, Hyderabad, Telangana, India, acts as <Bold>DATA FIDUCIARY</Bold> (under DPDPA 2023) / <Bold>DATA CONTROLLER</Bold> (under GDPR/CCPA) for:
           </P>
           <List>
             <Li><Bold>Food order data:</Bold> Order details, food preferences, dietary restrictions, delivery instructions</Li>

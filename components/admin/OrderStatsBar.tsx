@@ -26,11 +26,13 @@ export default function OrderStatsBar({ orders, className = '' }: OrderStatsBarP
   // Calculate real-time stats
   const stats = useMemo(() => {
     const todayOrders = orders.filter(isOrderToday);
+    // Only count actually fulfilled orders for revenue (exclude cancelled/refunded)
+    const fulfilledOrders = todayOrders.filter(o => ['delivered', 'picked-up'].includes(o.status));
     
     return {
       pending: orders.filter(o => o.status === 'pending').length,
       preparing: orders.filter(o => o.status === 'preparing').length,
-      todayRevenue: calculateOrdersTotal(todayOrders),
+      todayRevenue: calculateOrdersTotal(fulfilledOrders),
       totalOrders: todayOrders.length,
     };
   }, [orders]);

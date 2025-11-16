@@ -44,9 +44,9 @@ type ModifyOrderData = z.infer<typeof ModifyOrderSchema>;
 
 // ===== CONFIGURATION =====
 
-const INITIAL_GRACE_PERIOD_MS = 5 * 60 * 1000; // 5 minutes
+const INITIAL_GRACE_PERIOD_MS = 3 * 60 * 1000; // 3 minutes
 const GRACE_PERIOD_EXTENSION_MS = 2 * 60 * 1000; // +2 minutes per modification
-const MAX_GRACE_PERIOD_MS = 8 * 60 * 1000; // Max 8 minutes total
+const MAX_GRACE_PERIOD_MS = 5 * 60 * 1000; // Max 5 minutes total
 const TAX_RATE = restaurantInfo.settings.taxRate || 0.05; // 5% tax
 const DELIVERY_FEE = restaurantInfo.settings.deliveryFee || 50; // ₹50 delivery
 
@@ -137,18 +137,38 @@ export async function POST(request: NextRequest) {
     });
     
     if (!order) {
+      logger.warn('Order not found for modification', {
+        orderId: data.orderId,
+      });
       return NextResponse.json(
         { success: false, error: 'Order not found' },
         { status: 404 }
       );
     }
     
+    logger.info('Order modification attempt', {
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      currentStatus: order.status,
+      gracePeriodExpiresAt: order.gracePeriodExpiresAt?.toISOString(),
+      now: new Date().toISOString(),
+      itemCount: data.items.length,
+    });
+    
     // Validate order status - must be PENDING_CONFIRMATION
     if (order.status !== 'PENDING_CONFIRMATION') {
+      logger.warn('Order modification blocked - wrong status', {
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        status: order.status,
+        expectedStatus: 'PENDING_CONFIRMATION',
+      });
+      
       return NextResponse.json(
         {
           success: false,
-          error: 'Order can no longer be modified. It has been sent to the kitchen.',
+          error: `Order can no longer be modified. Current status: ${order.status}. Orders can only be modified when status is PENDING_CONFIRMATION.`,
+          currentStatus: order.status,
         },
         { status: 400 }
       );
@@ -266,16 +286,71 @@ export async function POST(request: NextRequest) {
       timeRemainingMs: timeRemaining,
     });
     
+    // Transform Prisma order to frontend Order type
+    const formattedOrder = {
+      id: updatedOrder.id,
+      orderNumber: updatedOrder.orderNumber,
+      customer: {
+        id: updatedOrder.customerId || '',
+        name: updatedOrder.customerName,
+        email: updatedOrder.customerEmail,
+        phone: updatedOrder.customerPhone,
+      },
+      items: updatedOrder.items.map(item => ({
+        id: item.id,
+        menuItemId: item.menuItemId,
+        menuItem: {
+          id: item.menuItem.id,
+          name: item.menuItem.name,
+          description: item.menuItem.description || '',
+          price: item.menuItem.price,
+          category: item.menuItem.category,
+          image: item.menuItem.image || '',
+          isAvailable: item.menuItem.isAvailable,
+          isVegetarian: item.menuItem.isVegetarian || false,
+          isSpicy: item.menuItem.isSpicy || false,
+          prepTime: item.menuItem.prepTime || 20,
+          calories: item.menuItem.calories,
+          ingredients: item.menuItem.ingredients as string[] || [],
+          allergens: item.menuItem.allergens as string[] || [],
+        },
+        quantity: item.quantity,
+        customization: item.specialInstructions || '',
+        specialInstructions: item.specialInstructions || '',
+        subtotal: item.subtotal,
+      })),
+      pricing: {
+        subtotal: updatedOrder.subtotal,
+        tax: updatedOrder.tax,
+        deliveryFee: updatedOrder.deliveryFee,
+        discount: updatedOrder.discount || 0,
+        tip: updatedOrder.tip || 0,
+        total: updatedOrder.total,
+      },
+      status: updatedOrder.status,
+      orderType: 'delivery' as const,
+      estimatedReadyTime: updatedOrder.estimatedDelivery?.toISOString() || new Date().toISOString(),
+      paymentMethod: updatedOrder.paymentMethod || 'cash-on-delivery',
+      paymentStatus: updatedOrder.paymentStatus,
+      createdAt: updatedOrder.createdAt.toISOString(),
+      updatedAt: updatedOrder.updatedAt.toISOString(),
+      deliveryAddress: updatedOrder.deliveryAddress ? {
+        street: updatedOrder.deliveryAddress,
+        city: updatedOrder.deliveryCity,
+        state: '',
+        zipCode: updatedOrder.deliveryZip,
+        deliveryInstructions: updatedOrder.deliveryNotes || '',
+      } : undefined,
+      contactPreference: ['sms', 'email'] as any[],
+      notifications: [],
+      modificationCount: updatedOrder.modificationCount,
+      gracePeriodExpiresAt: newGracePeriodExpiry.toISOString(),
+      lastModifiedAt: updatedOrder.lastModifiedAt?.toISOString(),
+    };
+    
     return NextResponse.json({
       success: true,
-      order: {
-        ...updatedOrder,
-        // Convert dates to ISO strings for JSON
-        createdAt: updatedOrder.createdAt.toISOString(),
-        updatedAt: updatedOrder.updatedAt.toISOString(),
-        gracePeriodExpiresAt: newGracePeriodExpiry.toISOString(),
-        lastModifiedAt: updatedOrder.lastModifiedAt?.toISOString(),
-      },
+      order: formattedOrder,
       timeRemaining, // in milliseconds
       message: `Order updated! You have ${Math.ceil(timeRemaining / 1000 / 60)} minutes to make more changes.`,
     });

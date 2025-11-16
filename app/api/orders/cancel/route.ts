@@ -21,6 +21,8 @@ import { prisma } from '@/lib/prisma';
 import { logger } from '@/utils/logger';
 import nodemailer from 'nodemailer';
 import { restaurantInfo } from '@/data/menuData';
+import { notificationManager } from '@/lib/notifications/notification-manager';
+import { broadcastOrderUpdate } from '@/lib/websocket-server';
 
 // ===== VALIDATION SCHEMAS =====
 
@@ -104,46 +106,43 @@ function canCancelOrder(
     return { allowed: true };
   }
 
-  // Customer cancellation logic with time-based rules
+  // Customer cancellation logic - allow cancellation before OUT_FOR_DELIVERY
   if (cancelledBy === 'customer') {
-    // Check if preparation has started - this blocks all cancellations
-    if (preparingAt) {
-      return { allowed: false, reason: 'Order is already being prepared. Please contact the restaurant.' };
+    // Block cancellation if order is OUT_FOR_DELIVERY or DELIVERED
+    if (normalizedStatus === 'OUT_FOR_DELIVERY') {
+      return { allowed: false, reason: 'Order is already out for delivery. Cannot cancel.' };
     }
 
-    // Calculate time since order creation
-    const timeSinceCreation = Date.now() - new Date(orderCreatedAt).getTime();
-    const isWithinTimeWindow = timeSinceCreation < CANCELLATION_WINDOW_MS;
-
-    // PENDING orders can be cancelled if within time window
-    if (normalizedStatus === 'PENDING') {
-      if (!isWithinTimeWindow) {
-        return { allowed: false, reason: `Cancellation window expired. Orders can only be cancelled within ${CANCELLATION_WINDOW_MINUTES} minutes of placement.` };
-      }
-      return { allowed: true };
-    }
-
-    // CONFIRMED orders can be cancelled if within time window and not preparing
-    if (normalizedStatus === 'CONFIRMED') {
-      if (!isWithinTimeWindow) {
-        return { allowed: false, reason: `Cancellation window expired. Orders can only be cancelled within ${CANCELLATION_WINDOW_MINUTES} minutes of placement.` };
-      }
-      return { allowed: true };
-    }
-
-    // PREPARING status - already checked preparingAt above, but double-check
-    if (normalizedStatus === 'PREPARING') {
-      return { allowed: false, reason: 'Order is already being prepared. Please contact the restaurant.' };
-    }
-
-    // DELIVERED orders cannot be cancelled
     if (normalizedStatus === 'DELIVERED') {
       return { allowed: false, reason: 'Delivered orders cannot be cancelled' };
     }
 
-    // CANCELLED orders cannot be cancelled again
+    // Block if already cancelled
     if (normalizedStatus === 'CANCELLED') {
       return { allowed: false, reason: 'Order is already cancelled' };
+    }
+
+    // Allow cancellation for PENDING_CONFIRMATION, PENDING, CONFIRMED, PREPARING
+    // (before it reaches OUT_FOR_DELIVERY)
+    if (['PENDING_CONFIRMATION', 'PENDING', 'CONFIRMED', 'PREPARING'].includes(normalizedStatus)) {
+      // Optional: Apply time window for PENDING and CONFIRMED (but not PREPARING)
+      // This gives flexibility - customers can cancel even if preparation started
+      // as long as it hasn't left the kitchen
+      if (normalizedStatus === 'PENDING' || normalizedStatus === 'CONFIRMED') {
+        const timeSinceCreation = Date.now() - new Date(orderCreatedAt).getTime();
+        const isWithinTimeWindow = timeSinceCreation < CANCELLATION_WINDOW_MS;
+        
+        // For PENDING/CONFIRMED, still apply time window
+        if (!isWithinTimeWindow) {
+          return { 
+            allowed: false, 
+            reason: `Cancellation window expired. Orders can only be cancelled within ${CANCELLATION_WINDOW_MINUTES} minutes of placement.` 
+          };
+        }
+      }
+      
+      // Allow cancellation (even if preparation started, as long as not OUT_FOR_DELIVERY)
+      return { allowed: true };
     }
 
     return { allowed: false, reason: 'This order cannot be cancelled at this stage' };
@@ -416,10 +415,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Process refund if applicable
+    // CRITICAL FIX: Only process refunds for online payments (not cash-on-delivery)
     // Note: PaymentStatus enum values are uppercase (PENDING, PAID, etc.)
     let refundProcessed = false;
     const normalizedPaymentStatus = order.paymentStatus.toUpperCase();
-    if (normalizedPaymentStatus === 'PAID' || normalizedPaymentStatus === 'PENDING') {
+    
+    // Check if payment method is cash-on-delivery
+    const isCashOnDelivery = order.paymentMethod?.toLowerCase().includes('cash') || 
+                             order.paymentMethod?.toLowerCase().includes('cod') ||
+                             order.paymentMethod === 'cash-on-delivery';
+    
+    // Only process refund if payment was made online (not COD)
+    const shouldProcessRefund = (normalizedPaymentStatus === 'PAID' || normalizedPaymentStatus === 'PENDING') && 
+                                !isCashOnDelivery;
+    
+    if (shouldProcessRefund) {
       refundProcessed = await processRefund(order.id, data.refundAmount);
     }
 
@@ -433,13 +443,37 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Send notifications
-    await sendCancellationNotifications(
-      updatedOrder,
-      data.cancelledBy,
-      data.reason,
-      data.refundAmount
-    );
+    // CRITICAL FIX: Use proper notification manager instead of custom function
+    // This ensures notifications are logged to database and customer receives them
+    try {
+      // Send cancellation notifications via notification manager
+      await sendCancellationNotifications(
+        updatedOrder,
+        data.cancelledBy,
+        data.reason,
+        data.refundAmount
+      );
+
+      // CRITICAL: Broadcast order cancellation via WebSocket for real-time updates
+      await broadcastOrderUpdate(updatedOrder.id, 'CANCELLED', {
+        reason: data.reason,
+        cancelledBy: data.cancelledBy,
+        refundAmount: data.refundAmount,
+        message: `Order cancelled - ${data.reason}`,
+      });
+
+      logger.info('Cancellation notifications sent successfully', {
+        orderId: data.orderId,
+        orderNumber: order.orderNumber,
+      });
+    } catch (notificationError) {
+      // Log notification failure but don't block the cancellation
+      logger.error('Failed to send cancellation notifications', {
+        orderId: data.orderId,
+        error: notificationError instanceof Error ? notificationError.message : String(notificationError),
+      });
+      // Note: Order is still cancelled even if notifications fail
+    }
 
     logger.info('Order cancelled successfully', {
       orderId: data.orderId,

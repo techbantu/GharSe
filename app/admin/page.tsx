@@ -67,6 +67,7 @@ import OrderStatsBar from '@/components/admin/OrderStatsBar';
 import OrderFilterBar from '@/components/admin/OrderFilterBar';
 import CollapsibleOrderSection from '@/components/admin/CollapsibleOrderSection';
 import CompactOrderCard from '@/components/admin/CompactOrderCard';
+import Logo from '@/components/Logo';
 
 // Safe wrapper for stopRepeatingNotification to handle import issues
 const safeStopNotification = () => {
@@ -1453,10 +1454,13 @@ const AdminDashboard: React.FC = () => {
     }
   }, [isAuthenticated, orders.length]);
 
-  // Calculate stats
+  // Calculate stats (excluding cancelled/refunded orders from revenue)
   const stats = {
     todayOrders: orders.length,
-    todayRevenue: orders.reduce((sum, order) => sum + order.pricing.total, 0),
+    // Only count actually fulfilled orders (delivered/picked-up) toward revenue
+    todayRevenue: orders
+      .filter(o => ['delivered', 'picked-up'].includes(o.status))
+      .reduce((sum, order) => sum + order.pricing.total, 0),
     pendingOrders: orders.filter(o => o.status === 'pending').length,
     activeOrders: orders.filter(o => ['confirmed', 'preparing', 'ready', 'out-for-delivery'].includes(o.status)).length,
   };
@@ -1698,41 +1702,7 @@ const AdminDashboard: React.FC = () => {
         <div className="admin-header-container" style={{ maxWidth: '1280px', margin: '0 auto', paddingLeft: '1.5rem', paddingRight: '1.5rem' }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              {/* GS Logo */}
-              <div style={{
-                position: 'relative',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '56px',
-                height: '56px',
-                background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.15) 100%)',
-                borderRadius: '50%',
-                padding: '8px',
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15), inset 0 1px 2px rgba(255, 255, 255, 0.3)',
-              }}>
-                {/* Top: Stylized Lotus Petal / Flame */}
-                <svg width="28" height="14" viewBox="0 0 24 12" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginBottom: '-2px' }}>
-                  <path d="M12 0C12 0 8 4 8 8C8 10 9.79 12 12 12C14.21 12 16 10 16 8C16 4 12 0 12 0Z" fill="white" fillOpacity="0.95"/>
-                  <path d="M6 2C6 2 3 5 3 8C3 9.5 4.12 11 6 11C7.88 11 9 9.5 9 8C9 5 6 2 6 2Z" fill="white" fillOpacity="0.7"/>
-                  <path d="M18 2C18 2 21 5 21 8C21 9.5 19.88 11 18 11C16.12 11 15 9.5 15 8C15 5 18 2 18 2Z" fill="white" fillOpacity="0.7"/>
-                </svg>
-                
-                {/* Bottom: GS Letters with Premium Typography */}
-                <div style={{
-                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif',
-                  fontSize: '16px',
-                  fontWeight: 800,
-                  letterSpacing: '0.5px',
-                  color: 'white',
-                  textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
-                  marginTop: '1px'
-                }}>
-                  GS
-                </div>
-              </div>
-              
+              <Logo variant="small" style={{ filter: 'brightness(0) invert(1)' }} />
               <div>
                 <h1 className="admin-header-title text-3xl font-bold mb-2">GharSe Admin Dashboard</h1>
                 <p className="admin-header-subtitle text-white/80">GharSe - Complete Management System</p>
@@ -3109,15 +3079,89 @@ STRIPE_WEBHOOK_SECRET=whsec_...`}
                 </div>
               )}
 
-              {/* LEGACY VIEW - Keep for backwards compatibility */}
+              {/* ALL ORDERS SECTION - Date Organized */}
               <div style={{ marginTop: '3rem', paddingTop: '2rem', borderTop: '2px solid #e2e8f0' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                  <h2 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#64748b' }}>
-                    All Orders (Legacy View)
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+                  <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1f2937' }}>
+                    📦 All Orders
                   </h2>
-                  <span style={{ fontSize: '0.875rem', color: '#94a3b8' }}>
-                    {orders.length} total
-                  </span>
+                  
+                  {/* Date Filter Dropdown */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                    <select
+                      value={dateRange.start.toISOString().split('T')[0]}
+                      onChange={(e) => {
+                        const selectedDate = new Date(e.target.value);
+                        selectedDate.setHours(0, 0, 0, 0);
+                        const endDate = new Date(selectedDate);
+                        endDate.setHours(23, 59, 59, 999);
+                        setDateRange({ start: selectedDate, end: endDate });
+                      }}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        borderRadius: '0.5rem',
+                        border: '2px solid #e2e8f0',
+                        fontSize: '0.875rem',
+                        fontWeight: 600,
+                        color: '#374151',
+                        backgroundColor: 'white',
+                        cursor: 'pointer',
+                        outline: 'none',
+                        transition: 'all 0.2s',
+                        minWidth: '150px'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = '#f97316';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = '#e2e8f0';
+                      }}
+                    >
+                      <option value={new Date().toISOString().split('T')[0]}>Today</option>
+                      <option value={new Date(Date.now() - 86400000).toISOString().split('T')[0]}>Yesterday</option>
+                      <option value={new Date(Date.now() - 2 * 86400000).toISOString().split('T')[0]}>2 Days Ago</option>
+                      <option value={new Date(Date.now() - 3 * 86400000).toISOString().split('T')[0]}>3 Days Ago</option>
+                      <option value={new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0]}>Last Week</option>
+                      <option value={new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0]}>Last Month</option>
+                    </select>
+                    
+                    {/* Show All Button */}
+                    <button
+                      onClick={() => {
+                        const start = new Date();
+                        start.setMonth(start.getMonth() - 6); // Show last 6 months
+                        start.setHours(0, 0, 0, 0);
+                        const end = new Date();
+                        end.setHours(23, 59, 59, 999);
+                        setDateRange({ start, end });
+                      }}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        borderRadius: '0.5rem',
+                        border: '2px solid #e2e8f0',
+                        fontSize: '0.875rem',
+                        fontWeight: 600,
+                        color: '#6b7280',
+                        backgroundColor: 'white',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = '#f97316';
+                        e.currentTarget.style.color = '#f97316';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = '#e2e8f0';
+                        e.currentTarget.style.color = '#6b7280';
+                      }}
+                    >
+                      Show All
+                    </button>
+                    
+                    <span style={{ fontSize: '0.875rem', color: '#94a3b8', fontWeight: 600 }}>
+                      {allFilteredOrders.length} orders
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -3141,7 +3185,14 @@ STRIPE_WEBHOOK_SECRET=whsec_...`}
                   gap: '1rem'
                 }}
               >
-            {orders.map(order => {
+            {allFilteredOrders
+              .sort((a, b) => {
+                // Sort by date (most recent first)
+                const dateA = typeof a.createdAt === 'string' ? new Date(a.createdAt) : new Date(a.createdAt);
+                const dateB = typeof b.createdAt === 'string' ? new Date(b.createdAt) : new Date(b.createdAt);
+                return dateB.getTime() - dateA.getTime();
+              })
+              .map(order => {
               // Only blink for active orders (not delivered, cancelled, or completed)
               const isActiveOrder = ['pending', 'confirmed', 'preparing', 'ready', 'out-for-delivery'].includes(order.status.toLowerCase());
               const isNewOrder = isActiveOrder && newOrderIds.has(order.id);
@@ -3475,6 +3526,25 @@ STRIPE_WEBHOOK_SECRET=whsec_...`}
             );
             })}
               </div>
+              
+              {/* Empty State */}
+              {allFilteredOrders.length === 0 && (
+                <div style={{
+                  textAlign: 'center',
+                  padding: '3rem 1rem',
+                  backgroundColor: '#f9fafb',
+                  borderRadius: '0.75rem',
+                  border: '2px dashed #e5e7eb'
+                }}>
+                  <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📭</div>
+                  <h3 style={{ fontSize: '1.125rem', fontWeight: 600, color: '#374151', marginBottom: '0.5rem' }}>
+                    No orders found
+                  </h3>
+                  <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                    Try selecting a different date or click "Show All"
+                  </p>
+                </div>
+              )}
             </>
           )}
         </div>
@@ -4070,7 +4140,7 @@ STRIPE_WEBHOOK_SECRET=whsec_...`}
                                 {order.orderId}
                               </td>
                               <td style={{ padding: '1rem', fontSize: '0.875rem', color: '#374151' }}>
-                                {order.customer.name}
+                                {order.customerName}
                               </td>
                               <td style={{ padding: '1rem', fontSize: '0.875rem', color: '#374151', fontFamily: 'monospace' }}>
                                 <a 
@@ -4098,8 +4168,8 @@ STRIPE_WEBHOOK_SECRET=whsec_...`}
                               <td style={{ padding: '1rem', textAlign: 'right', fontSize: '0.875rem', fontWeight: 600, color: '#111827' }}>
                                 ₹{order.orderTotal.toFixed(2)}
                               </td>
-                              <td style={{ padding: '1rem', textAlign: 'right', fontSize: '0.875rem', fontWeight: 700, color: order.refundAmount > 0 ? '#10B981' : '#6B7280' }}>
-                                {order.refundAmount > 0 ? `₹${order.refundAmount.toFixed(2)}` : 'N/A'}
+                              <td style={{ padding: '1rem', textAlign: 'right', fontSize: '0.875rem', fontWeight: 700, color: (order.refundAmount || 0) > 0 ? '#10B981' : '#6B7280' }}>
+                                {(order.refundAmount || 0) > 0 ? `₹${order.refundAmount.toFixed(2)}` : 'N/A'}
                               </td>
                               <td style={{ padding: '1rem' }}>
                                 <span style={{
@@ -5178,9 +5248,10 @@ STRIPE_WEBHOOK_SECRET=whsec_...`}
             total: orderToCancel.pricing.total,
             status: orderToCancel.status,
             paymentStatus: orderToCancel.paymentStatus,
+            paymentMethod: orderToCancel.paymentMethod, // CRITICAL FIX: Pass payment method to check if refund applies
             customerName: orderToCancel.customer.name,
           }}
-          cancelledBy="admin"
+          cancelledBy="chef" // CRITICAL FIX: Use "chef" for kitchen operations, not "admin"
           onSuccess={() => {
             // Refresh orders list
             fetchOrders();

@@ -1,7 +1,7 @@
 /**
  * NEW FILE: Pending Order Modification Component
  * 
- * Purpose: Shows after order placement during the 5-8 minute grace period.
+ * Purpose: Shows after order placement during the 3-5 minute grace period.
  * Allows customers to add/remove items before order reaches kitchen.
  * 
  * Features:
@@ -22,17 +22,21 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Clock, Plus, Minus, Trash2, ShoppingBag, Sparkles, TrendingUp, X } from 'lucide-react';
+import { Clock, Plus, Minus, Trash2, ShoppingBag, Sparkles, TrendingUp, X, XCircle, UtensilsCrossed } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/context/ToastContext';
 import { Order, MenuItem } from '@/types';
 import { menuItems, getMenuItemsByCategory } from '@/data/menuData';
+import OrderModificationConfirmModal from '@/components/OrderModificationConfirmModal';
+import CustomerCancelOrderModal from '@/components/CustomerCancelOrderModal';
+import { restaurantInfo } from '@/data/menuData';
 
 interface PendingOrderModificationProps {
   order: Order;
   onOrderUpdated: (updatedOrder: Order) => void;
   onFinalized: () => void;
   onBrowseMenu: () => void; // Opens cart sidebar / menu
+  onCancelled?: () => void; // Called when order is cancelled
 }
 
 interface OrderItem {
@@ -49,6 +53,7 @@ const PendingOrderModification: React.FC<PendingOrderModificationProps> = ({
   onOrderUpdated,
   onFinalized,
   onBrowseMenu,
+  onCancelled,
 }) => {
   const { addItem } = useCart();
   const toast = useToast();
@@ -58,6 +63,14 @@ const PendingOrderModification: React.FC<PendingOrderModificationProps> = ({
   const [items, setItems] = useState<OrderItem[]>([]);
   const [isModifying, setIsModifying] = useState(false);
   const [suggestedItems, setSuggestedItems] = useState<MenuItem[]>([]);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [pendingModification, setPendingModification] = useState<{
+    items: OrderItem[];
+    newTotal: number;
+    newSubtotal: number;
+    newTax: number;
+  } | null>(null);
   
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const finalizationInProgressRef = useRef(false);
@@ -87,18 +100,31 @@ const PendingOrderModification: React.FC<PendingOrderModificationProps> = ({
       setTimeRemaining(remaining);
     } else {
       console.error('[PendingOrderModification] No gracePeriodExpiresAt found!', order);
-      // Set default 5 minutes if not provided
-      setTimeRemaining(5 * 60 * 1000);
-      toast?.error?.('Timer not set properly. Defaulting to 5 minutes.');
+      // Set default 3 minutes if not provided
+      setTimeRemaining(3 * 60 * 1000);
+      toast?.error?.('Timer not set properly. Defaulting to 3 minutes.');
     }
     
-    // Convert order items to local state with proper typing
+    // Convert order items to local state with proper structure for modify API
     if (order.items && order.items.length > 0) {
-      console.log('[PendingOrderModification] Setting items:', order.items);
-      // Ensure each item has a menuItem object
-      const validItems = order.items.filter(item => item.menuItem && item.menuItem.name);
-      if (validItems.length > 0) {
-        setItems(validItems as any);
+      console.log('[PendingOrderModification] Raw order items:', order.items);
+      
+      // Transform items to include required fields at top level
+      const transformedItems: OrderItem[] = order.items
+        .filter(item => item.menuItem && item.menuItem.name)
+        .map(item => ({
+          id: item.id,
+          menuItemId: item.menuItem.id,
+          quantity: item.quantity,
+          price: item.menuItem.price, // Extract price from nested menuItem
+          specialInstructions: item.specialInstructions || item.customization || '',
+          menuItem: item.menuItem,
+        }));
+      
+      console.log('[PendingOrderModification] Transformed items:', transformedItems);
+      
+      if (transformedItems.length > 0) {
+        setItems(transformedItems);
       } else {
         console.error('[PendingOrderModification] Items missing menuItem data!', order.items);
         toast?.error?.('Order items missing data. Please refresh.');
@@ -209,19 +235,22 @@ const PendingOrderModification: React.FC<PendingOrderModificationProps> = ({
     if (seconds > 180) { // > 3 minutes
       return {
         color: '#3b82f6', // Blue - calm
-        message: '✨ You can still add more items!',
+        message: 'You can still add more items!',
+        icon: <Sparkles size={18} />,
         bgColor: 'rgba(59, 130, 246, 0.1)',
       };
     } else if (seconds > 60) { // 1-3 minutes
       return {
         color: '#f97316', // Orange - warm
-        message: '🍛 Did you forget anything?',
+        message: 'Did you forget anything?',
+        icon: <UtensilsCrossed size={18} />,
         bgColor: 'rgba(249, 115, 22, 0.1)',
       };
     } else { // < 1 minute
       return {
         color: '#f59e0b', // Amber - gentle urgency
-        message: '🔒 Finalizing order soon...',
+        message: 'Finalizing order soon...',
+        icon: <Clock size={18} />,
         bgColor: 'rgba(245, 158, 11, 0.1)',
       };
     }
@@ -256,33 +285,80 @@ const PendingOrderModification: React.FC<PendingOrderModificationProps> = ({
     toast.success('Item added!', `${menuItem.name} added to your order`);
   };
   
-  // Save modifications to server
-  const saveModifications = async () => {
-    if (items.length === 0) {
-      toast.error('Empty order', 'Please add at least one item or cancel the order');
-      return;
-    }
+  // Calculate new pricing for modifications
+  const calculateNewPricing = (itemsToCalculate: OrderItem[]) => {
+    const TAX_RATE = restaurantInfo.settings.taxRate || 0.05;
+    const DELIVERY_FEE = restaurantInfo.settings.deliveryFee || 50;
+    
+    const newSubtotal = itemsToCalculate.reduce(
+      (sum, item) => sum + item.quantity * item.price,
+      0
+    );
+    const newTax = newSubtotal * TAX_RATE;
+    const newTotal = newSubtotal + newTax + DELIVERY_FEE - (order.pricing.discount || 0);
+    
+    return { newSubtotal, newTax, newTotal };
+  };
+
+  // Get items being added (new items not in original order)
+  const getItemsBeingAdded = (): Array<{
+    menuItemId: string;
+    name: string;
+    price: number;
+    quantity: number;
+  }> => {
+    const originalItemIds = new Set(order.items.map(item => item.menuItemId));
+    return items
+      .filter(item => !originalItemIds.has(item.menuItemId))
+      .map(item => ({
+        menuItemId: item.menuItemId,
+        name: item.menuItem.name,
+        price: item.price,
+        quantity: item.quantity,
+      }));
+  };
+
+  // Save modifications to server (called after confirmation)
+  const executeModification = async () => {
+    if (!pendingModification) return;
     
     setIsModifying(true);
     
     try {
+      // Validate all items have required fields before sending
+      const itemsToSend = pendingModification.items.map(item => {
+        if (!item.menuItemId || !item.price || item.quantity === undefined) {
+          console.error('[PendingOrderModification] Invalid item:', item);
+          throw new Error(`Invalid item data: ${item.menuItem?.name || 'Unknown'}`);
+        }
+        return {
+          menuItemId: item.menuItemId,
+          quantity: item.quantity,
+          price: item.price,
+          specialInstructions: item.specialInstructions || '',
+        };
+      });
+      
+      console.log('[PendingOrderModification] Sending modification request:', {
+        orderId: order.id,
+        customerId: order.customer?.id,
+        items: itemsToSend,
+      });
+      
       const response = await fetch('/api/orders/modify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
           orderId: order.id,
-          customerId: order.customer.id || undefined,
-          items: items.map(item => ({
-            menuItemId: item.menuItemId,
-            quantity: item.quantity,
-            price: item.price,
-            specialInstructions: item.specialInstructions,
-          })),
+          customerId: order.customer?.id || undefined,
+          items: itemsToSend,
         }),
       });
       
       const data = await response.json();
+      
+      console.log('[PendingOrderModification] Modification response:', data);
       
       if (!response.ok || !data.success) {
         throw new Error(data.error || 'Failed to update order');
@@ -292,13 +368,52 @@ const PendingOrderModification: React.FC<PendingOrderModificationProps> = ({
       onOrderUpdated(data.order);
       setTimeRemaining(data.timeRemaining);
       
+      // Reset pending modification
+      setPendingModification(null);
+      setShowConfirmModal(false);
+      
       toast.success('Order updated!', data.message || 'Your changes have been saved');
       
     } catch (error) {
-      console.error('Failed to modify order:', error);
+      console.error('[PendingOrderModification] Failed to modify order:', error);
       toast.error('Update failed', error instanceof Error ? error.message : 'Please try again');
+      setShowConfirmModal(false);
     } finally {
       setIsModifying(false);
+    }
+  };
+
+  // Save modifications with confirmation
+  const saveModifications = () => {
+    if (items.length === 0) {
+      toast.error('Empty order', 'Please add at least one item or cancel the order');
+      return;
+    }
+    
+    // Calculate new pricing
+    const { newSubtotal, newTax, newTotal } = calculateNewPricing(items);
+    
+    // Check if there are items being added (not just quantity changes)
+    const itemsBeingAdded = getItemsBeingAdded();
+    
+    // If items are being added, show confirmation modal
+    if (itemsBeingAdded.length > 0) {
+      setPendingModification({
+        items,
+        newTotal,
+        newSubtotal,
+        newTax,
+      });
+      setShowConfirmModal(true);
+    } else {
+      // If only quantity changes, proceed without confirmation
+      setPendingModification({
+        items,
+        newTotal,
+        newSubtotal,
+        newTax,
+      });
+      executeModification();
     }
   };
   
@@ -398,7 +513,11 @@ const PendingOrderModification: React.FC<PendingOrderModificationProps> = ({
             fontSize: '0.875rem',
             color: '#6B7280',
             fontWeight: 500,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
           }}>
+            {timerStyle.icon}
             {timerStyle.message}
           </div>
         </div>
@@ -572,23 +691,71 @@ const PendingOrderModification: React.FC<PendingOrderModificationProps> = ({
           </button>
         )}
         
+        {/* Cancel Order Button */}
+        <button
+          onClick={() => setShowCancelModal(true)}
+          style={{
+            width: 'auto',
+            marginTop: '12px',
+            padding: '8px 16px',
+            background: 'white',
+            color: '#EF4444',
+            border: '2px solid #EF4444',
+            borderRadius: '10px',
+            fontSize: '0.8125rem',
+            fontWeight: 600,
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '6px',
+            margin: '12px auto 0',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = '#FEE2E2';
+            e.currentTarget.style.transform = 'translateY(-1px)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'white';
+            e.currentTarget.style.transform = 'translateY(0)';
+          }}
+        >
+          <XCircle size={14} />
+          Cancel Order
+        </button>
+        
         {/* Browse Menu Button */}
         <button
           onClick={onBrowseMenu}
           style={{
-            width: '100%',
+            width: 'auto',
             marginTop: '12px',
-            padding: '14px',
-            background: 'white',
-            color: '#f97316',
-            border: '2px solid #f97316',
-            borderRadius: '12px',
-            fontSize: '1rem',
+            padding: '8px 16px',
+            background: '#f97316',
+            color: 'white',
+            border: 'none',
+            borderRadius: '10px',
+            fontSize: '0.8125rem',
             fontWeight: 600,
             cursor: 'pointer',
             transition: 'all 0.2s',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '6px',
+            margin: '12px auto 0',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = '#ea580c';
+            e.currentTarget.style.transform = 'translateY(-1px)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = '#f97316';
+            e.currentTarget.style.transform = 'translateY(0)';
           }}
         >
+          <ShoppingBag size={14} />
           Browse Full Menu
         </button>
       </div>
@@ -755,6 +922,54 @@ const PendingOrderModification: React.FC<PendingOrderModificationProps> = ({
           <span>₹{order.pricing.total.toFixed(2)}</span>
         </div>
       </div>
+
+      {/* Confirmation Modal for Adding Items */}
+      {showConfirmModal && pendingModification && (
+        <OrderModificationConfirmModal
+          isOpen={showConfirmModal}
+          onClose={() => {
+            setShowConfirmModal(false);
+            setPendingModification(null);
+          }}
+          order={{
+            id: order.id,
+            orderNumber: order.orderNumber,
+            total: order.pricing.total,
+            subtotal: order.pricing.subtotal,
+            tax: order.pricing.tax,
+            deliveryFee: order.pricing.deliveryFee,
+            paymentMethod: order.paymentMethod,
+          }}
+          itemsToAdd={getItemsBeingAdded()}
+          newTotal={pendingModification.newTotal}
+          newSubtotal={pendingModification.newSubtotal}
+          newTax={pendingModification.newTax}
+          onConfirm={executeModification}
+        />
+      )}
+
+      {/* Cancel Order Modal */}
+      {showCancelModal && (
+        <CustomerCancelOrderModal
+          isOpen={showCancelModal}
+          onClose={() => setShowCancelModal(false)}
+          order={{
+            id: order.id,
+            orderNumber: order.orderNumber,
+            total: order.pricing.total,
+            status: order.status,
+            paymentStatus: order.paymentStatus,
+            createdAt: order.createdAt,
+            preparingAt: (order as any).preparingAt,
+          }}
+          onSuccess={() => {
+            setShowCancelModal(false);
+            if (onCancelled) {
+              onCancelled();
+            }
+          }}
+        />
+      )}
     </div>
   );
 };

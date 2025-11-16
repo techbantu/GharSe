@@ -24,6 +24,7 @@ import {
   ChefHat,
 } from 'lucide-react';
 import MenuManagement from '@/components/admin/MenuManagement';
+import Logo from '@/components/Logo';
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -91,9 +92,7 @@ export default function AdminDashboardPage() {
           <div className="flex items-center justify-between">
             {/* Logo */}
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-500 rounded-full flex items-center justify-center">
-                <ChefHat size={24} className="text-white" />
-              </div>
+              <Logo variant="small" />
               <div>
                 <h1 className="text-xl font-black text-gray-900">
                   GharSe

@@ -218,8 +218,8 @@ async function createOrderLogic(body: unknown): Promise<Result<Order, AppError>>
       Date.now() + (40 + restaurantInfo.settings.preparationBuffer) * 60 * 1000
     );
     
-    // Calculate grace period expiry (5 minutes from now)
-    const GRACE_PERIOD_MS = 5 * 60 * 1000; // 5 minutes
+    // Calculate grace period expiry (3 minutes from now)
+    const GRACE_PERIOD_MS = 3 * 60 * 1000; // 3 minutes
     const gracePeriodExpiresAt = new Date(Date.now() + GRACE_PERIOD_MS);
     
     // CRITICAL FIX: Declare order variable in outer scope

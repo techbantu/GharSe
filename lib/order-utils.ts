@@ -138,10 +138,19 @@ export function isOrderActive(order: Order): boolean {
 }
 
 /**
- * Check if order is completed
+ * Check if order is completed (actually fulfilled, not cancelled)
+ * Only counts orders that represent actual revenue
  */
 export function isOrderCompleted(order: Order): boolean {
-  return ['delivered', 'cancelled'].includes(order.status);
+  return ['delivered', 'picked-up'].includes(order.status);
+}
+
+/**
+ * Check if order is closed (completed OR cancelled)
+ * Use this for historical records, not revenue calculations
+ */
+export function isOrderClosed(order: Order): boolean {
+  return ['delivered', 'picked-up', 'cancelled', 'refunded'].includes(order.status);
 }
 
 /**

@@ -2038,6 +2038,31 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
               </p>
             </div>
             
+            {/* Legal Notice - FSSAI Operator */}
+            <div style={{
+              width: '100%',
+              maxWidth: '480px',
+              padding: '16px',
+              background: '#F9FAFB',
+              borderRadius: '12px',
+              border: '1px solid #E5E7EB',
+              marginBottom: '8px'
+            }}>
+              <p style={{
+                fontSize: '0.75rem',
+                color: '#6B7280',
+                textAlign: 'center',
+                lineHeight: '1.5',
+                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif'
+              }}>
+                <strong style={{ color: '#374151' }}>Food prepared by:</strong> Bantu'S kitchen (FSSAI: 23625028002731)
+                <br />
+                <span style={{ color: '#9CA3AF', fontSize: '0.6875rem' }}>
+                  Plot no 17, Road no 3, Padmalaya Nagar, Hayatnagar, Rangareddy, Telangana - 501505
+                </span>
+              </p>
+            </div>
+            
             {/* Action Buttons */}
             <div style={{
               width: '100%',
@@ -2048,7 +2073,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
             }}>
               {/* Cancel Order Section - Only show if order can be cancelled */}
               {orderId && orderCreatedAt && (() => {
-                const CANCELLATION_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
+                const CANCELLATION_WINDOW_MS = 3 * 60 * 1000; // 3 minutes
                 const canCancel = (orderStatus === 'PENDING' || orderStatus === 'CONFIRMED') && 
                                   timeRemaining !== null && timeRemaining > 0;
                 

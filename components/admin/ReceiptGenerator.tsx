@@ -98,15 +98,18 @@ const ReceiptGenerator: React.FC<ReceiptGeneratorProps> = ({ order, onClose }) =
           {/* Header */}
           <div className="text-center mb-8">
             <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-red-500 rounded-full mx-auto mb-4 flex items-center justify-center text-white font-bold text-2xl">
-              BK
+              GS
             </div>
-            <h1 className="text-3xl font-black text-gray-900 mb-2">Bantu's Kitchen</h1>
-            <p className="text-gray-600">Authentic Indian Home Cooking, Made with Love</p>
-            <div className="mt-4 text-sm text-gray-500">
-              <p>123 Culinary Lane, Your City, CA 12345</p>
-              <p>Phone: +1 (555) 123-4567</p>
-              <p>Email: orders@bantuskitchen.com</p>
+            <h1 className="text-3xl font-black text-gray-900 mb-1">GharSe</h1>
+            <p className="text-sm font-semibold text-gray-700 mb-2">Operated by: Bantu'S kitchen (Proprietor: Sailaja)</p>
+            <p className="text-xs text-gray-600 mb-1">FSSAI Reg: 23625028002731 (Valid until: 23 June 2027)</p>
+            <p className="text-gray-600 text-sm">Authentic Indian Home Cooking, Made with Love</p>
+            <div className="mt-4 text-xs text-gray-500">
+              <p>Plot no 17, Road no 3, Padmalaya Nagar, Hayatnagar</p>
+              <p>Pedda Amberpet (Kalan), Hayathnagar, Rangareddy, Telangana - 501505</p>
+              <p className="mt-2">Phone: +91 90104 60964 | Email: orders@gharse.com</p>
             </div>
+            <p className="text-xs text-gray-400 mt-3 italic">Technology by TechBantu IT Solutions LLC</p>
           </div>
 
           <div className="border-t-2 border-b-2 border-gray-300 py-4 mb-6">
@@ -235,7 +238,26 @@ const ReceiptGenerator: React.FC<ReceiptGeneratorProps> = ({ order, onClose }) =
             <p className="font-semibold mb-2">Thank you for your order!</p>
             <p>We hope you enjoy your meal. Please visit us again!</p>
             <p className="mt-4 text-xs text-gray-500">
-              For any queries, contact us at orders@bantuskitchen.com or +1 (555) 123-4567
+              For any queries, contact us at orders@gharse.com or +91 90104 60964
+            </p>
+          </div>
+
+          {/* Legal Footer - FSSAI Compliance */}
+          <div className="mt-8 pt-4 border-t-2 border-gray-300 text-center">
+            <p className="text-xs text-gray-600 font-semibold mb-2">Food Business Operator</p>
+            <p className="text-xs text-gray-500">
+              <strong>Bantu'S kitchen</strong> (Proprietor: Sailaja)
+            </p>
+            <p className="text-xs text-gray-500">
+              FSSAI Registration: <strong>23625028002731</strong>
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              Petty Retailer - Prepared Foods | Valid until: 23 June 2027
+            </p>
+            <p className="text-xs text-gray-400 mt-3 italic">
+              All food safety, quality, and liability rest with Bantu'S kitchen.
+              <br />
+              Technology services by TechBantu IT Solutions LLC (zero food liability).
             </p>
           </div>
 

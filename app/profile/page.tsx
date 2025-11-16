@@ -811,11 +811,13 @@ function ProfilePageContent() {
             grid-template-columns: 1fr;
             gap: 1.5rem;
             align-items: stretch;
+            width: 100%;
           }
           
           @media (min-width: 768px) {
             .hero-grid {
-              grid-template-columns: repeat(2, 1fr);
+              grid-template-columns: repeat(2, minmax(0, 1fr));
+              gap: 2rem;
             }
           }
           
@@ -826,14 +828,15 @@ function ProfilePageContent() {
             }
           }
           
-          /* Container Responsive Padding */
+          /* Container Responsive Padding - Unified centering */
           .profile-container {
             padding: 90px 16px 40px !important;
+            width: 100%;
           }
           
           @media (min-width: 640px) {
             .profile-container {
-              padding: 100px 20px 40px !important;
+              padding: 100px 24px 40px !important;
             }
           }
           
@@ -841,6 +844,19 @@ function ProfilePageContent() {
             .profile-container {
               padding: 100px 32px 60px !important;
             }
+          }
+          
+          @media (min-width: 1400px) {
+            .profile-container {
+              padding: 100px 48px 60px !important;
+            }
+          }
+          
+          /* Centered content sections */
+          .centered-section {
+            max-width: 100%;
+            margin: 0 auto;
+            width: 100%;
           }
         `}</style>
         
@@ -850,10 +866,7 @@ function ProfilePageContent() {
             {isLoadingProfile ? (
               <SkeletonHero />
             ) : tasteProfile ? (
-              <div className="hero-grid" style={{
-                maxWidth: '1400px',
-                margin: '0 auto',
-              }}>
+              <div className="hero-grid">
               <CulinaryPassport
                 customerName={user.name}
                 explorerRank={tasteProfile.explorationStats.explorerRank}
@@ -963,6 +976,7 @@ function ProfilePageContent() {
             boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
             padding: '0.5rem',
             marginBottom: '2rem',
+            width: '100%',
           }}>
             <style dangerouslySetInnerHTML={{
               __html: `
@@ -1170,11 +1184,11 @@ function ProfilePageContent() {
           <div style={{ position: 'relative' }}>
             {/* OVERVIEW TAB - Dashboard Summary */}
             {activeTab === 'overview' && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem' }} className="dashboard-main-grid">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%' }} className="centered-section">
             {/* Left Column - Main Content */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', minWidth: 0 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', minWidth: 0, width: '100%' }}>
               {/* Journey Timeline */}
-              <section>
+              <section style={{ width: '100%' }}>
                 {/* Header with View All Orders button */}
                 {!isLoadingOrders && orders.length > 0 && (
                   <div style={{
@@ -1222,7 +1236,7 @@ function ProfilePageContent() {
                   <SkeletonTimeline />
                 ) : orders.length > 0 ? (
                   <JourneyTimeline
-                    orders={orders.slice(0, 3).map(order => ({
+                    orders={orders.slice(0, 6).map(order => ({
                       ...order,
                       createdAt: new Date(order.createdAt),
                       confirmedAt: order.confirmedAt ? new Date(order.confirmedAt) : null,
@@ -1265,12 +1279,13 @@ function ProfilePageContent() {
 
             {/* ORDERS TAB - Full Order History */}
             {activeTab === 'orders' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%' }} className="centered-section">
                 <div style={{
                   backgroundColor: '#fff',
                   borderRadius: '1rem',
                   padding: '2rem',
                   boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                  width: '100%',
                 }}>
                   <div style={{
                     display: 'flex',
@@ -1338,7 +1353,7 @@ function ProfilePageContent() {
 
             {/* TASTE PROFILE TAB - Flavor Preferences & Insights */}
             {activeTab === 'taste' && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem' }} className="insights-grid">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem', width: '100%' }} className="insights-grid centered-section">
                 {/* Taste Profile Wheel */}
                 {!isLoadingProfile && tasteProfile ? (
                   <TasteProfileWheel
@@ -1383,13 +1398,14 @@ function ProfilePageContent() {
 
             {/* ACCOUNT SETTINGS TAB - Profile & Security */}
             {activeTab === 'settings' && (
-              <div>
+              <div style={{ width: '100%' }} className="centered-section">
                 <div style={{
                   backgroundColor: '#fff',
                   borderRadius: '1rem',
                   padding: '2rem',
                   boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
                   marginBottom: '1.5rem',
+                  width: '100%',
                 }}>
                   <h2 style={{
                     fontSize: '1.5rem',
@@ -1418,7 +1434,7 @@ function ProfilePageContent() {
 
             {/* REFERRALS TAB - Share & Earn Rewards */}
             {activeTab === 'referrals' && (
-              <div style={{ maxWidth: '48rem', margin: '0 auto' }}>
+              <div style={{ maxWidth: '48rem', margin: '0 auto', width: '100%' }} className="centered-section">
                 <ReferralCenter
                   referralCode={user.referralCode || 'N/A'}
                   friendsReferred={referralStats.friendsReferred}

@@ -18,6 +18,7 @@ import { restaurantInfo } from '@/data/menuData';
 import { LoginModal } from './auth/LoginModal';
 import { RegisterModal } from './auth/RegisterModal';
 import { ForgotPasswordModal } from './auth/ForgotPasswordModal';
+import Logo from './Logo';
 
 interface HeaderProps {
   onCartClick: () => void;
@@ -173,131 +174,10 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
                 padding: 0, 
                 minWidth: 0, 
                 flex: '0 1 auto',
-                overflow: 'hidden',
-                gap: '0.75rem'
+                overflow: 'hidden'
               }}
             >
-              {/* Custom Logo - Indian-Inspired Premium Mark */}
-              <div style={{ position: 'relative', width: 'clamp(44px, 10vw, 56px)', height: 'clamp(44px, 10vw, 56px)', flexShrink: 0 }}>
-                {/* Outer Glow Ring */}
-                <div style={{
-                  position: 'absolute',
-                  inset: '-4px',
-                  background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.2), rgba(234, 88, 12, 0.2), rgba(220, 38, 38, 0.2))',
-                  borderRadius: '50%',
-                  filter: 'blur(8px)',
-                  opacity: 0.6,
-                  animation: 'pulse 3s ease-in-out infinite'
-                }}></div>
-                
-                {/* Main Logo Container */}
-                <div style={{
-                  position: 'relative',
-                  width: '100%',
-                  height: '100%',
-                  background: 'linear-gradient(135deg, #f97316 0%, #ea580c 50%, #dc2626 100%)',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: '0 8px 32px rgba(249, 115, 22, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -1px 0 rgba(0, 0, 0, 0.2)',
-                  border: '2px solid rgba(255, 255, 255, 0.2)',
-                  transform: 'translateZ(0)',
-                  transition: 'transform 0.3s ease'
-                }} className="group-hover:scale-105">
-                  {/* Inner Gradient Overlay for Depth */}
-                  <div style={{
-                    position: 'absolute',
-                    inset: '6px',
-                    background: 'radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.25) 0%, transparent 50%)',
-                    borderRadius: '50%',
-                    pointerEvents: 'none'
-                  }}></div>
-                  
-                  {/* Logo Mark - Stylized GS with Indian Lotus Inspiration */}
-                  <div style={{
-                    position: 'relative',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: 10
-                  }}>
-                    {/* Top: Stylized Lotus Petal / Flame */}
-                    <svg width="24" height="12" viewBox="0 0 24 12" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginBottom: '-2px' }}>
-                      <path d="M12 0C12 0 8 4 8 8C8 10 9.79 12 12 12C14.21 12 16 10 16 8C16 4 12 0 12 0Z" fill="white" fillOpacity="0.95"/>
-                      <path d="M6 2C6 2 3 5 3 8C3 9.5 4.12 11 6 11C7.88 11 9 9.5 9 8C9 5 6 2 6 2Z" fill="white" fillOpacity="0.7"/>
-                      <path d="M18 2C18 2 21 5 21 8C21 9.5 19.88 11 18 11C16.12 11 15 9.5 15 8C15 5 18 2 18 2Z" fill="white" fillOpacity="0.7"/>
-                    </svg>
-                    
-                    {/* Bottom: GS Letters with Premium Typography */}
-                    <div style={{
-                      fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif',
-                      fontSize: '18px',
-                      fontWeight: 800,
-                      letterSpacing: '0.5px',
-                      color: 'white',
-                      textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
-                      marginTop: '1px'
-                    }}>
-                      GS
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Corner Accent - Premium Detail */}
-                <div style={{
-                  position: 'absolute',
-                  bottom: '2px',
-                  right: '2px',
-                  width: '14px',
-                  height: '14px',
-                  background: 'linear-gradient(135deg, #FFB800, #FFA500)',
-                  borderRadius: '50%',
-                  border: '2px solid white',
-                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
-                  <span style={{ fontSize: '8px', lineHeight: '1' }}>✦</span>
-                </div>
-              </div>
-              
-              {/* Brand Name with Premium Typography */}
-              <div style={{ textAlign: 'left', lineHeight: 1, minWidth: 0, flex: '0 1 auto', overflow: 'hidden' }}>
-                <h1 style={{
-                  fontSize: 'clamp(18px, 4vw, 26px)',
-                  fontWeight: 800,
-                  background: 'linear-gradient(135deg, #f97316 0%, #ea580c 50%, #dc2626 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
-                  color: '#f97316',
-                  letterSpacing: '-0.02em',
-                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif',
-                  marginBottom: '2px',
-                  lineHeight: '1.1',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  display: 'block',
-                  maxWidth: '100%'
-                }}>
-                  GharSe
-                </h1>
-                <p style={{
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  color: '#6B7280',
-                  letterSpacing: '0.02em',
-                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif',
-                  marginTop: '2px',
-                  whiteSpace: 'nowrap'
-                }} className="hidden sm:block">
-                  From Real Homes To Your Hungry Heart
-                </p>
-              </div>
+              <Logo variant="small" className="group-hover:opacity-90" />
             </button>
             
             {/* Desktop Navigation - Premium Typography */}

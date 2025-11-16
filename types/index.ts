@@ -197,6 +197,7 @@ export interface Address {
   street: string;
   apartment?: string;
   city: string;
+  district?: string;        // NEW: District for FSSAI compliance
   state: string;
   zipCode: string;
   country: string;
@@ -289,6 +290,11 @@ export interface AdminStats {
  */
 export interface Restaurant {
   name: string;
+  legalName?: string;              // Legal entity name (e.g., "Bantu'S kitchen")
+  proprietor?: string;              // Owner/proprietor name
+  fssaiNumber?: string;             // FSSAI registration number
+  fssaiValidUntil?: string;         // License expiry date
+  fssaiCategory?: string;           // Business category (e.g., "Petty Retailer - Prepared Foods")
   tagline: string;
   description: string;
   logo: string;

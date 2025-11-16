@@ -37,6 +37,7 @@ export default function RefundPolicyPage() {
         }}>
           Effective Date: January 13, 2025 | Version 2.0 (Comprehensive Legal Rewrite)<br />
           Governing Laws: Consumer Protection Act, 2019 | Indian Contract Act, 1872 | IT Act § 79 (India)<br />
+          Refund Authority: Bantu'S kitchen (FSSAI: 23625028002731) | Technology Intermediary: TechBantu IT Solutions LLC<br />
           Zero-Tolerance for Fraudulent Claims | Statutory Intermediary Protections
         </p>
       </div>
@@ -48,16 +49,17 @@ export default function RefundPolicyPage() {
           
           <Bold>I. FOOD BUSINESS OPERATOR (SOLE REFUND LIABILITY)</Bold><br /><br />
           
-          ALL food orders, refunds, cancellations, and food-related disputes are the <Bold>EXCLUSIVE RESPONSIBILITY</Bold> of the <Bold>Independent Home Chef</Bold>, an individual sole proprietor operating the GharSe food business from Hyderabad, Telangana, India. The Independent Home Chef:<br /><br />
+          ALL food orders, refunds, cancellations, and food-related disputes are the <Bold>EXCLUSIVE RESPONSIBILITY</Bold> of <Bold>Bantu'S kitchen</Bold> (FSSAI Registration: 23625028002731), an individual sole proprietorship operated by Sailaja from Plot no 17, Road no 3, Padmalaya Nagar, Hayatnagar, Pedda Amberpet (Kalan), Hayathnagar, Rangareddy, Telangana - 501505, India. Bantu'S kitchen:<br /><br />
           
           <List>
             <Li><Bold>Issues ALL refunds:</Bold> Sole discretion and financial responsibility for determining refund eligibility and processing refunds</Li>
+            <Li><Bold>FSSAI Registered Operator:</Bold> Petty food retailer under Category 16 (Prepared Foods), registration valid until 23 June 2027</Li>
             <Li><Bold>Bears ALL food liability:</Bold> Exclusive liability for food quality, safety, contamination, delivery, and customer complaints</Li>
             <Li><Bold>Processes ALL customer claims:</Bold> Direct contractual relationship with customers for food orders under Sale of Goods Act, 1930 and Consumer Protection Act, 2019</Li>
             <Li><Bold>Operates under Indian food laws:</Bold> FSSAI compliance, Consumer Protection Act jurisdiction, Indian Contract Act obligations</Li>
           </List>
           
-          <Bold>Legal Status:</Bold> Independent Home Chef is the <Bold>SELLER</Bold> and <Bold>SERVICE PROVIDER</Bold> under Consumer Protection Act § 2(38), (40). Customers contract directly with Independent Home Chef for food purchase.<br /><br />
+          <Bold>Legal Status:</Bold> Bantu'S kitchen is the <Bold>SELLER</Bold> and <Bold>SERVICE PROVIDER</Bold> under Consumer Protection Act § 2(38), (40). Customers contract directly with Bantu'S kitchen for food purchase.<br /><br />
           
           <Bold>II. TECHNOLOGY PROVIDER (ABSOLUTE ZERO REFUND LIABILITY)</Bold><br /><br />
           

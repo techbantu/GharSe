@@ -24,6 +24,7 @@ interface CancelOrderModalProps {
     total: number;
     status: string;
     paymentStatus: string;
+    paymentMethod?: string; // NEW: Payment method to determine if refund applies
     customerName: string;
   };
   cancelledBy: 'customer' | 'chef' | 'admin';
@@ -74,7 +75,17 @@ export default function CancelOrderModal({
 
   const reasons = CANCELLATION_REASONS[cancelledBy];
   const isCustomReason = selectedReason === 'Other';
-  const shouldRefund = order.paymentStatus === 'paid' || order.paymentStatus === 'pending';
+  
+  // CRITICAL FIX: Only show refund for online payments (not cash-on-delivery)
+  const isCashOnDelivery = order.paymentMethod?.toLowerCase().includes('cash') || 
+                           order.paymentMethod?.toLowerCase().includes('cod') ||
+                           order.paymentMethod === 'cash-on-delivery';
+  
+  const isPaidOnline = (order.paymentStatus?.toLowerCase() === 'paid' || 
+                        order.paymentStatus?.toLowerCase() === 'pending') && 
+                       !isCashOnDelivery;
+  
+  const shouldRefund = isPaidOnline;
 
   const handleCancel = async () => {
     // Validation
@@ -167,13 +178,49 @@ export default function CancelOrderModal({
         >
           {/* Header */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
-            <div>
+            <div style={{ flex: 1 }}>
               <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#111827', marginBottom: '6px' }}>
                 Cancel Order
               </h2>
-              <p style={{ fontSize: '0.9375rem', color: '#6B7280' }}>
+              <p style={{ fontSize: '0.9375rem', color: '#6B7280', marginBottom: '8px' }}>
                 Order #{order.orderNumber} • {order.customerName}
               </p>
+              {/* CRITICAL: Display Payment Method Prominently */}
+              <div style={{ 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                gap: '6px',
+                padding: '6px 12px',
+                background: isCashOnDelivery ? '#FEF3C7' : '#DBEAFE',
+                border: `2px solid ${isCashOnDelivery ? '#FCD34D' : '#93C5FD'}`,
+                borderRadius: '8px',
+                fontSize: '0.8125rem',
+                fontWeight: 600,
+                color: isCashOnDelivery ? '#92400E' : '#1E40AF',
+              }}>
+                <span style={{ fontSize: '1rem' }}>
+                  {isCashOnDelivery ? '💵' : '💳'}
+                </span>
+                <span style={{ textTransform: 'capitalize' }}>
+                  {order.paymentMethod 
+                    ? order.paymentMethod.replace(/-/g, ' ').replace(/_/g, ' ')
+                    : 'Cash on Delivery'}
+                </span>
+                {!isCashOnDelivery && (
+                  <span style={{ 
+                    marginLeft: '4px',
+                    padding: '2px 6px',
+                    background: order.paymentStatus?.toLowerCase() === 'paid' ? '#10B981' : '#F59E0B',
+                    color: 'white',
+                    borderRadius: '4px',
+                    fontSize: '0.6875rem',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                  }}>
+                    {order.paymentStatus || 'PENDING'}
+                  </span>
+                )}
+              </div>
             </div>
             <button
               onClick={onClose}
@@ -188,6 +235,8 @@ export default function CancelOrderModal({
                 justifyContent: 'center',
                 cursor: 'pointer',
                 transition: 'all 0.2s',
+                flexShrink: 0,
+                marginLeft: '16px',
               }}
               className="hover:bg-gray-300"
             >
@@ -204,17 +253,40 @@ export default function CancelOrderModal({
                 padding: '20px',
                 borderRadius: '12px',
                 display: 'flex',
-                alignItems: 'center',
+                flexDirection: 'column',
                 gap: '12px',
                 marginBottom: '24px',
               }}
             >
-              <CheckCircle2 size={24} />
-              <div>
-                <p style={{ fontWeight: 600, marginBottom: '4px' }}>Order Cancelled Successfully</p>
-                <p style={{ fontSize: '0.875rem', opacity: 0.9 }}>
-                  {shouldRefund && `Refund of ₹${order.total} will be processed within 5-7 days.`}
-                </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <CheckCircle2 size={24} />
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontWeight: 600, marginBottom: '4px', fontSize: '1.0625rem' }}>
+                    Order Cancelled Successfully
+                  </p>
+                  <p style={{ fontSize: '0.875rem', opacity: 0.9, marginBottom: 0 }}>
+                    Order #{order.orderNumber} has been cancelled.
+                  </p>
+                </div>
+              </div>
+              {shouldRefund && (
+                <div style={{
+                  background: 'rgba(255, 255, 255, 0.15)',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  fontSize: '0.875rem',
+                }}>
+                  💰 Refund of ₹{order.total.toFixed(2)} will be processed within 5-7 days.
+                </div>
+              )}
+              <div style={{
+                background: 'rgba(255, 255, 255, 0.15)',
+                padding: '12px',
+                borderRadius: '8px',
+                fontSize: '0.875rem',
+              }}>
+                ✉️ Customer has been notified via email
+                {order.customerName && ` (${order.customerName})`}
               </div>
             </div>
           )}
@@ -250,9 +322,13 @@ export default function CancelOrderModal({
                 marginBottom: '24px',
               }}
             >
-              <p style={{ fontWeight: 600, marginBottom: '6px' }}>⚠️ Refund Notice</p>
+              <p style={{ fontWeight: 600, marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '1.125rem' }}>⚠️</span>
+                <span>Refund Will Be Processed</span>
+              </p>
               <p style={{ fontSize: '0.875rem' }}>
-                This order was paid online. A refund of <strong>₹{order.total}</strong> will be processed automatically and will reflect in the customer's account within 5-7 business days.
+                This order was paid online via <strong>{order.paymentMethod ? order.paymentMethod.replace(/-/g, ' ').replace(/_/g, ' ').toUpperCase() : 'UNKNOWN'}</strong>. 
+                A refund of <strong>₹{order.total.toFixed(2)}</strong> will be processed automatically to the customer's account within 5-7 business days.
               </p>
             </div>
           )}
