@@ -129,6 +129,7 @@ async function getRedisClient() {
   try {
     // Dynamically import Redis (only if enabled)
     // This is wrapped in try-catch to gracefully handle when redis is not installed
+    // @ts-ignore - Redis is optional dependency, gracefully fallback to memory cache if not installed
     const redis = await import('redis').catch((error: any) => {
       // Redis module not installed - this is OK, we'll use memory cache
       if (error.code === 'MODULE_NOT_FOUND' || error.message?.includes("Can't resolve")) {
