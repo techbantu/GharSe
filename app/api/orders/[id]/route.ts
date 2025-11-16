@@ -93,7 +93,7 @@ export async function GET(
       restaurantName: 'Bantu\'s Kitchen', // You can add this to your schema if needed
       dasherName: order.dasherName || undefined,
       dasherPhone: order.dasherPhone || undefined,
-      items: order.items.map((item) => ({
+      items: order.items.map((item: any) => ({
         id: item.id,
         name: item.name || item.menuItem?.name || 'Item',
         quantity: item.quantity,

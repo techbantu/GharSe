@@ -143,7 +143,7 @@ export async function POST(request: NextRequest) {
       logger.info('Bulk payouts generated', {
         period,
         count: payouts.length,
-        totalAmount: payouts.reduce((sum, p) => sum + p.netEarnings, 0),
+        totalAmount: payouts.reduce((sum: number, p: any) => sum + p.netEarnings, 0),
         duration,
       });
 

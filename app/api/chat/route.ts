@@ -633,7 +633,7 @@ async function generateActionButtons(aiResponse: string, functionResults: any[],
   
   if (addToCartActions.length >= 2 && itemsNotInCart.length > 0) {
     // Calculate total price (keep for backend, don't show in label)
-    const totalPrice = addToCartActions.reduce((sum, action) => 
+    const totalPrice = addToCartActions.reduce((sum: number, action: any) => 
       sum + (action.price || 0), 0
     );
     

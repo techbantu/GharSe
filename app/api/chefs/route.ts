@@ -133,7 +133,7 @@ export async function GET(request: NextRequest) {
     ]);
 
     // Transform chefs to include parsed JSON fields
-    const transformedChefs = chefs.map((chef) => ({
+    const transformedChefs = chefs.map((chef: any) => ({
       ...chef,
       address: chef.address ? JSON.parse(chef.address) : null,
       cuisineTypes: chef.cuisineTypes ? JSON.parse(chef.cuisineTypes) : [],
