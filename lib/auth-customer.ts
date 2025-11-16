@@ -80,11 +80,9 @@ export function generateToken(customer: Customer): string {
     phoneVerified: customer.phoneVerified,
   };
 
-  const options: SignOptions = {
-    expiresIn: JWT_EXPIRES_IN,
-  };
-
-  return jwt.sign(payload, JWT_SECRET!, options);
+  return jwt.sign(payload, JWT_SECRET!, {
+    expiresIn: JWT_EXPIRES_IN as any,
+  });
 }
 
 /**
