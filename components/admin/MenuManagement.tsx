@@ -132,8 +132,8 @@ const MenuManagement: React.FC<MenuManagementProps> = ({ initialItems = [] }) =>
     } else {
       // Create new item
       const newItem: MenuItem = {
-        id: `item-${Date.now()}`,
         ...formData as MenuItem,
+        id: `item-${Date.now()}`,
         image: imagePreview || '/images/placeholder.jpg',
       };
       // In production: await fetch('/api/menu', { method: 'POST', body: JSON.stringify(newItem) });

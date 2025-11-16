@@ -22,9 +22,8 @@ export async function GET(request: NextRequest) {
       const duration = Date.now() - startTime;
 
       return NextResponse.json({
-        success: result.success,
-        service,
         ...result,
+        service,
         duration,
       });
     }
