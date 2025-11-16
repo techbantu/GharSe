@@ -252,14 +252,14 @@ export function filterOrdersBySearch(orders: Order[], query: string): Order[] {
     if (order.orderNumber.toLowerCase().includes(searchLower)) return true;
     
     // Search by customer name
-    if (order.customerName.toLowerCase().includes(searchLower)) return true;
+    if (order.customer.name.toLowerCase().includes(searchLower)) return true;
     
     // Search by phone number
-    if (order.customerPhone.includes(searchLower)) return true;
+    if (order.customer.phone.includes(searchLower)) return true;
     
     // Search by items
     const itemMatch = order.items.some(item => 
-      item.name.toLowerCase().includes(searchLower)
+      item.menuItem.name.toLowerCase().includes(searchLower)
     );
     if (itemMatch) return true;
     
