@@ -98,7 +98,7 @@ async function uploadToCloudinary(
         ],
         eager_async: false, // Wait for transformations
       },
-      (error, result) => {
+      (error: any, result: any) => {
         if (error) {
           logger.error('Cloudinary upload failed', {
             error: error.message,
