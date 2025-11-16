@@ -10,7 +10,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Header from '@/components/Header';
 import Hero from '@/components/Hero';
@@ -32,7 +32,7 @@ import AdvancedSearch from '@/components/AdvancedSearch';
  * - Checkout modal visibility
  * - Scroll animations trigger
  */
-const HomePage: React.FC = () => {
+const HomePageContent: React.FC = () => {
   const searchParams = useSearchParams();
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
@@ -204,4 +204,13 @@ const HomePage: React.FC = () => {
  * Ensures cart state is available throughout the component tree.
  */
 // Export HomePage directly (CartProvider is now in root layout)
+// Wrap in Suspense for useSearchParams (Next.js 16 requirement)
+const HomePage: React.FC = () => {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <HomePageContent />
+    </Suspense>
+  );
+};
+
 export default HomePage;
