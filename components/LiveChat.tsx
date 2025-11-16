@@ -938,7 +938,7 @@ const LiveChat: React.FC<LiveChatProps> = ({ minimized = false, onMinimize, onRe
                       return (
                       <ActionButton
                         key={index}
-                        action={action}
+                        action={action as any}
                         sessionId={message.sessionId}
                         onExecute={() => {
                           console.log('Action executed:', action);
