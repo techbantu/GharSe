@@ -117,7 +117,7 @@ const PendingOrderModification: React.FC<PendingOrderModificationProps> = ({
           menuItemId: item.menuItem.id,
           quantity: item.quantity,
           price: item.menuItem.price, // Extract price from nested menuItem
-          specialInstructions: item.specialInstructions || item.customizations || '',
+          specialInstructions: item.specialInstructions || '',
           menuItem: item.menuItem,
         }));
       
