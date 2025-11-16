@@ -127,12 +127,12 @@ export async function saveCustomerPreferences(
         phone,
         email,
         name,
-        notificationPrefs: preferences,
+        notificationPrefs: JSON.stringify(preferences),
       },
       update: {
         email,
         name,
-        notificationPrefs: preferences,
+        notificationPrefs: JSON.stringify(preferences),
       },
     });
 
