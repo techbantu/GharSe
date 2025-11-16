@@ -197,7 +197,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Validate at least one item with quantity > 0
-    const validItems = data.items.filter(item => item.quantity > 0);
+    const validItems = data.items.filter((item: any) => item.quantity > 0);
     if (validItems.length === 0) {
       // No items left - should cancel order instead
       return NextResponse.json(
@@ -229,7 +229,7 @@ export async function POST(request: NextRequest) {
       
       // Create new order items
       const newItems = await Promise.all(
-        validItems.map(item =>
+        validItems.map((item: any) =>
           tx.orderItem.create({
             data: {
               orderId: order.id,
@@ -296,7 +296,7 @@ export async function POST(request: NextRequest) {
         email: updatedOrder.customerEmail,
         phone: updatedOrder.customerPhone,
       },
-      items: updatedOrder.items.map(item => ({
+      items: updatedOrder.items.map((item: any) => ({
         id: item.id,
         menuItemId: item.menuItemId,
         menuItem: {

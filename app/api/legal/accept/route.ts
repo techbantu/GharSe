@@ -72,7 +72,7 @@ export async function POST(request: Request) {
 
     // Record acceptance for each document
     const acceptances = await Promise.all(
-      documents.map(async (doc: { type: string; version: string }) => {
+      documents.map(async (doc: any) => {
         // Check if already accepted this version
         const existing = await prisma.$queryRaw<Array<{ id: string }>>`
           SELECT id FROM legal_acceptances

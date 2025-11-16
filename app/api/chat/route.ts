@@ -251,7 +251,7 @@ Use this information proactively to personalize the experience. You can use getC
     // Add cart context to system prompt for AI awareness
     if (cartData && cartData.items.length > 0) {
       const cartSummary = cartData.items
-        .map(item => `${item.name} (x${item.quantity}) - ₹${item.price}`)
+        .map((item: any) => `${item.name} (x${item.quantity}) - ₹${item.price}`)
         .join(', ');
       
       enhancedSystemPrompt += `\n\n**CURRENT CART (${cartData.itemCount} items, ₹${cartData.total} total):**
@@ -285,14 +285,14 @@ Make them feel their cart is smart, but time-sensitive. Drive that order home!`;
         role: 'system',
         content: enhancedSystemPrompt,
       },
-      ...messages.slice(-10).map(msg => ({ // Keep last 10 messages for context
+      ...messages.slice(-10).map((msg: any) => ({ // Keep last 10 messages for context
         role: msg.role as 'user' | 'assistant' | 'system',
         content: msg.content,
       })),
     ];
 
     // Convert our function definitions to OpenAI format
-    const tools: OpenAI.Chat.ChatCompletionTool[] = Object.values(aiChatFunctions).map(func => ({
+    const tools: OpenAI.Chat.ChatCompletionTool[] = Object.values(aiChatFunctions).map((func: any) => ({
       type: 'function' as const,
       function: {
         name: func.name,
@@ -319,7 +319,7 @@ Make them feel their cart is smart, but time-sensitive. Drive that order home!`;
     if (responseMessage.tool_calls && responseMessage.tool_calls.length > 0) {
       // Execute all function calls
       functionResults = await Promise.all(
-        responseMessage.tool_calls.map(async (toolCall) => {
+        responseMessage.tool_calls.map(async (toolCall: any) => {
           if (toolCall.type === 'function') {
             const functionName = toolCall.function.name;
             const functionArgs = JSON.parse(toolCall.function.arguments);
@@ -366,7 +366,7 @@ Make them feel their cart is smart, but time-sensitive. Drive that order home!`;
       message: finalResponse,
       actions, // NEW: Action buttons for frontend
       sessionId, // Return session ID for cart operations
-      functionsCalled: functionResults.map(r => r.name),
+      functionsCalled: functionResults.map((r: any) => r.name),
       timestamp: new Date().toISOString(),
     });
 
@@ -432,7 +432,7 @@ function zodToJsonSchema(schema: z.ZodObject<any>): any {
   const properties: any = {};
   const required: string[] = [];
 
-  Object.keys(shape).forEach(key => {
+  Object.keys(shape).forEach((key: string) => {
     const field = shape[key];
     properties[key] = zodTypeToJsonSchema(field);
 
@@ -478,7 +478,7 @@ async function generateActionButtons(aiResponse: string, functionResults: any[],
   // ===== LAYER 1: Function Results (Highest Priority) =====
   
   // Check if AI called searchMenuItems
-  const searchResults = functionResults.find(r => r.name === 'searchMenuItems');
+  const searchResults = functionResults.find((r: any) => r.name === 'searchMenuItems');
   if (searchResults) {
     try {
       const result = JSON.parse(searchResults.content);
@@ -493,7 +493,7 @@ async function generateActionButtons(aiResponse: string, functionResults: any[],
   }
 
   // Check if AI called getPopularItems
-  const popularResults = functionResults.find(r => r.name === 'getPopularItems');
+  const popularResults = functionResults.find((r: any) => r.name === 'getPopularItems');
   if (popularResults) {
     try {
       const result = JSON.parse(popularResults.content);
@@ -517,7 +517,7 @@ async function generateActionButtons(aiResponse: string, functionResults: any[],
       const extractedItems = extractItemsFromMessage(aiResponse);
       if (extractedItems.length > 0) {
         const matchedItems = await matchItemsToDatabase(extractedItems);
-        matchedItems.forEach(item => {
+        matchedItems.forEach((item: any) => {
           if (item.confidence >= 0.8) { // 80% confidence threshold
             detectedItems.set(item.id, {
               id: item.id,
@@ -537,13 +537,13 @@ async function generateActionButtons(aiResponse: string, functionResults: any[],
   
   const itemsArray = Array.from(detectedItems.values());
   
-  console.log('[Button Gen] All detected items:', itemsArray.map(i => i.name));
+  console.log('[Button Gen] All detected items:', itemsArray.map((i: any) => i.name));
   console.log('[Button Gen] AI Response:', aiResponse.substring(0, 200));
   
   // GENIUS FILTER: Show items that AI mentioned OR were returned by function calls
   // GENIUS FIX: If function returned items but AI didn't mention them (e.g., said "out of stock" incorrectly),
   // still show the items so user can add them!
-  const mentionedItems = itemsArray.filter(item => {
+  const mentionedItems = itemsArray.filter((item: any) => {
     const itemNameLower = item.name.toLowerCase();
     const responseLower = aiResponse.toLowerCase();
     
@@ -559,7 +559,7 @@ async function generateActionButtons(aiResponse: string, functionResults: any[],
     // Strategy 3: Reverse match - check if shortened name in response matches item
     // e.g., response says "tikka masala", item is "Chicken Tikka Masala"
     const responseWords = responseLower.split(/\s+/);
-    const reverseMatch = responseWords.some(rWord => {
+    const reverseMatch = responseWords.some((rWord: string) => {
       if (rWord.length <= 4) return false; // Skip short words
       return itemNameLower.includes(rWord);
     });
@@ -580,9 +580,9 @@ async function generateActionButtons(aiResponse: string, functionResults: any[],
     return isMatched;
   });
   
-  console.log('[Button Gen] Mentioned items (filtered):', mentionedItems.map(i => i.name));
+  console.log('[Button Gen] Mentioned items (filtered):', mentionedItems.map((i: any) => i.name));
   
-  mentionedItems.forEach(item => {
+  mentionedItems.forEach((item: any) => {
     actions.push({
       type: 'add_to_cart',
       label: `Add ${item.name}`,
@@ -596,13 +596,13 @@ async function generateActionButtons(aiResponse: string, functionResults: any[],
 
   // ===== ADD URGENCY DATA TO BUTTONS =====
   
-  const demandResults = functionResults.find(r => r.name === 'getItemDemandPressure');
+  const demandResults = functionResults.find((r: any) => r.name === 'getItemDemandPressure');
   if (demandResults) {
     try {
       const result = JSON.parse(demandResults.content);
       if (result.success && result.items) {
         result.items.forEach((item: any) => {
-          const existingAction = actions.find(a => a.itemId === item.itemId);
+          const existingAction = actions.find((a: any) => a.itemId === item.itemId);
           if (existingAction && item.urgencyLevel) {
             existingAction.urgency = {
               level: item.urgencyLevel,
@@ -619,7 +619,7 @@ async function generateActionButtons(aiResponse: string, functionResults: any[],
 
   // ===== GENIUS FEATURE: "Add All Items" Bulk Button =====
   
-  const addToCartActions = actions.filter(a => a.type === 'add_to_cart');
+  const addToCartActions = actions.filter((a: any) => a.type === 'add_to_cart');
   
   // GENIUS FIX: Check if items are already in cart before showing "Add All" button
   const cartItemIds = new Set(
@@ -627,7 +627,7 @@ async function generateActionButtons(aiResponse: string, functionResults: any[],
   );
   
   // Only show "Add All" if we have 2+ items AND not all items are already in cart
-  const itemsNotInCart = addToCartActions.filter(action => 
+  const itemsNotInCart = addToCartActions.filter((action: any) => 
     action.itemId && !cartItemIds.has(action.itemId)
   );
   
@@ -641,7 +641,7 @@ async function generateActionButtons(aiResponse: string, functionResults: any[],
     actions.push({
       type: 'add_all_to_cart',
       label: `Add All ${addToCartActions.length} Items`, // Clean label, NO price
-      items: addToCartActions.map(action => ({
+      items: addToCartActions.map((action: any) => ({
         itemId: action.itemId!,
         name: action.itemName!,
         quantity: 1,
@@ -655,7 +655,7 @@ async function generateActionButtons(aiResponse: string, functionResults: any[],
 
   // ===== CHECKOUT BUTTON =====
   
-  const cartModified = functionResults.some(r => r.name === 'addItemToCart');
+  const cartModified = functionResults.some((r: any) => r.name === 'addItemToCart');
   const hasItemsInCart = cartData && cartData.items && cartData.items.length > 0;
   
   if (cartModified || hasItemsInCart) {
@@ -666,7 +666,7 @@ async function generateActionButtons(aiResponse: string, functionResults: any[],
   }
 
   // Check if AI called proceedToCheckout
-  const checkoutCalled = functionResults.find(r => r.name === 'proceedToCheckout');
+  const checkoutCalled = functionResults.find((r: any) => r.name === 'proceedToCheckout');
   if (checkoutCalled) {
     const checkoutIndex = actions.findIndex(a => a.type === 'checkout');
     if (checkoutIndex >= 0) {

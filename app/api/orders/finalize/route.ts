@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
         orderNumber: finalizedOrder.orderNumber,
         total: finalizedOrder.total,
         customerName: finalizedOrder.customerName,
-        items: finalizedOrder.items.map(item => ({
+        items: finalizedOrder.items.map((item: any) => ({
           name: item.menuItem.name,
           quantity: item.quantity,
           price: item.price,

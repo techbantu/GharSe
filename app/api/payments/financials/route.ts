@@ -97,13 +97,13 @@ export async function GET(request: NextRequest) {
     // Calculate payout status
     // Stripe: Money is available after 2-7 days (T+2 to T+7)
     // Razorpay: Money is available after 1-3 days (T+1 to T+3)
-    const recentPayments = successfulPayments.filter(p => {
+    const recentPayments = successfulPayments.filter((p: any) => {
       const daysSince = (Date.now() - p.createdAt.getTime()) / (1000 * 60 * 60 * 24);
       return daysSince <= 7;
     });
 
     const availableNow = successfulPayments
-      .filter(p => {
+      .filter((p: any) => {
         const daysSince = (Date.now() - p.createdAt.getTime()) / (1000 * 60 * 60 * 24);
         // Stripe: Available after 2 days, Razorpay: Available after 1 day
         const threshold = p.paymentGateway === 'razorpay' ? 1 : 2;
@@ -112,7 +112,7 @@ export async function GET(request: NextRequest) {
       .reduce((sum: number, p: any) => sum + p.netAmount, 0);
 
     const inTransit = successfulPayments
-      .filter(p => {
+      .filter((p: any) => {
         const daysSince = (Date.now() - p.createdAt.getTime()) / (1000 * 60 * 60 * 24);
         const threshold = p.paymentGateway === 'razorpay' ? 1 : 2;
         return daysSince < threshold && !p.payoutId;
@@ -140,7 +140,7 @@ export async function GET(request: NextRequest) {
         successfulPaymentCount: successfulPayments.length,
       },
       byPaymentMethod: byMethod,
-      recentPayments: recentPayments.slice(0, 10).map(p => ({
+      recentPayments: recentPayments.slice(0, 10).map((p: any) => ({
         id: p.id,
         orderNumber: p.order.orderNumber,
         amount: p.netAmount,
@@ -148,7 +148,7 @@ export async function GET(request: NextRequest) {
         paidAt: p.paidAt,
         customerName: p.order.customerName,
       })),
-      pendingOrders: pendingOrders.map(o => ({
+      pendingOrders: pendingOrders.map((o: any) => ({
         orderNumber: o.orderNumber,
         amount: o.total,
         tip: o.tip || 0,
