@@ -13,7 +13,7 @@
  * Architecture: Production-grade security following OWASP best practices
  */
 
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { Customer } from '@prisma/client';
@@ -80,9 +80,11 @@ export function generateToken(customer: Customer): string {
     phoneVerified: customer.phoneVerified,
   };
 
-  return jwt.sign(payload, JWT_SECRET!, {
+  const options: SignOptions = {
     expiresIn: JWT_EXPIRES_IN,
-  });
+  };
+
+  return jwt.sign(payload, JWT_SECRET!, options);
 }
 
 /**
