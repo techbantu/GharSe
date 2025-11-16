@@ -257,12 +257,12 @@ async function createOrderLogic(body: unknown): Promise<Result<Order, AppError>>
             gracePeriodExpiresAt, // Grace period expiry timestamp
             modificationCount: 0, // No modifications yet
             items: {
-              create: data.items.map(item => ({
+              create: data.items.map((item: any) => ({
                 menuItemId: item.menuItem.id,
                 quantity: item.quantity,
                 price: item.menuItem.price,
                 subtotal: item.subtotal,
-                specialInstructions: item.customization || '',
+                specialInstructions: item.customization || item.specialInstructions || '',
               })),
             },
           },
