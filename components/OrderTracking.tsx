@@ -13,18 +13,22 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { 
-  MapPin, 
-  Clock, 
-  CheckCircle2, 
-  ChefHat, 
-  Package, 
+import {
+  MapPin,
+  Clock,
+  CheckCircle2,
+  ChefHat,
+  Package,
   TruckIcon,
   Phone,
-  Mail
+  Mail,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
 import { Order, OrderStatus } from '@/types';
 import { format } from 'date-fns';
+import { useOrderTracking } from '@/hooks/useSocket';
+import DeliveryMap from './DeliveryMap';
 
 interface OrderTrackingProps {
   orderId: string;
@@ -35,14 +39,17 @@ const OrderTracking: React.FC<OrderTrackingProps> = ({ orderId, orderNumber }) =
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
-  // Fetch order data
+
+  // Real-time WebSocket updates
+  const { orderStatus, deliveryLocation, connected } = useOrderTracking(orderId);
+
+  // Fetch initial order data
   useEffect(() => {
     const fetchOrder = async () => {
       try {
         const response = await fetch(`/api/orders/${orderId}`);
         const data = await response.json();
-        
+
         if (data.success) {
           setOrder(data.order);
         } else {
@@ -55,14 +62,23 @@ const OrderTracking: React.FC<OrderTrackingProps> = ({ orderId, orderNumber }) =
         setLoading(false);
       }
     };
-    
+
     fetchOrder();
-    
-    // Poll for updates every 10 seconds
-    const interval = setInterval(fetchOrder, 10000);
-    
-    return () => clearInterval(interval);
   }, [orderId]);
+
+  // Update order when WebSocket receives updates
+  useEffect(() => {
+    if (orderStatus && order) {
+      setOrder((prevOrder) => {
+        if (!prevOrder) return null;
+        return {
+          ...prevOrder,
+          status: orderStatus.status,
+          estimatedReadyTime: new Date(orderStatus.estimatedReadyTime),
+        };
+      });
+    }
+  }, [orderStatus, order]);
   
   if (loading) {
     return (
@@ -114,14 +130,32 @@ const OrderTracking: React.FC<OrderTrackingProps> = ({ orderId, orderNumber }) =
   
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
-      {/* Header */}
+      {/* Header with Real-Time Status */}
       <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold text-gray-900 mb-2">
-          Order {order.orderNumber}
-        </h2>
+        <div className="flex items-center justify-center gap-2 mb-2">
+          <h2 className="text-3xl font-bold text-gray-900">
+            Order {order.orderNumber}
+          </h2>
+          {connected ? (
+            <div className="flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
+              <Wifi size={14} />
+              <span>Live</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1 px-3 py-1 bg-gray-200 text-gray-600 rounded-full text-sm">
+              <WifiOff size={14} />
+              <span>Offline</span>
+            </div>
+          )}
+        </div>
         <p className="text-gray-600">
           Placed on {format(order.createdAt, 'MMMM d, yyyy h:mm a')}
         </p>
+        {connected && (
+          <p className="text-sm text-green-600 mt-1">
+            ✓ Real-time updates enabled
+          </p>
+        )}
       </div>
       
       {/* Status Timeline */}
@@ -252,13 +286,30 @@ const OrderTracking: React.FC<OrderTrackingProps> = ({ orderId, orderNumber }) =
         </div>
       </div>
       
-      {/* Map Placeholder */}
-      {order.deliveryAddress && process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && (
+      {/* Live Delivery Map */}
+      {order.deliveryAddress && order.orderType === 'delivery' && (
         <div className="bg-white rounded-xl shadow-lg p-6">
-          <h3 className="text-xl font-semibold mb-4">Delivery Location</h3>
-          <div className="aspect-video bg-gray-200 rounded-lg flex items-center justify-center">
-            <p className="text-gray-500">Map integration ready (Google Maps API key required)</p>
-          </div>
+          <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+            <MapPin size={20} className="text-primary-500" />
+            Live Delivery Tracking
+          </h3>
+          <DeliveryMap
+            restaurantLocation={{ lat: 17.3616, lng: 78.4747 }} // GharSe Kitchen location
+            deliveryLocation={{
+              lat: order.deliveryAddress.latitude || 17.3616,
+              lng: order.deliveryAddress.longitude || 78.4747,
+            }}
+            driverLocation={deliveryLocation}
+            orderId={order.id}
+            className="h-96"
+          />
+          <p className="text-sm text-gray-500 mt-2 text-center">
+            {deliveryLocation ? (
+              <span className="text-green-600">✓ Live tracking active</span>
+            ) : (
+              <span>Tracking will activate when driver picks up your order</span>
+            )}
+          </p>
         </div>
       )}
     </div>
