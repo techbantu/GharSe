@@ -1185,3 +1185,120 @@ model DatabaseChange {
   @@index([commandTag])
   @@map("database_changes")
 }
+
+// ===== ADVANCED RECOMMENDATION SYSTEM =====
+
+// Thompson Sampling Multi-Armed Bandit Statistics
+// Tracks impressions and conversions for exploration/exploitation
+model BanditStats {
+  id          String   @id @default(cuid())
+  itemId      String   @unique // MenuItem ID
+  impressions Int      @default(0) // Times shown to users
+  conversions Int      @default(0) // Times added to cart/ordered
+  alpha       Float    @default(1) // Beta distribution α parameter
+  beta        Float    @default(1) // Beta distribution β parameter
+  updatedAt   DateTime @updatedAt
+
+  @@index([itemId])
+  @@index([updatedAt])
+}
+
+// Collaborative Filtering - User-Item Interactions
+// Tracks user preferences with temporal decay
+model UserItemInteraction {
+  id          String   @id @default(cuid())
+  customerId  String
+  itemId      String
+  interaction String   // "view", "add_to_cart", "order", "favorite"
+  weight      Float    @default(1.0) // Interaction strength
+  createdAt   DateTime @default(now())
+
+  @@unique([customerId, itemId, interaction])
+  @@index([customerId])
+  @@index([itemId])
+  @@index([createdAt])
+}
+
+// Affinity Rules - Association Mining Results
+// "Customers who bought A also bought B"
+model AffinityRule {
+  id          String   @id @default(cuid())
+  antecedent  String   // JSON array of item IDs (if part)
+  consequent  String   // JSON array of item IDs (then part)
+  support     Float    // How often pattern occurs (0-1)
+  confidence  Float    // P(consequent|antecedent) (0-1)
+  lift        Float    // Confidence / P(consequent)
+  orderCount  Int      @default(0)
+  updatedAt   DateTime @updatedAt
+
+  @@unique([antecedent, consequent])
+  @@index([support])
+  @@index([confidence])
+  @@index([lift])
+}
+
+// Trending Velocity Tracking
+// Tracks order velocity over time windows
+model ItemVelocity {
+  id            String   @id @default(cuid())
+  itemId        String
+  windowHours   Int      // Time window (1, 3, 6, 24, etc.)
+  orderCount    Int      @default(0)
+  velocity      Float    @default(0) // Orders per hour change
+  percentChange Float    @default(0)
+  momentum      String   @default("stable") // "rising", "stable", "falling"
+  windowStart   DateTime
+  windowEnd     DateTime
+  createdAt     DateTime @default(now())
+
+  @@unique([itemId, windowHours, windowStart])
+  @@index([itemId])
+  @@index([velocity])
+  @@index([momentum])
+  @@index([windowStart])
+}
+
+// A/B Test Assignments
+// Track which algorithm variant users see
+model ABTestAssignment {
+  id          String   @id @default(cuid())
+  sessionId   String
+  customerId  String?
+  variant     String   // "A", "B", "C"
+  algorithm   String   // "recommendation_engine", "trending_display", etc.
+  assignedAt  DateTime @default(now())
+
+  @@unique([sessionId, algorithm])
+  @@index([sessionId])
+  @@index([customerId])
+  @@index([variant])
+  @@index([algorithm])
+}
+
+// Recommendation Performance Metrics
+// Track how well recommendations perform
+model RecommendationMetric {
+  id              String   @id @default(cuid())
+  sessionId       String
+  customerId      String?
+  itemId          String
+  algorithm       String   // Which algorithm recommended it
+  variant         String?  // A/B test variant
+  rank            Int      // Position in recommendations (1-based)
+  score           Float    // Recommendation score
+  shown           Boolean  @default(false) // Was it displayed?
+  clicked         Boolean  @default(false) // Did user click/view?
+  addedToCart     Boolean  @default(false) // Did user add to cart?
+  ordered         Boolean  @default(false) // Did user order?
+  shownAt         DateTime @default(now())
+  clickedAt       DateTime?
+  addedToCartAt   DateTime?
+  orderedAt       DateTime?
+
+  @@index([sessionId])
+  @@index([customerId])
+  @@index([itemId])
+  @@index([algorithm])
+  @@index([variant])
+  @@index([shownAt])
+}
