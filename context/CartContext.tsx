@@ -348,6 +348,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
   
   // Load cart from localStorage on mount (client-side only)
+  // GENIUS FIX: Validate and refresh prices from database to prevent stale data
   useEffect(() => {
     if (!isMounted) return;
     
@@ -355,12 +356,110 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (savedCart) {
       try {
         const parsedCart = JSON.parse(savedCart);
-        dispatch({ type: 'LOAD_CART', payload: parsedCart });
+        
+        // GENIUS: Check for stale prices and refresh from database
+        validateAndRefreshCartPrices(parsedCart).then((updatedCart) => {
+          dispatch({ type: 'LOAD_CART', payload: updatedCart });
+        });
       } catch (error) {
         console.error('Failed to load cart from localStorage:', error);
       }
     }
   }, [isMounted]);
+  
+  /**
+   * GENIUS FUNCTION: Validate Cart Prices Against Database
+   * 
+   * Problem: Users might have items in cart with old prices (₹0) from before
+   * database was properly seeded. This causes confusion.
+   * 
+   * Solution: On cart load, fetch fresh prices from database and update any
+   * items that have incorrect prices.
+   * 
+   * @param cart - Cart loaded from localStorage
+   * @returns Updated cart with fresh prices from database
+   */
+  async function validateAndRefreshCartPrices(cart: Cart): Promise<Cart> {
+    // If cart is empty, nothing to validate
+    if (!cart.items || cart.items.length === 0) {
+      return cart;
+    }
+    
+    try {
+      // Extract all menu item IDs from cart
+      const menuItemIds = cart.items.map(item => item.menuItem.id);
+      
+      // Fetch fresh data from database for all cart items
+      const response = await fetch('/api/menu');
+      if (!response.ok) {
+        console.warn('[Cart Price Validation] Failed to fetch menu, using existing prices');
+        return cart;
+      }
+      
+      const { items: menuItems } = await response.json();
+      
+      // Create a map for fast lookup
+      const menuItemMap = new Map(
+        menuItems.map((item: MenuItem) => [item.id, item])
+      );
+      
+      // Track if any prices were updated
+      let pricesUpdated = false;
+      
+      // Update cart items with fresh prices
+      const updatedItems = cart.items.map((cartItem) => {
+        const freshMenuItem = menuItemMap.get(cartItem.menuItem.id);
+        
+        if (!freshMenuItem) {
+          console.warn(`[Cart Price Validation] Menu item not found: ${cartItem.menuItem.name} (${cartItem.menuItem.id})`);
+          return cartItem; // Keep original if item not found
+        }
+        
+        // Check if price needs updating
+        if (cartItem.menuItem.price !== freshMenuItem.price) {
+          console.log(`[Cart Price Validation] Price mismatch for ${cartItem.menuItem.name}:`);
+          console.log(`  Old price: ₹${cartItem.menuItem.price}`);
+          console.log(`  New price: ₹${freshMenuItem.price}`);
+          console.log(`  Updating to fresh price...`);
+          
+          pricesUpdated = true;
+          
+          // Create updated cart item with fresh menu data
+          return {
+            ...cartItem,
+            menuItem: freshMenuItem, // Replace entire menuItem with fresh data
+            subtotal: cartItem.quantity * freshMenuItem.price, // Recalculate subtotal
+          };
+        }
+        
+        return cartItem;
+      });
+      
+      if (pricesUpdated) {
+        console.log('[Cart Price Validation] ✅ Prices updated from database');
+        
+        // Recalculate cart totals with updated prices
+        const refreshedCart = calculateTotals(
+          updatedItems,
+          cart.promoCode,
+          cart.discount ? cart.discount / updatedItems.reduce((sum, item) => sum + item.subtotal, 0) : 0
+        );
+        
+        // Save updated cart back to localStorage
+        localStorage.setItem('bantusKitchenCart', JSON.stringify(refreshedCart));
+        
+        return refreshedCart;
+      }
+      
+      console.log('[Cart Price Validation] ✅ All prices are up to date');
+      return cart;
+      
+    } catch (error) {
+      console.error('[Cart Price Validation] Error validating prices:', error);
+      // On error, return original cart (better to show stale prices than crash)
+      return cart;
+    }
+  }
   
   // Save cart to localStorage whenever it changes (client-side only)
   // ALSO broadcast to other tabs (BroadcastChannel ONLY - no localStorage fallback)
