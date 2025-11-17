@@ -20,9 +20,10 @@ import { Clock, ChefHat, IndianRupee, ShoppingBag } from 'lucide-react';
 interface OrderStatsBarProps {
   orders: Order[];
   className?: string;
+  showRevenue?: boolean; // NEW: Control whether to show revenue (default true for backward compatibility)
 }
 
-export default function OrderStatsBar({ orders, className = '' }: OrderStatsBarProps) {
+export default function OrderStatsBar({ orders, className = '', showRevenue = true }: OrderStatsBarProps) {
   // Calculate real-time stats
   const stats = useMemo(() => {
     const todayOrders = orders.filter(isOrderToday);
@@ -63,16 +64,18 @@ export default function OrderStatsBar({ orders, className = '' }: OrderStatsBarP
           </div>
         </div>
 
-        {/* Today's Revenue */}
-        <div className="stat-card stat-revenue">
-          <div className="stat-icon">
-            <IndianRupee size={24} />
+        {/* Today's Revenue - Hidden in kitchen mode */}
+        {showRevenue && (
+          <div className="stat-card stat-revenue">
+            <div className="stat-icon">
+              <IndianRupee size={24} />
+            </div>
+            <div className="stat-content">
+              <div className="stat-label">Today's Revenue</div>
+              <div className="stat-value">₹{stats.todayRevenue.toLocaleString('en-IN')}</div>
+            </div>
           </div>
-          <div className="stat-content">
-            <div className="stat-label">Today's Revenue</div>
-            <div className="stat-value">₹{stats.todayRevenue.toLocaleString('en-IN')}</div>
-          </div>
-        </div>
+        )}
 
         {/* Total Orders Today */}
         <div className="stat-card stat-total">

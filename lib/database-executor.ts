@@ -131,13 +131,16 @@ class DatabaseExecutor {
    */
   async ensureTable(tableName: string, createSql: string): Promise<boolean> {
     try {
-      // Check if table exists using SQLite syntax (default for this project)
+      // Check if table exists using PostgreSQL syntax (Supabase uses PostgreSQL)
       const checkResult = await prisma.$queryRawUnsafe(`
-        SELECT name FROM sqlite_master 
-        WHERE type='table' AND name='${tableName}';
+        SELECT EXISTS (
+          SELECT 1 FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = '${tableName}'
+        ) as exists;
       `) as any[];
       
-      if (!checkResult || checkResult.length === 0) {
+      if (!checkResult || !checkResult[0]?.exists) {
         console.log(`📋 Creating table: ${tableName}`);
         const createResult = await this.execute(createSql, `Create table ${tableName}`);
         return createResult.success;
@@ -145,7 +148,7 @@ class DatabaseExecutor {
 
       return true;
     } catch (error: any) {
-      // Fallback for PostgreSQL/Supabase (if provider changes)
+      // Fallback for SQLite (local development)
       try {
         const checkResult = await prisma.$queryRawUnsafe(`
           SELECT EXISTS (

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import { useOrderRealtime } from '@/hooks/useOrderRealtime';
 import Image from 'next/image';
 import {
   ChevronLeft,
@@ -68,6 +69,29 @@ export default function OrderDetailPage() {
 
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Real-time order updates
+  const { isConnected } = useOrderRealtime({
+    orderId: id,
+    enabled: !!id && !loading,
+    onStatusUpdate: (data) => {
+      // Update order status in real-time
+      setOrder(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          status: data.status as OrderStatus,
+          estimatedDelivery: data.estimatedDelivery ? new Date(data.estimatedDelivery) : prev.estimatedDelivery,
+        };
+      });
+    },
+    onModification: (data) => {
+      // Refresh order data when modified
+      if (data.modificationType === 'item_update') {
+        fetchOrderDetail();
+      }
+    },
+  });
 
   useEffect(() => {
     if (id) {
@@ -196,6 +220,7 @@ export default function OrderDetailPage() {
               <ChevronLeft size={24} style={{ color: '#111827' }} />
             </button>
             <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <h1 style={{
                 fontSize: '1.25rem',
                 fontWeight: 700,
@@ -204,12 +229,29 @@ export default function OrderDetailPage() {
               }}>
                 Order Complete
               </h1>
+                {/* Real-time connection indicator */}
+                <div style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  backgroundColor: isConnected ? '#10B981' : '#D1D5DB',
+                  boxShadow: isConnected ? '0 0 8px rgba(16, 185, 129, 0.5)' : 'none',
+                  transition: 'all 0.3s ease',
+                }}
+                title={isConnected ? 'Real-time updates active' : 'Connecting...'}
+                />
+              </div>
               <p style={{
                 fontSize: '0.875rem',
                 color: '#6B7280',
                 margin: 0,
               }}>
                 {format(new Date(order.createdAt), 'EEEE, MMM dd, yyyy \'at\' h:mm a')}
+                {isConnected && (
+                  <span style={{ color: '#10B981', marginLeft: '8px' }}>
+                    • Live updates enabled
+                  </span>
+                )}
               </p>
             </div>
           </div>

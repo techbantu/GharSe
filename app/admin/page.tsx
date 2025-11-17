@@ -67,6 +67,9 @@ import OrderStatsBar from '@/components/admin/OrderStatsBar';
 import OrderFilterBar from '@/components/admin/OrderFilterBar';
 import CollapsibleOrderSection from '@/components/admin/CollapsibleOrderSection';
 import CompactOrderCard from '@/components/admin/CompactOrderCard';
+import OrderCalendar from '@/components/admin/OrderCalendar';
+import KitchenTicket from '@/components/admin/KitchenTicket';
+import FinanceTab from '@/components/admin/FinanceTab';
 import Logo from '@/components/Logo';
 
 // Safe wrapper for stopRepeatingNotification to handle import issues
@@ -157,7 +160,7 @@ const AdminDashboard: React.FC = () => {
   const router = useRouter();
   
   // Tab state
-  const [activeTab, setActiveTab] = useState<'orders' | 'menu' | 'refunds'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'menu' | 'refunds' | 'finance'>('orders');
   
   // Refunds & Cancellations state
   const [refundsData, setRefundsData] = useState<any>(null);
@@ -1712,38 +1715,6 @@ const AdminDashboard: React.FC = () => {
               </div>
             </div>
             <div className="flex items-center gap-4">
-              {/* Test Sound Button (for debugging and audio unlock) */}
-              <button
-                onClick={() => {
-                  unlockAudio();
-                  playNotificationSound();
-                  console.log('🔊 Test sound button clicked');
-                }}
-                style={{
-                  background: 'rgba(255, 255, 255, 0.2)',
-                  border: '1px solid rgba(255, 255, 255, 0.3)',
-                  borderRadius: '0.5rem',
-                  padding: '0.5rem 1rem',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  transition: 'all 0.2s',
-                  fontSize: '0.875rem',
-                  fontWeight: 600,
-                  color: 'white',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.3)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
-                }}
-                title="Test notification sound"
-              >
-                🔊 Test Sound
-              </button>
-              
               {/* Notification Bell with Dropdown */}
               <div className="relative" style={{ position: 'relative' }} data-notification-dropdown>
                 <button
@@ -2196,6 +2167,41 @@ const AdminDashboard: React.FC = () => {
             )}
           </button>
           
+          <button
+            onClick={() => setActiveTab('finance')}
+            style={{
+              padding: '0.75rem 1.25rem',
+              backgroundColor: activeTab === 'finance' ? '#F97316' : 'transparent',
+              color: activeTab === 'finance' ? '#ffffff' : '#4B5563',
+              border: 'none',
+              borderBottom: activeTab === 'finance' ? '3px solid #EA580C' : '3px solid transparent',
+              fontSize: '0.875rem',
+              fontWeight: activeTab === 'finance' ? 600 : 500,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              transition: 'all 0.15s ease',
+              marginBottom: '-1px',
+              whiteSpace: 'nowrap'
+            }}
+            onMouseEnter={(e) => {
+              if (activeTab !== 'finance') {
+                e.currentTarget.style.backgroundColor = '#F9FAFB';
+                e.currentTarget.style.color = '#111827';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (activeTab !== 'finance') {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = '#4B5563';
+              }
+            }}
+          >
+            <IndianRupee size={16} />
+            <span>Finance</span>
+          </button>
+          
           <div style={{ flex: 1 }} />
           
           <button
@@ -2307,152 +2313,139 @@ const AdminDashboard: React.FC = () => {
             </div>
           </div>
           
-          <div className="stat-card" style={{
-            backgroundColor: '#ffffff',
-            padding: '1.5rem',
+          {/* Financial Info Removed - See Finance Tab */}
+          <div style={{
+            background: '#fef3c7',
+            border: '2px solid #fbbf24',
             borderRadius: '0.75rem',
-            boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
-            border: '1px solid #f3f4f6',
-            transition: 'all 0.2s ease'
+            padding: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            gridColumn: '1 / -1',
           }}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Money Received Today</p>
-                {financialLoading ? (
-                  <p className="text-3xl font-bold text-gray-400">Loading...</p>
-                ) : financialData ? (
-                  <div>
-                    <p className="text-3xl font-bold text-green-600">
-                      ₹{financialData.totalReceived.toFixed(2)}
-                    </p>
-                    {financialData.totalPending > 0 && (
-                      <p className="text-xs text-orange-600 mt-1">
-                        ₹{financialData.totalPending.toFixed(2)} pending
-                      </p>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-3xl font-bold text-green-600">₹{stats.todayRevenue.toFixed(2)}</p>
-                )}
-              </div>
-              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                <IndianRupee className="text-green-600" size={24} />
-              </div>
+            <div style={{
+              width: '40px',
+              height: '40px',
+              background: '#f59e0b',
+              borderRadius: '0.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'white',
+              fontSize: '1.25rem',
+              flexShrink: 0,
+            }}>
+              💰
             </div>
+            <div style={{ flex: 1 }}>
+              <p style={{ margin: 0, fontSize: '0.875rem', color: '#92400e', fontWeight: 600 }}>
+                Need to check revenue or payments?
+              </p>
+              <p style={{ margin: 0, fontSize: '0.75rem', color: '#b45309', marginTop: '0.25rem' }}>
+                Click the <strong>Finance</strong> tab above to see all money-related data
+              </p>
+            </div>
+            <button
+              onClick={() => setActiveTab('finance')}
+              style={{
+                padding: '0.5rem 1rem',
+                background: '#f59e0b',
+                color: 'white',
+                border: 'none',
+                borderRadius: '0.5rem',
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                whiteSpace: 'nowrap',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = '#d97706';
+                e.currentTarget.style.transform = 'scale(1.05)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = '#f59e0b';
+                e.currentTarget.style.transform = 'scale(1)';
+              }}
+            >
+              Go to Finance →
+            </button>
           </div>
           
-          {/* Financial Status Card */}
-          {financialData && (
-            <div className="stat-card" style={{
-              backgroundColor: '#f0fdf4',
-              padding: '1.5rem',
-              borderRadius: '0.75rem',
-              boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
-              border: '2px solid #86efac',
-              gridColumn: '1 / -1', // Full width
-            }}>
-              <h3 className="text-lg font-semibold text-gray-800 mb-3">💰 Your Money Status</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Available Now</p>
-                  <p className="text-2xl font-bold text-green-600">
-                    ₹{financialData.availableNow.toFixed(2)}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">Ready to use</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">In Transit</p>
-                  <p className="text-2xl font-bold text-blue-600">
-                    ₹{financialData.inTransit.toFixed(2)}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">Processing (1-7 days)</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600 mb-1">Pending Collection</p>
-                  <p className="text-2xl font-bold text-orange-600">
-                    ₹{financialData.totalPending.toFixed(2)}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">Cash on delivery</p>
-                </div>
-              </div>
-              <div className="mt-4 pt-4 border-t border-green-200">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <p className="text-sm text-gray-700 flex-1">
-                    💡 <strong>How to get your money:</strong> Connect your bank account in Stripe/Razorpay dashboard. 
-                    Money automatically transfers daily.
-                  </p>
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      e.nativeEvent.stopImmediatePropagation();
-                      console.log('Setup Guide button clicked, current state:', showBankSetupGuide);
-                      setShowBankSetupGuide(prev => {
-                        console.log('Toggling guide, new state will be:', !prev);
-                        return !prev;
-                      });
-                      return false;
-                    }}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                    }}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:bg-blue-800 font-semibold text-sm whitespace-nowrap transition-all shadow-md hover:shadow-lg cursor-pointer"
-                    type="button"
-                    style={{ minWidth: '140px' }}
-                    role="button"
-                    aria-expanded={showBankSetupGuide}
-                    aria-controls="bank-setup-guide-content"
-                  >
-                    {showBankSetupGuide ? '▼ Hide Guide' : '▶ Setup Guide'}
-                  </button>
-                </div>
+          {/* Hidden button to maintain structure */}
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              e.nativeEvent.stopImmediatePropagation();
+              console.log('Setup Guide button clicked, current state:', showBankSetupGuide);
+              setShowBankSetupGuide(prev => {
+                console.log('Toggling guide, new state will be:', !prev);
+                return !prev;
+              });
+              return false;
+            }}
+            onMouseDown={(e) => {
+              e.preventDefault();
+            }}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:bg-blue-800 font-semibold text-sm whitespace-nowrap transition-all shadow-md hover:shadow-lg cursor-pointer"
+            type="button"
+            style={{ minWidth: '140px', display: 'none' }}
+            role="button"
+            aria-expanded={showBankSetupGuide}
+            aria-controls="bank-setup-guide-content"
+          >
+            {showBankSetupGuide ? '▼ Hide Guide' : '▶ Setup Guide'}
+          </button>
+          
+          {/* Bank Setup Guide - Expandable Section */}
+          {showBankSetupGuide && (
+            <div 
+              id="bank-setup-guide-content"
+              style={{
+                marginTop: '1rem',
+                backgroundColor: '#ffffff',
+                border: '1px solid #e5e7eb',
+                borderRadius: '0.5rem',
+                padding: '1.5rem',
+                maxHeight: '600px',
+                overflowY: 'auto',
+                gridColumn: '1 / -1',
+              }}
+              role="region"
+              aria-label="Bank Account Setup Guide"
+            >
+              <div style={{ maxWidth: '100%' }}>
+                <h3 style={{
+                  fontSize: '1.25rem',
+                  fontWeight: 700,
+                  color: '#111827',
+                  marginBottom: '1rem',
+                  marginTop: 0
+                }}>
+                  🏦 Bank Account Setup Guide
+                </h3>
                 
-                {/* Bank Setup Guide - Expandable Section */}
-                {showBankSetupGuide && (
-                  <div 
-                    id="bank-setup-guide-content"
-                    style={{
-                      marginTop: '1rem',
-                      backgroundColor: '#ffffff',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '0.5rem',
-                      padding: '1.5rem',
-                      maxHeight: '600px',
-                      overflowY: 'auto'
-                    }}
-                    role="region"
-                    aria-label="Bank Account Setup Guide"
-                  >
-                    <div style={{ maxWidth: '100%' }}>
-                      <h3 style={{
-                        fontSize: '1.25rem',
-                        fontWeight: 700,
-                        color: '#111827',
-                        marginBottom: '1rem',
-                        marginTop: 0
-                      }}>
-                        🏦 Bank Account Setup Guide
-                      </h3>
-                      
-                      <div style={{ marginBottom: '1.5rem' }}>
-                        <h4 style={{
-                          fontSize: '0.9375rem',
-                          fontWeight: 600,
-                          color: '#1f2937',
-                          marginBottom: '0.5rem',
-                          marginTop: 0
-                        }}>
-                          Current Situation
-                        </h4>
-                        <p style={{
-                          fontSize: '0.875rem',
-                          color: '#374151',
-                          marginBottom: '0.75rem',
-                          lineHeight: '1.5',
-                          marginTop: 0
-                        }}>
-                          Your "Today's Revenue" shows <strong style={{ fontWeight: 600 }}>order totals</strong>, but this is <strong style={{ fontWeight: 600 }}>NOT actual money</strong> in your bank account yet.
-                        </p>
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <h4 style={{
+                    fontSize: '0.9375rem',
+                    fontWeight: 600,
+                    color: '#1f2937',
+                    marginBottom: '0.5rem',
+                    marginTop: 0
+                  }}>
+                    Current Situation
+                  </h4>
+                  <p style={{
+                    fontSize: '0.875rem',
+                    color: '#374151',
+                    marginBottom: '0.75rem',
+                    lineHeight: '1.5',
+                    marginTop: 0
+                  }}>
+                    Your "Today's Revenue" shows <strong style={{ fontWeight: 600 }}>order totals</strong>, but this is <strong style={{ fontWeight: 600 }}>NOT actual money</strong> in your bank account yet.
+                  </p>
                         <div style={{
                           backgroundColor: '#fef2f2',
                           border: '1px solid #fecaca',
@@ -2864,11 +2857,8 @@ STRIPE_WEBHOOK_SECRET=whsec_...`}
                           lineHeight: '1.5'
                         }}>
                           Your money will automatically transfer to your bank account every day/week (based on your schedule)!
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                  </p>
+                </div>
               </div>
             </div>
           )}
@@ -2930,8 +2920,8 @@ STRIPE_WEBHOOK_SECRET=whsec_...`}
             </div>
           ) : (
             <>
-              {/* NEW: Smart Order Organization */}
-              <OrderStatsBar orders={orders} />
+              {/* NEW: Smart Order Organization - Kitchen Mode (No Revenue) */}
+              <OrderStatsBar orders={orders} showRevenue={false} />
               
               <OrderFilterBar
                 searchQuery={searchQuery}
@@ -3089,81 +3079,19 @@ STRIPE_WEBHOOK_SECRET=whsec_...`}
                     📦 All Orders
                   </h2>
                   
-                  {/* Date Filter Dropdown */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-                    <select
-                      value={dateRange.start.toISOString().split('T')[0]}
-                      onChange={(e) => {
-                        const selectedDate = new Date(e.target.value);
-                        selectedDate.setHours(0, 0, 0, 0);
-                        const endDate = new Date(selectedDate);
+                  {/* Interactive Calendar */}
+                  <div style={{ marginTop: '1rem' }}>
+                    <OrderCalendar
+                      orders={orders}
+                      selectedDate={dateRange.start}
+                      onDateSelect={(date) => {
+                        const startDate = new Date(date);
+                        startDate.setHours(0, 0, 0, 0);
+                        const endDate = new Date(date);
                         endDate.setHours(23, 59, 59, 999);
-                        setDateRange({ start: selectedDate, end: endDate });
+                        setDateRange({ start: startDate, end: endDate });
                       }}
-                      style={{
-                        padding: '0.5rem 1rem',
-                        borderRadius: '0.5rem',
-                        border: '2px solid #e2e8f0',
-                        fontSize: '0.875rem',
-                        fontWeight: 600,
-                        color: '#374151',
-                        backgroundColor: 'white',
-                        cursor: 'pointer',
-                        outline: 'none',
-                        transition: 'all 0.2s',
-                        minWidth: '150px'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = '#f97316';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = '#e2e8f0';
-                      }}
-                    >
-                      <option value={new Date().toISOString().split('T')[0]}>Today</option>
-                      <option value={new Date(Date.now() - 86400000).toISOString().split('T')[0]}>Yesterday</option>
-                      <option value={new Date(Date.now() - 2 * 86400000).toISOString().split('T')[0]}>2 Days Ago</option>
-                      <option value={new Date(Date.now() - 3 * 86400000).toISOString().split('T')[0]}>3 Days Ago</option>
-                      <option value={new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0]}>Last Week</option>
-                      <option value={new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0]}>Last Month</option>
-                    </select>
-                    
-                    {/* Show All Button */}
-                    <button
-                      onClick={() => {
-                        const start = new Date();
-                        start.setMonth(start.getMonth() - 6); // Show last 6 months
-                        start.setHours(0, 0, 0, 0);
-                        const end = new Date();
-                        end.setHours(23, 59, 59, 999);
-                        setDateRange({ start, end });
-                      }}
-                      style={{
-                        padding: '0.5rem 1rem',
-                        borderRadius: '0.5rem',
-                        border: '2px solid #e2e8f0',
-                        fontSize: '0.875rem',
-                        fontWeight: 600,
-                        color: '#6b7280',
-                        backgroundColor: 'white',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = '#f97316';
-                        e.currentTarget.style.color = '#f97316';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = '#e2e8f0';
-                        e.currentTarget.style.color = '#6b7280';
-                      }}
-                    >
-                      Show All
-                    </button>
-                    
-                    <span style={{ fontSize: '0.875rem', color: '#94a3b8', fontWeight: 600 }}>
-                      {allFilteredOrders.length} orders
-                    </span>
+                    />
                   </div>
                 </div>
               </div>
@@ -5507,6 +5435,23 @@ STRIPE_WEBHOOK_SECRET=whsec_...`}
           </div>
         </div>
       )}
+
+        {/* Finance Tab */}
+        {activeTab === 'finance' && (
+          <FinanceTab
+            financeData={{
+              todayRevenue: stats.todayRevenue,
+              pendingCollection: financialData?.totalPending || 0,
+              availableNow: financialData?.availableNow || 0,
+              inTransit: financialData?.inTransit || 0,
+              todayOrders: stats.todayOrders,
+              averageOrderValue: stats.todayOrders > 0 
+                ? stats.todayRevenue / stats.todayOrders
+                : 0,
+            }}
+            onSetupPayments={() => setShowBankSetupGuide(true)}
+          />
+        )}
     </div>
   );
 };

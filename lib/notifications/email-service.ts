@@ -55,41 +55,36 @@ const generateOrderConfirmationHTML = (order: Order): string => {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Order Confirmation - ${order.orderNumber}</title>
 </head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #1f2937; margin: 0; padding: 0; background-color: #f9fafb;">
-  <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
-    <!-- Header -->
-    <div style="background: linear-gradient(135deg, #FF6B35 0%, #F77F00 100%); padding: 32px 24px; text-align: center;">
-      <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700;">
-        🏠 GharSe
-      </h1>
-      <p style="color: #ffffff; margin: 8px 0 0 0; font-size: 14px; opacity: 0.95;">
-        From Real Homes To Your Hungry Heart
-      </p>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #1f2937; margin: 0; padding: 0; background: linear-gradient(135deg, #fff5f0 0%, #ffe8dc 100%);">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; box-shadow: 0 4px 20px rgba(255, 107, 53, 0.15);">
+    <!-- Header with Logo -->
+    <div style="background: linear-gradient(135deg, #fff9f5 0%, #ffffff 100%); padding: 16px 20px; text-align: center; border-bottom: 3px solid #FF6B35;">
+      <img src="${process.env.NEXT_PUBLIC_APP_URL || 'https://gharse.app'}/images/GharSe.png" alt="GharSe" style="max-width: 140px; height: auto; display: inline-block;" />
     </div>
 
     <!-- Order Confirmation Badge -->
-    <div style="text-align: center; padding: 24px;">
-      <div style="background-color: #10b981; color: #ffffff; display: inline-block; padding: 12px 24px; border-radius: 24px; font-weight: 600; font-size: 16px;">
+    <div style="text-align: center; padding: 16px 20px; background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);">
+      <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; display: inline-block; padding: 8px 20px; border-radius: 6px; font-weight: 600; font-size: 14px; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.25);">
         ✓ Order Confirmed
       </div>
     </div>
 
     <!-- Order Details -->
-    <div style="padding: 0 24px 24px 24px;">
-      <h2 style="color: #1f2937; font-size: 20px; margin: 0 0 16px 0;">
+    <div style="padding: 20px; background: linear-gradient(180deg, #ffffff 0%, #fffbf8 100%);">
+      <h2 style="color: #1f2937; font-size: 18px; margin: 0 0 12px 0; font-weight: 600;">
         Order #${order.orderNumber}
       </h2>
       
-      <div style="background-color: #f3f4f6; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
-        <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 14px;">Estimated Preparation Time</p>
-        <p style="margin: 0; color: #1f2937; font-size: 24px; font-weight: 700;">
+      <div style="background: linear-gradient(135deg, #fff5f0 0%, #ffe8dc 100%); border-radius: 8px; padding: 16px; margin-bottom: 16px; border-left: 4px solid #FF6B35; box-shadow: 0 2px 6px rgba(255, 107, 53, 0.08);">
+        <p style="margin: 0 0 6px 0; color: #f77f00; font-size: 12px; text-transform: uppercase; letter-spacing: 0.3px; font-weight: 600;">Estimated Preparation Time</p>
+        <p style="margin: 0; color: #1f2937; font-size: 28px; font-weight: 700;">
           ${new Date(order.estimatedReadyTime).toLocaleTimeString('en-IN', {
             hour: '2-digit',
             minute: '2-digit',
             hour12: true,
           })}
         </p>
-        <p style="margin: 8px 0 0 0; color: #6b7280; font-size: 12px;">
+        <p style="margin: 8px 0 0 0; color: #6b7280; font-size: 14px;">
           ${new Date(order.estimatedReadyTime).toLocaleDateString('en-IN', {
             weekday: 'long',
             year: 'numeric',
@@ -100,8 +95,8 @@ const generateOrderConfirmationHTML = (order: Order): string => {
       </div>
 
       <!-- Customer Info -->
-      <div style="margin-bottom: 24px;">
-        <h3 style="color: #1f2937; font-size: 16px; margin: 0 0 12px 0;">Delivery Details</h3>
+      <div style="margin-bottom: 16px; background-color: #f9fafb; padding: 12px; border-radius: 6px;">
+        <h3 style="color: #FF6B35; font-size: 15px; margin: 0 0 8px 0; font-weight: 600;">Delivery Details</h3>
         <p style="margin: 0 0 4px 0; color: #1f2937;"><strong>${order.customer.name}</strong></p>
         <p style="margin: 0 0 4px 0; color: #6b7280; font-size: 14px;">${order.customer.phone}</p>
         ${
@@ -117,49 +112,49 @@ const generateOrderConfirmationHTML = (order: Order): string => {
       </div>
 
       <!-- Order Items -->
-      <h3 style="color: #1f2937; font-size: 16px; margin: 0 0 12px 0;">Your Order</h3>
-      <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px;">
+      <h3 style="color: #FF6B35; font-size: 15px; margin: 0 0 10px 0; font-weight: 600;">Your Order</h3>
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 12px;">
         <tbody>
           ${itemsHTML}
         </tbody>
       </table>
 
       <!-- Pricing Summary -->
-      <table style="width: 100%; margin-bottom: 24px;">
+      <table style="width: 100%; margin-bottom: 16px; background-color: #f9fafb; border-radius: 6px; padding: 10px;">
         <tbody>
           <tr>
-            <td style="padding: 8px 0; color: #6b7280;">Subtotal</td>
-            <td style="padding: 8px 0; text-align: right; color: #1f2937;">₹${order.pricing.subtotal.toFixed(2)}</td>
+            <td style="padding: 6px 8px; color: #6b7280; font-size: 14px;">Subtotal</td>
+            <td style="padding: 6px 8px; text-align: right; color: #1f2937; font-weight: 500; font-size: 14px;">₹${order.pricing.subtotal.toFixed(2)}</td>
           </tr>
           <tr>
-            <td style="padding: 8px 0; color: #6b7280;">Tax</td>
-            <td style="padding: 8px 0; text-align: right; color: #1f2937;">₹${order.pricing.tax.toFixed(2)}</td>
+            <td style="padding: 6px 8px; color: #6b7280; font-size: 14px;">Tax</td>
+            <td style="padding: 6px 8px; text-align: right; color: #1f2937; font-weight: 500; font-size: 14px;">₹${order.pricing.tax.toFixed(2)}</td>
           </tr>
           <tr>
-            <td style="padding: 8px 0; color: #6b7280;">Delivery Fee</td>
-            <td style="padding: 8px 0; text-align: right; color: #1f2937;">
-              ${order.pricing.deliveryFee === 0 ? '<span style="color: #10b981;">FREE</span>' : `₹${order.pricing.deliveryFee.toFixed(2)}`}
+            <td style="padding: 6px 8px; color: #6b7280; font-size: 14px;">Delivery Fee</td>
+            <td style="padding: 6px 8px; text-align: right; color: #1f2937; font-weight: 500; font-size: 14px;">
+              ${order.pricing.deliveryFee === 0 ? '<span style="color: #10b981; font-weight: 600;">FREE</span>' : `₹${order.pricing.deliveryFee.toFixed(2)}`}
             </td>
           </tr>
           ${
             order.pricing.discount && order.pricing.discount > 0
               ? `
           <tr>
-            <td style="padding: 8px 0; color: #10b981;">Discount</td>
-            <td style="padding: 8px 0; text-align: right; color: #10b981;">-₹${order.pricing.discount.toFixed(2)}</td>
+            <td style="padding: 6px 8px; color: #10b981; font-size: 14px;">Discount</td>
+            <td style="padding: 6px 8px; text-align: right; color: #10b981; font-weight: 600; font-size: 14px;">-₹${order.pricing.discount.toFixed(2)}</td>
           </tr>
           `
               : ''
           }
-          <tr style="border-top: 2px solid #1f2937;">
-            <td style="padding: 12px 0; color: #1f2937; font-weight: 700; font-size: 18px;">Total</td>
-            <td style="padding: 12px 0; text-align: right; color: #1f2937; font-weight: 700; font-size: 18px;">₹${order.pricing.total.toFixed(2)}</td>
+          <tr style="border-top: 2px solid #FF6B35;">
+            <td style="padding: 10px 8px; color: #1f2937; font-weight: 700; font-size: 16px;">Total</td>
+            <td style="padding: 10px 8px; text-align: right; color: #FF6B35; font-weight: 700; font-size: 18px;">₹${order.pricing.total.toFixed(2)}</td>
           </tr>
         </tbody>
       </table>
 
       <!-- Payment Info -->
-      <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; border-radius: 4px; margin-bottom: 24px;">
+      <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-left: 3px solid #f59e0b; padding: 12px; border-radius: 6px; margin-bottom: 0; box-shadow: 0 1px 3px rgba(245, 158, 11, 0.08);">
         <p style="margin: 0; color: #92400e; font-size: 14px;">
           <strong>Payment:</strong> ${order.paymentMethod === 'cash-on-delivery' ? 'Cash on Delivery' : 'Online Payment'}
           ${order.paymentStatus === 'completed' ? '(Paid ✓)' : order.paymentMethod === 'cash-on-delivery' ? '' : '(Pending)'}
@@ -169,7 +164,7 @@ const generateOrderConfirmationHTML = (order: Order): string => {
       ${
         order.specialInstructions
           ? `
-      <div style="background-color: #f3f4f6; padding: 12px; border-radius: 4px; margin-bottom: 24px;">
+      <div style="background-color: #f3f4f6; padding: 12px; border-radius: 4px; margin-top: 12px; margin-bottom: 0;">
         <p style="margin: 0; color: #6b7280; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Special Instructions</p>
         <p style="margin: 8px 0 0 0; color: #1f2937; font-size: 14px;">${order.specialInstructions}</p>
       </div>
@@ -177,30 +172,19 @@ const generateOrderConfirmationHTML = (order: Order): string => {
           : ''
       }
 
-      <!-- Contact Info -->
-      <div style="border-top: 1px solid #e5e7eb; padding-top: 24px; text-align: center;">
-        <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 14px;">Questions about your order?</p>
-        <p style="margin: 0; color: #1f2937; font-size: 16px;">
-          <a href="tel:${restaurantInfo.contact.phone}" style="color: #FF6B35; text-decoration: none; font-weight: 600;">
-            ${restaurantInfo.contact.phone}
-          </a>
-        </p>
-        <p style="margin: 8px 0 0 0; color: #6b7280; font-size: 14px;">
-          <a href="https://wa.me/${restaurantInfo.contact.whatsapp?.replace(/[^0-9]/g, '') || ''}" style="color: #10b981; text-decoration: none;">
-            WhatsApp Us
-          </a>
-        </p>
-      </div>
     </div>
 
     <!-- Footer -->
-    <div style="background-color: #f9fafb; padding: 24px; text-align: center; border-top: 1px solid #e5e7eb;">
-      <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 12px;">
-        Thank you for ordering from ${restaurantInfo.name}!
+    <div style="background: linear-gradient(180deg, #fff9f5 0%, #ffe8dc 100%); border-top: 3px solid #FF6B35; padding: 24px 20px 20px 20px; text-align: center; margin-top: 0;">
+      <p style="margin: 0 0 16px 0; color: #1f2937; font-size: 15px; font-weight: 600;">Thank you for choosing GharSe!</p>
+      <p style="margin: 0 0 4px 0; font-size: 11px; font-weight: 600; color: #f77f00; text-transform: uppercase; letter-spacing: 0.3px;">Need Help?</p>
+      <p style="margin: 0 0 3px 0;">
+        <a href="mailto:support@gharse.app" style="color: #FF6B35; text-decoration: none; font-size: 13px; font-weight: 600;">support@gharse.app</a>
       </p>
-      <p style="margin: 0; color: #9ca3af; font-size: 12px;">
-        ${restaurantInfo.address.street}, ${restaurantInfo.address.city}
+      <p style="margin: 0 0 12px 0;">
+        <a href="https://gharse.app" style="color: #FF6B35; text-decoration: none; font-size: 13px; font-weight: 600;">www.gharse.app</a>
       </p>
+      <p style="margin: 0; font-size: 11px; color: #92400e; padding-top: 12px; border-top: 1px solid rgba(255, 107, 53, 0.2);">© 2025 GharSe • Authentic Home-Cooked Food</p>
     </div>
   </div>
 </body>
@@ -209,35 +193,30 @@ const generateOrderConfirmationHTML = (order: Order): string => {
 };
 
 const generateStatusUpdateHTML = (order: Order, newStatus: string): string => {
-  const statusMessages: Record<string, { title: string; message: string; icon: string; color: string }> = {
+  const statusMessages: Record<string, { title: string; message: string; color: string }> = {
     confirmed: {
-      title: 'Order Confirmed',
-      message: 'Your order has been confirmed and is being prepared.',
-      icon: '✓',
+      title: 'Your Ghar (Home) Kitchen is Ready!',
+      message: 'Your order has been confirmed! Our home chef is rolling up their sleeves and getting the stove ready. Authentic flavors from our home to yours!',
       color: '#10b981',
     },
     preparing: {
-      title: 'Now Cooking!',
-      message: 'Your delicious meal is being prepared with care.',
-      icon: '👨‍🍳',
+      title: 'Cooking with Love at GharSe!',
+      message: 'Your meal is sizzling in our home kitchen right now! Our chef is adding that special "ghar ka tadka" (home-style seasoning) just for you. Fresh, hot, and made with care!',
       color: '#f59e0b',
     },
     ready: {
-      title: 'Order Ready',
-      message: 'Your food is ready and will be delivered soon.',
-      icon: '🎉',
+      title: 'Fresh from Our Home Kitchen!',
+      message: 'Your delicious meal is ready! It\'s hot, fresh, and packed with love - just like mom makes it at home. Get ready to enjoy authentic "ghar ka khana" (home-cooked food)!',
       color: '#8b5cf6',
     },
     'out-for-delivery': {
-      title: 'Out for Delivery',
-      message: 'Your order is on its way to you!',
-      icon: '🛵',
+      title: 'Bringing Home to Your Doorstep!',
+      message: 'Your GharSe order is on its way! Our delivery partner is rushing to bring you fresh home-cooked food while it\'s still steaming hot. Almost there!',
       color: '#3b82f6',
     },
     delivered: {
-      title: 'Delivered',
-      message: 'Your order has been delivered. Enjoy your meal!',
-      icon: '🍽️',
+      title: 'Delivered! Enjoy Your Home-Cooked Meal!',
+      message: 'Your order has been delivered! Time to dig into delicious, authentic home-cooked food. Enjoy every bite and feel the warmth of "ghar ka khana"!',
       color: '#10b981',
     },
   };
@@ -252,35 +231,31 @@ const generateStatusUpdateHTML = (order: Order, newStatus: string): string => {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Order Update - ${order.orderNumber}</title>
 </head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #1f2937; margin: 0; padding: 0; background-color: #f9fafb;">
-  <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
-    <!-- Header -->
-    <div style="background: linear-gradient(135deg, #FF6B35 0%, #F77F00 100%); padding: 32px 24px; text-align: center;">
-      <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700;">
-        🍛 ${restaurantInfo.name}
-      </h1>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #1f2937; margin: 0; padding: 0; background: linear-gradient(135deg, #fff5f0 0%, #ffe8dc 100%);">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; box-shadow: 0 4px 20px rgba(255, 107, 53, 0.15);">
+    <!-- Header with Logo -->
+    <div style="background: linear-gradient(135deg, #fff9f5 0%, #ffffff 100%); padding: 16px 20px; text-align: center; border-bottom: 3px solid #FF6B35;">
+      <img src="${process.env.NEXT_PUBLIC_APP_URL || 'https://gharse.app'}/images/GharSe.png" alt="GharSe" style="max-width: 140px; height: auto; display: inline-block;" />
     </div>
 
-    <!-- Status Update Badge -->
-    <div style="text-align: center; padding: 32px 24px;">
-      <div style="font-size: 48px; margin-bottom: 16px;">${status.icon}</div>
-      <h2 style="color: #1f2937; font-size: 24px; margin: 0 0 8px 0;">${status.title}</h2>
-      <p style="color: #6b7280; margin: 0; font-size: 16px;">${status.message}</p>
-    </div>
-
-    <!-- Order Info -->
-    <div style="padding: 0 24px 32px 24px; text-align: center;">
-      <div style="background-color: #f3f4f6; border-radius: 8px; padding: 16px; display: inline-block;">
-        <p style="margin: 0 0 4px 0; color: #6b7280; font-size: 12px; text-transform: uppercase;">Order Number</p>
-        <p style="margin: 0; color: #1f2937; font-size: 20px; font-weight: 700;">${order.orderNumber}</p>
+    <!-- Status Update -->
+    <div style="text-align: center; padding: 20px; background: #fffbf8;">
+      <div style="background: ${status.color}; color: #fff; display: inline-block; padding: 8px 20px; border-radius: 6px; font-weight: 600; font-size: 14px; margin-bottom: 10px;">
+        ${status.title}
+      </div>
+      <p style="color: #6b7280; margin: 0 0 12px 0; font-size: 14px;">${status.message}</p>
+      <div style="background: #fff5f0; border-radius: 6px; padding: 10px 18px; display: inline-block; border: 2px solid #FF6B35;">
+        <p style="margin: 0; color: #1f2937; font-size: 16px; font-weight: 700;">${order.orderNumber}</p>
       </div>
     </div>
 
     <!-- Footer -->
-    <div style="background-color: #f9fafb; padding: 24px; text-align: center; border-top: 1px solid #e5e7eb;">
-      <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 14px;">
-        Need help? Call us at <a href="tel:${restaurantInfo.contact.phone}" style="color: #FF6B35; text-decoration: none;">${restaurantInfo.contact.phone}</a>
-      </p>
+    <div style="background: #ffe8dc; border-top: 3px solid #FF6B35; padding: 18px; text-align: center;">
+      <p style="margin: 0 0 10px 0; color: #1f2937; font-size: 14px; font-weight: 600;">Thank you for choosing GharSe!</p>
+      <p style="margin: 0 0 3px 0; font-size: 11px; font-weight: 600; color: #f77f00;">NEED HELP?</p>
+      <p style="margin: 0 0 2px 0;"><a href="mailto:support@gharse.app" style="color: #FF6B35; text-decoration: none; font-size: 12px; font-weight: 600;">support@gharse.app</a></p>
+      <p style="margin: 0 0 8px 0;"><a href="https://gharse.app" style="color: #FF6B35; text-decoration: none; font-size: 12px; font-weight: 600;">www.gharse.app</a></p>
+      <p style="margin: 0; font-size: 10px; color: #92400e; padding-top: 8px; border-top: 1px solid rgba(255, 107, 53, 0.2);">© 2025 GharSe</p>
     </div>
   </div>
 </body>
@@ -320,11 +295,20 @@ async function sendEmailWithRetry(
 ): Promise<{ success: boolean; error?: string; messageId?: string }> {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
+      // Build from address with display name
+      const fromName = process.env.FROM_NAME || 'GharSe';
+      const fromEmail = process.env.SMTP_USER || 'bantusailaja@gmail.com';
+      const fromAddress = `"${fromName}" <${fromEmail}>`;
+      
+      // Reply-To should be the business email
+      const replyToEmail = process.env.FROM_EMAIL || 'orders@gharse.app';
+      
       const result = await getTransporter().sendMail({
-        from: EMAIL_CONFIG.from,
+        from: fromAddress,
         to,
         subject,
         html,
+        replyTo: replyToEmail, // Replies go to orders@gharse.app
       });
 
       logger.info('Email sent successfully', {

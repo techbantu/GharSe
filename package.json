@@ -75,6 +75,7 @@
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-hook-form": "^7.65.0",
+    "redis": "^5.9.0",
     "resend": "^6.4.2",
     "socket.io": "^4.7.2",
     "socket.io-client": "^4.7.2",

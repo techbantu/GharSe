@@ -22,6 +22,7 @@ import CartSidebar from '@/components/CartSidebar';
 import CheckoutModal from '@/components/CheckoutModal';
 import LiveChat from '@/components/LiveChat';
 import AdvancedSearch from '@/components/AdvancedSearch';
+import FloatingCartBubble from '@/components/FloatingCartBubble';
 // CartProvider is now in root layout
 
 /**
@@ -193,6 +194,14 @@ const HomePageContent: React.FC = () => {
         minimized={isChatMinimized}
         onMinimize={() => setIsChatMinimized(true)}
         onRestore={() => setIsChatMinimized(false)}
+      />
+      
+      {/* Floating Cart Bubble - Instant feedback when adding items */}
+      <FloatingCartBubble 
+        onCartClick={() => {
+          setIsCartOpen(true);
+          setIsChatMinimized(true); // Auto-minimize chat when opening cart
+        }} 
       />
     </div>
   );

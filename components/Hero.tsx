@@ -14,7 +14,8 @@ import React, { useState, useEffect } from 'react';
 import { ArrowRight, Star, Clock, TruckIcon } from 'lucide-react';
 import { restaurantInfo } from '@/data/menuData';
 import { useAuth } from '@/context/AuthContext';
-import { getFirstOrderDiscountStatus } from '@/lib/first-order-discount';
+import { getFirstOrderDiscountStatus } from '@/lib/first-order-discount-client';
+import { useRouter } from 'next/navigation';
 
 interface HeroProps {
   onOrderNowClick: () => void;
@@ -22,6 +23,7 @@ interface HeroProps {
 
 const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
   const { user } = useAuth();
+  const router = useRouter();
   const [showFirstOrderBanner, setShowFirstOrderBanner] = useState(true);
   
   // Check first-order eligibility
@@ -44,6 +46,20 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
     
     checkEligibility();
   }, [user]);
+  
+  // Handle category card clicks - Navigate to menu with category filter
+  const handleCategoryClick = (category: string) => {
+    // Scroll to menu section with category filter
+    const menuSection = document.getElementById('menu');
+    if (menuSection) {
+      // Update URL with category param
+      router.push(`/#menu?category=${encodeURIComponent(category)}`);
+      // Scroll smoothly
+      setTimeout(() => {
+        menuSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  };
   
   return (
     <>
@@ -380,7 +396,18 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
             {/* Food Grid - 2x2 Beautiful Layout */}
             <div className="grid grid-cols-2 gap-4 p-4">
                       {/* Biryani - Top Left */}
-                      <div className="relative group">
+                      <div 
+                        className="relative group cursor-pointer" 
+                        onClick={() => handleCategoryClick('Biryani & Rice')}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleCategoryClick('Biryani & Rice');
+                          }
+                        }}
+                      >
                         <div className="relative rounded-3xl overflow-hidden shadow-2xl transform group-hover:scale-105 transition-all duration-500 aspect-square">
                           <img
                             src="https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=800&h=800&fit=crop&q=80"
@@ -400,7 +427,18 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
                       </div>
                       
                       {/* Butter Chicken - Top Right */}
-                      <div className="relative group mt-8">
+                      <div 
+                        className="relative group mt-8 cursor-pointer"
+                        onClick={() => handleCategoryClick('Curries')}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleCategoryClick('Curries');
+                          }
+                        }}
+                      >
                         <div className="relative rounded-3xl overflow-hidden shadow-2xl transform group-hover:scale-105 transition-all duration-500 aspect-square">
                           <img
                             src="https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=800&h=800&fit=crop&q=80"
@@ -420,7 +458,18 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
                       </div>
                       
                       {/* Paneer Tikka - Bottom Left */}
-                      <div className="relative group -mt-4">
+                      <div 
+                        className="relative group -mt-4 cursor-pointer"
+                        onClick={() => handleCategoryClick('Appetizers')}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleCategoryClick('Appetizers');
+                          }
+                        }}
+                      >
                         <div className="relative rounded-3xl overflow-hidden shadow-2xl transform group-hover:scale-105 transition-all duration-500 aspect-square">
                           <img
                             src="https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?w=800&h=800&fit=crop&q=80"
@@ -440,7 +489,18 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
                       </div>
                       
                       {/* Desserts - Bottom Right */}
-                      <div className="relative group">
+                      <div 
+                        className="relative group cursor-pointer"
+                        onClick={() => handleCategoryClick('Desserts')}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleCategoryClick('Desserts');
+                          }
+                        }}
+                      >
                         <div className="relative rounded-3xl overflow-hidden shadow-2xl transform group-hover:scale-105 transition-all duration-500 aspect-square">
                           <img
                             src="https://images.unsplash.com/photo-1631452180519-c014fe946bc7?w=800&h=800&fit=crop&q=80"

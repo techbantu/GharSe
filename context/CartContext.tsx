@@ -14,7 +14,7 @@ import React, { createContext, useContext, useReducer, useEffect, useState, useR
 import { Cart, CartItem, MenuItem } from '@/types';
 import { restaurantInfo } from '@/data/menuData';
 import { useAuth } from '@/context/AuthContext';
-import { getFirstOrderDiscountStatus } from '@/lib/first-order-discount';
+import { getFirstOrderDiscountStatus } from '@/lib/first-order-discount-client';
 
 /**
  * Cart Actions - All possible cart mutations
@@ -243,15 +243,17 @@ const cartReducer = (state: Cart, action: CartAction): Cart => {
 export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [cart, dispatch] = useReducer(cartReducer, initialCart);
   const [isMounted, setIsMounted] = useState(false);
-  const [sessionId, setSessionId] = useState<string>('');
   const [firstOrderDiscount, setFirstOrderDiscount] = useState<number>(0);
   const [firstOrderEligible, setFirstOrderEligible] = useState(false);
   const { user } = useAuth();
-  
+
   // Cross-tab sync infrastructure
   const broadcastChannel = useRef<BroadcastChannel | null>(null);
   const CART_CHANNEL_NAME = 'bantu_cart_sync';
   const CART_SYNC_KEY = 'bantu_cart_sync_event';
+  const lastBroadcastRef = useRef<number>(0); // Prevent infinite loops
+  const sessionIdRef = useRef<string>(''); // Session ID ref for immediate access
+  const instanceIdRef = useRef<string>(`instance_${Date.now()}_${Math.random().toString(36)}`); // Unique per component instance
   
   // Check for first-order discount eligibility when user logs in
   useEffect(() => {
@@ -295,17 +297,17 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     setIsMounted(true);
     
-    // Generate or retrieve session ID
+    // Generate or retrieve session ID (use ref for immediate access)
     const generateSessionId = () => {
       let storedSessionId = localStorage.getItem('bantu_session_id');
       if (!storedSessionId) {
         storedSessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
         localStorage.setItem('bantu_session_id', storedSessionId);
       }
+      sessionIdRef.current = storedSessionId;
       return storedSessionId;
     };
-    
-    setSessionId(generateSessionId());
+    generateSessionId();
     
     // Setup BroadcastChannel for cross-tab sync (modern browsers)
     if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
@@ -315,7 +317,13 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
         channel.onmessage = (event) => {
           if (event.data.type === 'CART_UPDATED') {
+            // Prevent processing our own broadcasts (check instance ID)
+            if (event.data.instanceId === instanceIdRef.current) {
+              return; // Ignore broadcasts from THIS component instance
+            }
+
             console.log('[Cart Sync] Received cart update from another tab');
+            lastBroadcastRef.current = Date.now();
             dispatch({ type: 'LOAD_CART', payload: event.data.cart });
           }
         };
@@ -326,29 +334,16 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     }
     
-    // Fallback: localStorage event listener for older browsers
-    const handleStorageEvent = (e: StorageEvent) => {
-      if (e.key === CART_SYNC_KEY && e.newValue) {
-        try {
-          const data = JSON.parse(e.newValue);
-          if (data.type === 'CART_UPDATED') {
-            console.log('[Cart Sync] Received cart update via localStorage event');
-            dispatch({ type: 'LOAD_CART', payload: data.cart });
-          }
-        } catch (error) {
-          console.error('[Cart Sync] Failed to parse storage event:', error);
-        }
-      }
-    };
-    
-    window.addEventListener('storage', handleStorageEvent);
+    // DISABLED: localStorage event listener (was causing duplicate events)
+    // BroadcastChannel is sufficient for modern browsers
+    // const handleStorageEvent = (e: StorageEvent) => { ... };
+    // window.addEventListener('storage', handleStorageEvent);
     
     // Cleanup
     return () => {
       if (broadcastChannel.current) {
         broadcastChannel.current.close();
       }
-      window.removeEventListener('storage', handleStorageEvent);
     };
   }, []);
   
@@ -368,43 +363,41 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [isMounted]);
   
   // Save cart to localStorage whenever it changes (client-side only)
-  // ALSO broadcast to other tabs
+  // ALSO broadcast to other tabs (BroadcastChannel ONLY - no localStorage fallback)
   useEffect(() => {
-    if (!isMounted) return;
-    
+    if (!isMounted || !sessionIdRef.current) return;
+
+    // Throttle broadcasts to prevent micro-bursts (max 1 per second)
+    const now = Date.now();
+    if (now - lastBroadcastRef.current < 1000) {
+      return;
+    }
+
+    // Save to localStorage for persistence
     localStorage.setItem('bantusKitchenCart', JSON.stringify(cart));
-    
-    // Broadcast cart update to other tabs
+
+    // Broadcast ONLY via BroadcastChannel (not localStorage)
     if (broadcastChannel.current) {
       try {
-        broadcastChannel.current.postMessage({
+        const payload = {
           type: 'CART_UPDATED',
           cart,
-          timestamp: Date.now(),
-        });
+          instanceId: instanceIdRef.current, // Instance ID to prevent self-receive
+          sessionId: sessionIdRef.current,
+          timestamp: now,
+        };
+        broadcastChannel.current.postMessage(payload);
+        lastBroadcastRef.current = now;
         console.log('[Cart Sync] Broadcasted cart update to other tabs');
       } catch (error) {
         console.error('[Cart Sync] BroadcastChannel error:', error);
       }
     }
-    
-    // Fallback: localStorage event for older browsers
-    try {
-      const payload = {
-        type: 'CART_UPDATED',
-        cart,
-        timestamp: Date.now(),
-      };
-      localStorage.setItem(CART_SYNC_KEY, JSON.stringify(payload));
-      localStorage.removeItem(CART_SYNC_KEY); // Trigger storage event
-    } catch (error) {
-      console.error('[Cart Sync] localStorage sync error:', error);
-    }
   }, [cart, isMounted]);
   
   // Sync cart to backend for inventory tracking (GENIUS URGENCY SYSTEM)
   useEffect(() => {
-    if (!isMounted || !sessionId) return;
+    if (!isMounted || !sessionIdRef.current) return;
     
     const syncCartToBackend = async () => {
       try {
@@ -414,7 +407,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           await fetch('/api/cart/track', {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sessionId }),
+            body: JSON.stringify({ sessionId: sessionIdRef.current }),
           });
           return;
         }
@@ -424,7 +417,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            sessionId,
+            sessionId: sessionIdRef.current,
             items: cart.items.map(item => ({
               itemId: item.menuItem.id,
               quantity: item.quantity,
@@ -443,7 +436,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const timeoutId = setTimeout(syncCartToBackend, 500);
     
     return () => clearTimeout(timeoutId);
-  }, [cart.items, isMounted, sessionId]);
+  }, [cart.items, isMounted]);
   
   // Cart API methods
   const addItem = (

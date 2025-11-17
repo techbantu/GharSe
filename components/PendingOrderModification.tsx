@@ -26,7 +26,7 @@ import { Clock, Plus, Minus, Trash2, ShoppingBag, Sparkles, TrendingUp, X, XCirc
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/context/ToastContext';
 import { Order, MenuItem } from '@/types';
-import { menuItems, getMenuItemsByCategory } from '@/data/menuData';
+// Removed hardcoded menu data import - now using API
 import OrderModificationConfirmModal from '@/components/OrderModificationConfirmModal';
 import CustomerCancelOrderModal from '@/components/CustomerCancelOrderModal';
 import { restaurantInfo } from '@/data/menuData';
@@ -180,44 +180,37 @@ const PendingOrderModification: React.FC<PendingOrderModificationProps> = ({
     loadSuggestions();
   }, [items]);
   
-  // Load smart suggestions based on current items
-  const loadSuggestions = () => {
-    const currentItemIds = new Set(items.map(item => item.menuItemId));
-    
-    // Get all available menu items
-    const availableItems = menuItems.filter(
-      item => !currentItemIds.has(item.id) && item.isAvailable
-    );
-    
-    // Smart pairing logic
-    const hasButterChicken = items.some(item => 
-      item.menuItem.name.toLowerCase().includes('butter chicken')
-    );
-    const hasCurry = items.some(item => 
-      item.menuItem.category === 'Curries' && item.menuItem.name.toLowerCase().includes('curry')
-    );
-    const hasBiryani = items.some(item => 
-      item.menuItem.name.toLowerCase().includes('biryani')
-    );
-    
-    // Prioritize complementary items
-    const suggestions = availableItems.filter(item => {
-      if (hasButterChicken || hasCurry) {
-        // Suggest naan, rice, raita
-        return item.name.toLowerCase().includes('naan') ||
-               item.name.toLowerCase().includes('rice') ||
-               item.name.toLowerCase().includes('raita');
+  // Load smart suggestions based on current items (from database)
+  const loadSuggestions = async () => {
+    try {
+      const currentItemIds = items.map(item => item.menuItemId);
+
+      // Build API URL with parameters
+      const params = new URLSearchParams({
+        suggestions: 'true',
+        currentOrder: JSON.stringify(currentItemIds),
+        limit: '3',
+      });
+
+      const response = await fetch(`/api/menu?${params}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setSuggestedItems(data.items);
+        console.log('[PendingOrderModification] Loaded smart suggestions:', data.items.length);
+      } else {
+        console.error('[PendingOrderModification] Failed to load suggestions:', data.error);
+        // Fallback to empty suggestions
+        setSuggestedItems([]);
       }
-      if (hasBiryani) {
-        // Suggest raita, beverages
-        return item.name.toLowerCase().includes('raita') ||
-               item.category === 'Beverages';
-      }
-      // Default: popular items
-      return item.isPopular;
-    });
-    
-    setSuggestedItems(suggestions.slice(0, 3)); // Show top 3
+    } catch (error) {
+      console.error('[PendingOrderModification] Error loading suggestions:', error);
+      setSuggestedItems([]);
+    }
   };
   
   // Format time as MM:SS
@@ -256,8 +249,9 @@ const PendingOrderModification: React.FC<PendingOrderModificationProps> = ({
     }
   };
   
-  // Update item quantity locally
-  const updateItemQuantity = (itemId: string, delta: number) => {
+  // Update item quantity locally AND sync to backend immediately
+  const updateItemQuantity = async (itemId: string, delta: number) => {
+    // Optimistic update
     setItems(prev => {
       const updated = prev.map(item => {
         if (item.id === itemId) {
@@ -269,10 +263,57 @@ const PendingOrderModification: React.FC<PendingOrderModificationProps> = ({
       
       return updated;
     });
+    
+    // Instant backend sync - no Save button needed
+    setTimeout(async () => {
+      try {
+        const updatedItems = items.map(item => {
+          if (item.id === itemId) {
+            const newQuantity = Math.max(0, item.quantity + delta);
+            return { ...item, quantity: newQuantity };
+          }
+          return item;
+        }).filter(item => item.quantity > 0);
+        
+        if (updatedItems.length === 0) {
+          toast.warning('Empty order', 'Please add at least one item or cancel the order');
+          return;
+        }
+        
+        const itemsToSend = updatedItems.map(item => ({
+          menuItemId: item.menuItemId,
+          quantity: item.quantity,
+          price: item.price,
+          specialInstructions: item.specialInstructions || '',
+        }));
+        
+        const response = await fetch('/api/orders/modify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            orderId: order.id,
+            customerId: order.customer?.id || undefined,
+            items: itemsToSend,
+          }),
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+          // Update parent with new order data
+          onOrderUpdated(data.order);
+          console.log('[PendingOrderModification] Instant update successful:', data.order);
+        }
+      } catch (error) {
+        console.error('[PendingOrderModification] Instant update failed:', error);
+        // Revert on error - not implemented for simplicity, user can refresh
+      }
+    }, 300); // Small delay to batch rapid clicks
   };
   
-  // Add suggested item
-  const addSuggestedItem = (menuItem: MenuItem) => {
+  // Add suggested item AND sync to backend immediately
+  const addSuggestedItem = async (menuItem: MenuItem) => {
     const newItem: OrderItem = {
       id: `temp-${Date.now()}`,
       menuItemId: menuItem.id,
@@ -281,8 +322,43 @@ const PendingOrderModification: React.FC<PendingOrderModificationProps> = ({
       menuItem: menuItem,
     };
     
+    // Optimistic update
     setItems(prev => [...prev, newItem]);
     toast.success('Item added!', `${menuItem.name} added to your order`);
+    
+    // Instant backend sync
+    setTimeout(async () => {
+      try {
+        const updatedItems = [...items, newItem];
+        const itemsToSend = updatedItems.map(item => ({
+          menuItemId: item.menuItemId,
+          quantity: item.quantity,
+          price: item.price,
+          specialInstructions: item.specialInstructions || '',
+        }));
+        
+        const response = await fetch('/api/orders/modify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            orderId: order.id,
+            customerId: order.customer?.id || undefined,
+            items: itemsToSend,
+          }),
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+          // Update parent with new order data
+          onOrderUpdated(data.order);
+          console.log('[PendingOrderModification] Instant add successful:', data.order);
+        }
+      } catch (error) {
+        console.error('[PendingOrderModification] Instant add failed:', error);
+      }
+    }, 300);
   };
   
   // Calculate new pricing for modifications
@@ -298,6 +374,73 @@ const PendingOrderModification: React.FC<PendingOrderModificationProps> = ({
     const newTotal = newSubtotal + newTax + DELIVERY_FEE - (order.pricing.discount || 0);
     
     return { newSubtotal, newTax, newTotal };
+  };
+
+  // Confirm order and send to kitchen
+  const handleConfirmOrder = async () => {
+    if (items.length === 0) {
+      toast.error('Empty order', 'Please add at least one item before confirming');
+      return;
+    }
+
+    setIsModifying(true);
+
+    try {
+      // Prepare final items payload
+      const itemsToSend = items.map(item => ({
+        menuItemId: item.menuItemId,
+        quantity: item.quantity,
+        price: item.price,
+        specialInstructions: item.specialInstructions || '',
+      }));
+
+      console.log('[PendingOrderModification] Confirming order and sending to kitchen:', {
+        orderId: order.id,
+        items: itemsToSend,
+      });
+
+      // Send final order to kitchen via modify API
+      const response = await fetch('/api/orders/modify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          orderId: order.id,
+          customerId: order.customer?.id || undefined,
+          items: itemsToSend,
+          finalize: true, // Signal that this is the final confirmation
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to confirm order');
+      }
+
+      // Success!
+      toast.success(
+        'Order Confirmed! 🎉',
+        'Your order has been sent to the kitchen. You\'ll receive updates as it\'s prepared.'
+      );
+
+      // Update parent with confirmed order
+      onOrderUpdated(data.order);
+
+      // Finalize and close modification UI
+      setTimeout(() => {
+        onFinalized();
+      }, 1500);
+
+    } catch (error) {
+      console.error('[PendingOrderModification] Confirm order failed:', error);
+      toast.error(
+        'Confirmation Failed',
+        error instanceof Error ? error.message : 'Please try again or contact support'
+      );
+    } finally {
+      setIsModifying(false);
+    }
   };
 
   // Get items being added (new items not in original order)
@@ -450,7 +593,23 @@ const PendingOrderModification: React.FC<PendingOrderModificationProps> = ({
     }
   }, [order.id, order.customer.id, onFinalized, toast]);
   
+  // Calculate live totals from current items
+  const calculateLiveTotals = () => {
+    const TAX_RATE = restaurantInfo.settings.taxRate || 0.05;
+    const DELIVERY_FEE = restaurantInfo.settings.deliveryFee || 50;
+    
+    const liveSubtotal = items.reduce(
+      (sum, item) => sum + item.quantity * item.price,
+      0
+    );
+    const liveTax = liveSubtotal * TAX_RATE;
+    const liveTotal = liveSubtotal + liveTax + DELIVERY_FEE - (order.pricing.discount || 0);
+    
+    return { liveSubtotal, liveTax, liveTotal, liveDeliveryFee: DELIVERY_FEE };
+  };
+  
   const timerStyle = getTimerStyle();
+  const { liveSubtotal, liveTax, liveTotal, liveDeliveryFee } = calculateLiveTotals();
   const hasChanges = items.length !== order.items.length || 
     items.some((item, idx) => item.quantity !== (order.items[idx] as any)?.quantity);
   
@@ -667,97 +826,163 @@ const PendingOrderModification: React.FC<PendingOrderModificationProps> = ({
           ))}
         </div>
         
-        {/* Save Changes Button */}
-        {hasChanges && (
+        {/* Live Order Summary - Shows above suggestions */}
+        <div style={{
+          marginTop: '20px',
+          padding: '16px',
+          background: 'linear-gradient(135deg, #F9FAFB, #F3F4F6)',
+              borderRadius: '12px',
+          border: '2px solid #E5E7EB',
+        }}>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            marginBottom: '8px',
+            fontSize: '0.875rem',
+            color: '#6B7280',
+          }}>
+            <span>Subtotal:</span>
+            <span style={{ fontWeight: 600, color: '#1F2937' }}>₹{Math.round(liveSubtotal)}</span>
+          </div>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            marginBottom: '8px',
+            fontSize: '0.875rem',
+            color: '#6B7280',
+          }}>
+            <span>Tax (GST 5%):</span>
+            <span style={{ fontWeight: 600, color: '#1F2937' }}>₹{Math.round(liveTax)}</span>
+          </div>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            marginBottom: '12px',
+            fontSize: '0.875rem',
+            color: '#6B7280',
+          }}>
+            <span>Delivery:</span>
+            <span style={{ fontWeight: 600, color: liveDeliveryFee === 0 ? '#10B981' : '#1F2937' }}>
+              {liveDeliveryFee === 0 ? 'FREE' : `₹${Math.round(liveDeliveryFee)}`}
+            </span>
+          </div>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            paddingTop: '12px',
+            borderTop: '2px solid #D1D5DB',
+            fontSize: '1.25rem',
+            fontWeight: 700,
+          }}>
+            <span style={{ color: '#1F2937' }}>Total:</span>
+            <span style={{ color: '#f97316' }}>₹{Math.round(liveTotal)}</span>
+          </div>
+        </div>
+        
+        {/* Action Buttons Container */}
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px',
+          marginTop: '16px',
+        }}>
+          {/* PRIMARY: Confirm & Send to Kitchen Button */}
           <button
-            onClick={saveModifications}
-            disabled={isModifying || items.length === 0}
+            onClick={handleConfirmOrder}
             style={{
               width: '100%',
-              marginTop: '16px',
-              padding: '14px',
-              background: 'linear-gradient(135deg, #f97316, #ea580c)',
+              padding: '14px 20px',
+              background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
               color: 'white',
               border: 'none',
               borderRadius: '12px',
               fontSize: '1rem',
-              fontWeight: 600,
-              cursor: isModifying ? 'not-allowed' : 'pointer',
-              opacity: isModifying ? 0.6 : 1,
-              transition: 'all 0.2s',
+              fontWeight: 700,
+              cursor: 'pointer',
+              transition: 'all 0.3s',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 6px 16px rgba(16, 185, 129, 0.4)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.3)';
             }}
           >
-            {isModifying ? 'Saving...' : 'Save Changes'}
+            <UtensilsCrossed size={18} />
+            Confirm & Send to Kitchen
           </button>
-        )}
-        
-        {/* Cancel Order Button */}
-        <button
-          onClick={() => setShowCancelModal(true)}
-          style={{
-            width: 'auto',
-            marginTop: '12px',
-            padding: '8px 16px',
-            background: 'white',
-            color: '#EF4444',
-            border: '2px solid #EF4444',
-            borderRadius: '10px',
-            fontSize: '0.8125rem',
-            fontWeight: 600,
-            cursor: 'pointer',
-            transition: 'all 0.2s',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '6px',
-            margin: '12px auto 0',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = '#FEE2E2';
-            e.currentTarget.style.transform = 'translateY(-1px)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'white';
-            e.currentTarget.style.transform = 'translateY(0)';
-          }}
-        >
-          <XCircle size={14} />
-          Cancel Order
-        </button>
-        
-        {/* Browse Menu Button */}
-        <button
-          onClick={onBrowseMenu}
-          style={{
-            width: 'auto',
-            marginTop: '12px',
-            padding: '8px 16px',
-            background: '#f97316',
-            color: 'white',
-            border: 'none',
-            borderRadius: '10px',
-            fontSize: '0.8125rem',
-            fontWeight: 600,
-            cursor: 'pointer',
-            transition: 'all 0.2s',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '6px',
-            margin: '12px auto 0',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = '#ea580c';
-            e.currentTarget.style.transform = 'translateY(-1px)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = '#f97316';
-            e.currentTarget.style.transform = 'translateY(0)';
-          }}
-        >
-          <ShoppingBag size={14} />
-          Browse Full Menu
-        </button>
+
+          {/* SECONDARY: Browse Menu Button */}
+          <button
+            onClick={onBrowseMenu}
+            style={{
+              width: '100%',
+              padding: '12px 20px',
+              background: '#f97316',
+              color: 'white',
+              border: 'none',
+              borderRadius: '10px',
+              fontSize: '0.875rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#ea580c';
+              e.currentTarget.style.transform = 'translateY(-1px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = '#f97316';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}
+          >
+            <ShoppingBag size={16} />
+            Browse Full Menu
+          </button>
+
+          {/* TERTIARY: Cancel Order Button */}
+          <button
+            onClick={() => setShowCancelModal(true)}
+            style={{
+              width: '100%',
+              padding: '10px 20px',
+              background: 'white',
+              color: '#EF4444',
+              border: '2px solid #EF4444',
+              borderRadius: '10px',
+              fontSize: '0.8125rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#FEE2E2';
+              e.currentTarget.style.transform = 'translateY(-1px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'white';
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}
+          >
+            <XCircle size={14} />
+            Cancel Order
+          </button>
+        </div>
       </div>
       
       {/* Suggested Items */}
@@ -871,57 +1096,6 @@ const PendingOrderModification: React.FC<PendingOrderModificationProps> = ({
           </div>
         </div>
       )}
-      
-      {/* Order Summary */}
-      <div style={{
-        marginTop: '24px',
-        padding: '16px',
-        background: '#F3F4F6',
-        borderRadius: '12px',
-      }}>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          marginBottom: '8px',
-          fontSize: '0.875rem',
-          color: '#6B7280',
-        }}>
-          <span>Subtotal:</span>
-          <span>₹{order.pricing.subtotal.toFixed(2)}</span>
-        </div>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          marginBottom: '8px',
-          fontSize: '0.875rem',
-          color: '#6B7280',
-        }}>
-          <span>Tax:</span>
-          <span>₹{order.pricing.tax.toFixed(2)}</span>
-        </div>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          marginBottom: '8px',
-          fontSize: '0.875rem',
-          color: '#6B7280',
-        }}>
-          <span>Delivery:</span>
-          <span>₹{order.pricing.deliveryFee.toFixed(2)}</span>
-        </div>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          paddingTop: '12px',
-          borderTop: '1px solid #D1D5DB',
-          fontSize: '1.125rem',
-          fontWeight: 700,
-          color: '#1F2937',
-        }}>
-          <span>Total:</span>
-          <span>₹{order.pricing.total.toFixed(2)}</span>
-        </div>
-      </div>
 
       {/* Confirmation Modal for Adding Items */}
       {showConfirmModal && pendingModification && (

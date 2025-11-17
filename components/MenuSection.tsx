@@ -71,9 +71,11 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
     return () => window.removeEventListener('resize', checkWidth);
   }, []);
 
-  // Handle URL parameters for regional filtering
+  // Handle URL parameters for regional filtering and category filtering
   useEffect(() => {
     const region = searchParams?.get('region');
+    const category = searchParams?.get('category');
+    
     if (region && REGIONAL_CUISINES.some(r => r.id === region)) {
       setSelectedRegion(region);
       // Scroll to menu section
@@ -84,7 +86,25 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
         }
       }, 100);
     }
-  }, [searchParams]);
+    
+    // Set category filter from URL parameter (wait for menu items to load)
+    if (category && menuItems.length > 0) {
+      const decodedCategory = decodeURIComponent(category);
+      // Check if this category exists in our menu by looking at menuItems
+      const availableCategories = ['All', ...Array.from(new Set(menuItems.map(item => item.category)))];
+      const categoryExists = availableCategories.some(cat => cat === decodedCategory);
+      if (categoryExists) {
+        setSelectedCategory(decodedCategory);
+      }
+      // Scroll to menu section
+      setTimeout(() => {
+        const menuElement = document.getElementById('menu');
+        if (menuElement) {
+          menuElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
+    }
+  }, [searchParams, menuItems]);
   
   // Fetch menu items from database
   useEffect(() => {
@@ -116,10 +136,10 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
         }
         
         const data = await response.json();
-        
+
         if (data.success) {
           // Transform database items to MenuItem format
-          const transformedItems: MenuItem[] = (data.data || []).map((item: any) => ({
+          const transformedItems: MenuItem[] = (data.items || []).map((item: any) => ({
             id: item.id,
             name: item.name,
             description: item.description,
