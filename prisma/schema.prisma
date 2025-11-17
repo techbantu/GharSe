@@ -2532,3 +2532,749 @@ model SeasonalPattern {
   @@index([itemType])
   @@index([itemId])
 }
+
+// ============================================================================
+// 🤖 AI/ML INTELLIGENCE SYSTEM - Apple-Level Smart
+// ============================================================================
+// Revolutionary AI models that make the app feel magical
+// Real predictions, real insights, real intelligence
+// ============================================================================
+
+// ===== PREDICTIVE AI MODELS =====
+
+// AI Model Registry - Track all deployed ML models
+model AIModel {
+  id              String   @id @default(cuid())
+  modelName       String   @unique // "churn_predictor_v3", "demand_forecaster_v2"
+  modelType       String   // "classification", "regression", "timeseries", "nlp", "vision"
+  version         String   // "3.2.1"
+
+  // Model Architecture
+  framework       String   // "tensorflow", "pytorch", "scikit", "prophet"
+  algorithm       String   // "random_forest", "lstm", "transformer", "cnn"
+
+  // Performance Metrics
+  accuracy        Float?   // Classification accuracy
+  precision       Float?   // Precision score
+  recall          Float?   // Recall score
+  f1Score         Float?   // F1 score
+  mse             Float?   // Mean squared error (regression)
+  mae             Float?   // Mean absolute error
+  r2Score         Float?   // R² score
+
+  // Training Data
+  trainingSize    Int      // Number of samples
+  features        Json     // Feature list and importance
+  hyperparameters Json     // Model hyperparameters
+
+  // Deployment
+  status          String   @default("training") // training, testing, deployed, deprecated
+  deployedAt      DateTime?
+  lastTrainedAt   DateTime @default(now())
+
+  // Performance Tracking
+  totalPredictions Int     @default(0)
+  avgLatency      Float?   // ms per prediction
+
+  // Relations
+  predictions     AIPrediction[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([modelType])
+  @@index([status])
+}
+
+// AI Predictions - Store all AI predictions for tracking and learning
+model AIPrediction {
+  id              String   @id @default(cuid())
+  modelId         String
+  model           AIModel  @relation(fields: [modelId], references: [id])
+
+  // Input
+  entityType      String   // "customer", "order", "menu_item", "driver"
+  entityId        String
+  inputFeatures   Json     // Raw input data
+
+  // Prediction
+  predictionType  String   // "churn", "ltv", "demand", "rating", "eta"
+  predictedValue  Float?   // Numeric prediction
+  predictedClass  String?  // Classification prediction
+  confidence      Float    // 0-1 confidence score
+  probabilities   Json?    // Class probabilities
+
+  // Explanation
+  topFeatures     Json?    // SHAP values / feature importance
+  explanation     String?  @db.Text // Human-readable explanation
+
+  // Outcome (for model retraining)
+  actualValue     Float?   // Ground truth (filled later)
+  actualClass     String?
+  wasCorrect      Boolean?
+  error           Float?   // Prediction error
+
+  // Metadata
+  latency         Float?   // Prediction time in ms
+  createdAt       DateTime @default(now())
+
+  @@index([modelId])
+  @@index([entityType, entityId])
+  @@index([predictionType])
+  @@index([createdAt])
+}
+
+// Real-Time Demand Forecasting
+model DemandForecast {
+  id              String   @id @default(cuid())
+
+  // Target
+  itemType        String   // "menu_item", "category", "cuisine"
+  itemId          String
+  itemName        String
+
+  // Time Window
+  forecastDate    DateTime
+  forecastHour    Int?     // 0-23, null for daily forecast
+  forecastWindow  String   // "hourly", "daily", "weekly"
+
+  // Predictions
+  predictedOrders Int
+  predictedRevenue Float
+  confidence      Float    // 0-1
+
+  // Confidence Intervals
+  ordersLowerBound Int?
+  ordersUpperBound Int?
+
+  // Contributing Factors
+  weatherFactor   Float?   // Impact of weather (-1 to 1)
+  eventFactor     Float?   // Impact of events/holidays
+  trendFactor     Float?   // Trend momentum
+  seasonalFactor  Float?   // Seasonal pattern
+
+  // Context
+  weather         String?  // "rainy", "sunny", "cold", "hot"
+  isHoliday       Boolean  @default(false)
+  isWeekend       Boolean  @default(false)
+  specialEvent    String?
+
+  // Recommendations
+  stockingLevel   String?  // "low", "medium", "high", "very_high"
+  pricingAdvice   String?  // "increase_10", "decrease_5", "maintain"
+  marketingAdvice String?  @db.Text
+
+  // Accuracy Tracking
+  actualOrders    Int?     // Filled after forecast period
+  actualRevenue   Float?
+  forecastError   Float?   // Percentage error
+
+  createdAt       DateTime @default(now())
+
+  @@unique([itemType, itemId, forecastDate, forecastHour])
+  @@index([itemType, itemId])
+  @@index([forecastDate])
+}
+
+// Customer Churn Prediction with AI
+model ChurnPrediction {
+  id              String   @id @default(cuid())
+  customerId      String   @unique
+
+  // Prediction
+  churnRisk       Float    // 0-1 probability of churning
+  riskLevel       String   // "low", "medium", "high", "critical"
+  churnDate       DateTime? // Predicted churn date
+
+  // Contributing Factors (SHAP values)
+  factorRecency   Float?   // Days since last order impact
+  factorFrequency Float?   // Order frequency impact
+  factorMonetary  Float?   // Spend amount impact
+  factorRating    Float?   // Rating trend impact
+  factorSupport   Float?   // Support tickets impact
+
+  // Top Risk Indicators
+  riskReasons     Json     // ["declining_frequency", "low_ratings", "competitor_switch"]
+
+  // AI Recommendations
+  retentionStrategy String? @db.Text // AI-generated retention plan
+  recommendedAction String? // "send_coupon", "vip_upgrade", "personal_call"
+  actionPriority    Int?    // 1-10
+
+  // Intervention Tracking
+  actionTaken     String?
+  actionDate      DateTime?
+  wasRetained     Boolean?
+
+  // Model Performance
+  modelVersion    String
+  confidence      Float    // 0-1
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([riskLevel])
+  @@index([churnRisk])
+}
+
+// Smart Price Optimization with AI
+model DynamicPricing {
+  id              String   @id @default(cuid())
+  menuItemId      String
+
+  // Current State
+  currentPrice    Float
+  basePrice       Float
+
+  // AI Recommendations
+  recommendedPrice Float
+  priceChange     Float    // Percentage change
+  confidence      Float    // 0-1
+
+  // Expected Impact
+  expectedDemandChange Float // Percentage
+  expectedRevenueChange Float // Percentage
+  expectedProfitChange Float // Percentage
+
+  // Optimization Factors
+  demandLevel     String   // "low", "medium", "high", "surge"
+  competitorPrice Float?
+  inventoryLevel  String?  // "low", "medium", "high"
+  timeOfDay       String?  // "breakfast", "lunch", "dinner", "night"
+  dayOfWeek       String?
+
+  // Weather & Events
+  weather         String?
+  isEvent         Boolean  @default(false)
+  eventType       String?
+
+  // Strategy
+  pricingStrategy String   // "maximize_revenue", "maximize_profit", "maximize_volume", "clearance"
+
+  // A/B Testing
+  isExperiment    Boolean  @default(false)
+  experimentGroup String?  // "control", "test_a", "test_b"
+
+  // Results (filled later)
+  actualOrders    Int?
+  actualRevenue   Float?
+  wasSuccessful   Boolean?
+
+  validFrom       DateTime @default(now())
+  validUntil      DateTime?
+
+  createdAt       DateTime @default(now())
+
+  @@index([menuItemId])
+  @@index([validFrom, validUntil])
+}
+
+// ===== AUTO-GENERATED INSIGHTS =====
+
+// AI-Generated Insights - The "magic" that impresses users
+model AIInsight {
+  id              String   @id @default(cuid())
+
+  // Insight Details
+  insightType     String   // "trend", "anomaly", "opportunity", "risk", "prediction"
+  category        String   // "sales", "customer", "operations", "finance", "marketing"
+
+  // Content
+  title           String   // "Sales spike on rainy days"
+  description     String   @db.Text // Full insight description
+
+  // Impact
+  severity        String   // "low", "medium", "high", "critical"
+  impact          String   // "positive", "negative", "neutral"
+  impactValue     Float?   // Estimated $ impact
+
+  // Data
+  dataPoints      Json     // Supporting data
+  visualization   String?  // "line_chart", "bar_chart", "heatmap", "gauge"
+
+  // AI Recommendations
+  recommendations Json     // List of actionable recommendations
+  actionPriority  Int      // 1-10
+
+  // Targeting
+  audience        String   // "admin", "chef", "customer"
+  entityType      String?  // "customer", "menu_item", "driver"
+  entityId        String?
+
+  // Status
+  status          String   @default("new") // new, viewed, acted, dismissed, archived
+  isActionable    Boolean  @default(true)
+
+  // Engagement
+  viewCount       Int      @default(0)
+  viewedBy        Json?    // List of user IDs who viewed
+  actionTaken     String?
+  actionDate      DateTime?
+
+  // Metadata
+  confidence      Float?   // 0-1 confidence in insight
+  source          String?  // Which AI model generated it
+  expiresAt       DateTime? // Time-sensitive insights
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([insightType])
+  @@index([category])
+  @@index([severity])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// Anomaly Detection - Automatically detect unusual patterns
+model AnomalyDetection {
+  id              String   @id @default(cuid())
+
+  // Anomaly Details
+  anomalyType     String   // "fraud", "spike", "drop", "outlier", "pattern_break"
+  entityType      String   // "order", "customer", "driver", "menu_item"
+  entityId        String
+
+  // Detection
+  metric          String   // "order_value", "frequency", "rating", "delivery_time"
+  expectedValue   Float
+  actualValue     Float
+  deviation       Float    // Standard deviations from normal
+
+  // Severity
+  severity        String   // "low", "medium", "high", "critical"
+  confidence      Float    // 0-1
+
+  // Context
+  description     String   @db.Text
+  possibleCauses  Json     // AI-generated hypotheses
+
+  // Response
+  status          String   @default("detected") // detected, investigating, resolved, false_positive
+  needsAction     Boolean  @default(true)
+  suggestedAction String?  @db.Text
+
+  // Resolution
+  actionTaken     String?
+  resolvedBy      String?
+  resolvedAt      DateTime?
+  resolution      String?  @db.Text
+
+  // Impact
+  financialImpact Float?   // $ amount
+  customerImpact  Int?     // Number of customers affected
+
+  detectedAt      DateTime @default(now())
+
+  @@index([anomalyType])
+  @@index([severity])
+  @@index([status])
+  @@index([detectedAt])
+}
+
+// ===== COMPUTER VISION =====
+
+// Food Image Recognition
+model FoodImageAnalysis {
+  id              String   @id @default(cuid())
+
+  // Image
+  imageUrl        String
+  imageHash       String   @unique // Perceptual hash for duplicate detection
+
+  // Source
+  sourceType      String   // "menu_upload", "customer_review", "social_media"
+  sourceId        String?
+  menuItemId      String?
+
+  // AI Vision Analysis
+  detectedFood    String?  // Primary food detected
+  foodConfidence  Float?   // 0-1
+
+  // Multi-label Classification
+  foodCategories  Json     // ["indian", "curry", "chicken", "spicy"]
+  categoryScores  Json     // Confidence for each category
+
+  // Quality Assessment
+  visualAppeal    Float?   // 0-1 score
+  platting        Float?   // Presentation score
+  freshnessScore  Float?   // Freshness score
+  portionSize     String?  // "small", "medium", "large"
+
+  // Color Analysis
+  dominantColors  Json     // RGB values
+  colorPalette    Json     // Full palette
+  colorfulness    Float?   // 0-1
+
+  // Content Detection
+  hasText         Boolean  @default(false)
+  hasPerson       Boolean  @default(false)
+  hasBranding     Boolean  @default(false)
+
+  // Safety
+  isAppropriate   Boolean  @default(true)
+  nsfwScore       Float?   // 0-1
+
+  // Recommendations
+  isHighQuality   Boolean?
+  suggestedPrice  Float?   // Price range based on visual appeal
+  marketingReady  Boolean  @default(false)
+
+  // Metadata
+  modelVersion    String
+  processingTime  Float?   // ms
+
+  createdAt       DateTime @default(now())
+
+  @@index([menuItemId])
+  @@index([detectedFood])
+}
+
+// ===== NATURAL LANGUAGE PROCESSING =====
+
+// Smart Search Query Analysis
+model SearchQuery {
+  id              String   @id @default(cuid())
+
+  // Query
+  rawQuery        String   @db.Text
+  normalizedQuery String   // Cleaned, lowercased
+
+  // User Context
+  customerId      String?
+  sessionId       String?
+
+  // NLP Analysis
+  intent          String?  // "find_food", "browse", "compare", "reorder"
+  entities        Json?    // Extracted: cuisine, dish, price, etc.
+  sentiment       String?  // "positive", "neutral", "negative"
+
+  // Semantic Understanding
+  semanticVector  String?  @db.Text // Embedding for semantic search
+  relatedQueries  Json?    // Similar past queries
+
+  // Query Enhancement
+  suggestedQuery  String?
+  autoCorrection  String?
+  synonyms        Json?
+
+  // Results
+  resultCount     Int      @default(0)
+  topResultId     String?
+  wasSuccessful   Boolean?
+
+  // User Behavior
+  clickedResults  Json?    // Which results were clicked
+  clickPosition   Int?     // Position of first click
+  timeToClick     Float?   // Seconds
+  addedToCart     Boolean  @default(false)
+
+  // Learning
+  feedbackScore   Float?   // User satisfaction
+
+  createdAt       DateTime @default(now())
+
+  @@index([customerId])
+  @@index([normalizedQuery])
+  @@index([intent])
+  @@index([createdAt])
+}
+
+// Review Sentiment & Topic Analysis
+model ReviewAnalysis {
+  id              String   @id @default(cuid())
+  reviewId        String   @unique // Links to DishRating or OrderReview
+  reviewText      String   @db.Text
+
+  // Sentiment Analysis
+  sentiment       String   // "very_positive", "positive", "neutral", "negative", "very_negative"
+  sentimentScore  Float    // -1 to 1
+  confidence      Float    // 0-1
+
+  // Emotion Detection
+  emotions        Json     // {"joy": 0.8, "anger": 0.1, "sadness": 0.1}
+  dominantEmotion String?
+
+  // Topic Modeling
+  topics          Json     // ["taste", "delivery", "packaging", "price"]
+  topicScores     Json     // Relevance scores
+
+  // Aspect-Based Sentiment
+  tastesentiment  Float?   // -1 to 1
+  deliverySentiment Float?
+  packagingSentiment Float?
+  valuesentiment   Float?
+
+  // Key Phrases
+  keyPhrases      Json     // Important phrases extracted
+
+  // Urgency Detection
+  isUrgent        Boolean  @default(false)
+  needsResponse   Boolean  @default(false)
+  priority        Int?     // 1-10
+
+  // Auto-Response
+  suggestedReply  String?  @db.Text
+  replyTone       String?  // "apologetic", "grateful", "neutral"
+
+  // Language
+  language        String   @default("en")
+
+  createdAt       DateTime @default(now())
+
+  @@index([sentiment])
+  @@index([needsResponse])
+}
+
+// ===== SMART AUTOMATION =====
+
+// Smart Notifications Engine
+model SmartNotification {
+  id              String   @id @default(cuid())
+
+  // Target
+  recipientType   String   // "customer", "chef", "driver", "admin"
+  recipientId     String
+
+  // Notification Details
+  channel         String   // "push", "email", "sms", "in_app"
+  title           String
+  message         String   @db.Text
+
+  // AI Optimization
+  priority        String   // "low", "medium", "high", "urgent"
+  optimalTime     DateTime? // AI-calculated best time to send
+
+  // Personalization
+  personalization Json?    // Dynamic content
+  template        String?
+
+  // Trigger
+  triggerType     String   // "event", "prediction", "schedule", "anomaly"
+  triggerData     Json?
+
+  // Delivery
+  status          String   @default("scheduled") // scheduled, sent, delivered, read, clicked, dismissed
+  sentAt          DateTime?
+  deliveredAt     DateTime?
+  readAt          DateTime?
+  clickedAt       DateTime?
+
+  // Engagement
+  wasClicked      Boolean  @default(false)
+  clickedLink     String?
+  conversionValue Float?   // $ value of action taken
+
+  // A/B Testing
+  experimentId    String?
+  variant         String?  // "A", "B", "C"
+
+  // Learning
+  engagementScore Float?   // 0-1
+
+  createdAt       DateTime @default(now())
+
+  @@index([recipientType, recipientId])
+  @@index([status])
+  @@index([optimalTime])
+}
+
+// Auto-Generated Actions & Workflows
+model AIAction {
+  id              String   @id @default(cuid())
+
+  // Action Details
+  actionType      String   // "send_coupon", "price_adjustment", "inventory_alert", "churn_prevention"
+  targetType      String   // "customer", "menu_item", "driver"
+  targetId        String
+
+  // Trigger
+  triggeredBy     String   // Which AI system triggered it
+  triggerReason   String   @db.Text
+  confidence      Float    // 0-1
+
+  // Action Plan
+  actionPlan      Json     // Detailed steps
+  expectedOutcome String?  @db.Text
+  expectedValue   Float?   // Expected $ impact
+
+  // Approval
+  requiresApproval Boolean @default(false)
+  status          String   @default("pending") // pending, approved, executed, failed, cancelled
+  approvedBy      String?
+  approvedAt      DateTime?
+
+  // Execution
+  executedAt      DateTime?
+  executionDetails Json?
+
+  // Results
+  actualOutcome   String?  @db.Text
+  actualValue     Float?   // Actual $ impact
+  wasSuccessful   Boolean?
+
+  // Learning
+  feedbackScore   Float?   // For model improvement
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([actionType])
+  @@index([status])
+  @@index([targetType, targetId])
+}
+
+// ===== INTELLIGENT A/B TESTING =====
+
+// Smart A/B Testing with Multi-Armed Bandits
+model ABTest {
+  id              String   @id @default(cuid())
+
+  // Test Details
+  testName        String   @unique
+  testType        String   // "price", "ui", "notification", "recommendation"
+  description     String   @db.Text
+
+  // Target
+  entityType      String   // "menu_item", "feature", "campaign"
+  entityId        String?
+
+  // Variants
+  variants        Json     // [{"id": "A", "config": {...}}, {"id": "B", ...}]
+
+  // Algorithm
+  algorithm       String   @default("thompson_sampling") // "thompson_sampling", "epsilon_greedy", "ucb"
+
+  // Metrics
+  primaryMetric   String   // "conversion", "revenue", "engagement"
+  secondaryMetrics Json?
+
+  // Status
+  status          String   @default("draft") // draft, running, paused, completed, archived
+  startedAt       DateTime?
+  endedAt         DateTime?
+
+  // Auto-Optimization
+  autoOptimize    Boolean  @default(true)
+  minSampleSize   Int      @default(100)
+  confidenceLevel Float    @default(0.95)
+
+  // Results
+  winner          String?  // Variant ID
+  confidenceScore Float?
+  liftPercent     Float?
+
+  // Relation
+  results         ABTestResult[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([status])
+  @@index([testType])
+}
+
+// A/B Test Results (per variant)
+model ABTestResult {
+  id              String   @id @default(cuid())
+  testId          String
+  test            ABTest   @relation(fields: [testId], references: [id], onDelete: Cascade)
+
+  variant         String   // "A", "B", "C"
+
+  // Impressions & Conversions
+  impressions     Int      @default(0)
+  conversions     Int      @default(0)
+  conversionRate  Float    @default(0)
+
+  // Revenue
+  totalRevenue    Float    @default(0)
+  avgRevenue      Float    @default(0)
+
+  // Engagement
+  totalEngagement Float    @default(0)
+  avgEngagement   Float    @default(0)
+
+  // Thompson Sampling Parameters
+  alpha           Float    @default(1)  // Successes + 1
+  beta            Float    @default(1)  // Failures + 1
+
+  // Statistics
+  confidence      Float?   // Confidence vs control
+  pValue          Float?
+
+  updatedAt       DateTime @updatedAt
+
+  @@unique([testId, variant])
+  @@index([testId])
+}
+
+// ===== REAL-TIME INTELLIGENCE =====
+
+// Real-Time Business Metrics Dashboard
+model RealtimeMetrics {
+  id              String   @id @default(cuid())
+
+  // Timestamp (minute-level granularity)
+  timestamp       DateTime @unique
+
+  // Orders
+  activeOrders    Int      @default(0)
+  ordersPerMinute Float    @default(0)
+  avgOrderValue   Float    @default(0)
+
+  // Customers
+  activeUsers     Int      @default(0)
+  newSignups      Int      @default(0)
+
+  // Drivers
+  onlineDrivers   Int      @default(0)
+  busyDrivers     Int      @default(0)
+  avgDeliveryTime Float?
+
+  // Revenue
+  revenuePerMinute Float   @default(0)
+
+  // AI Predictions
+  predictedNext5Min Float? // Predicted orders in next 5 min
+  predictedNext15Min Float?
+  predictedNext60Min Float?
+
+  // Alerts
+  anomalyDetected Boolean  @default(false)
+  alertLevel      String?  // "normal", "warning", "critical"
+
+  @@index([timestamp])
+}
+
+// Event Stream - All important events in real-time
+model EventStream {
+  id              String   @id @default(cuid())
+
+  // Event
+  eventType       String   // "order_placed", "payment_success", "delivery_complete", "review_posted"
+  eventCategory   String   // "order", "customer", "driver", "finance"
+
+  // Entities
+  entityType      String?
+  entityId        String?
+
+  // Data
+  eventData       Json     // Full event payload
+
+  // AI Processing
+  processed       Boolean  @default(false)
+  processedAt     DateTime?
+  aiInsights      Json?    // AI-generated insights from event
+
+  // Impact
+  businessImpact  String?  // "high", "medium", "low"
+  revenueImpact   Float?
+
+  timestamp       DateTime @default(now())
+
+  @@index([eventType])
+  @@index([eventCategory])
+  @@index([timestamp])
+  @@index([processed])
+}
