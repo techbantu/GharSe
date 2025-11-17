@@ -161,8 +161,8 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
           marginTop: '0.75rem'
         }}
       >
-        <nav className="container-custom mx-auto" style={{ paddingLeft: '1.5rem', paddingRight: '1.5rem', paddingTop: '0.75rem', paddingBottom: '0.75rem' }}>
-          <div className="flex items-center justify-between" style={{ gap: '0.75rem', minWidth: 0 }}>
+        <nav className="container-custom mx-auto" style={{ paddingLeft: '1rem', paddingRight: '1rem', paddingTop: '0.75rem', paddingBottom: '0.75rem' }}>
+          <div className="flex items-center justify-between" style={{ gap: '0.5rem', minWidth: 0 }}>
             {/* Logo and Brand - Premium Design */}
             <button 
               onClick={() => scrollToSection('home')}
@@ -172,12 +172,24 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
                 border: 'none', 
                 cursor: 'pointer', 
                 padding: 0, 
-                minWidth: 0, 
-                flex: '0 1 auto',
-                overflow: 'hidden'
+                minWidth: '120px',
+                maxWidth: '120px',
+                flex: '0 0 auto',
+                position: 'relative',
+                zIndex: 20
               }}
             >
-              <Logo variant="small" className="group-hover:opacity-90" />
+              <img 
+                src="/images/GharSe.png" 
+                alt="GharSe - From Real Homes To Your Hungry Heart"
+                style={{
+                  width: '100%',
+                  height: 'auto',
+                  objectFit: 'contain',
+                  display: 'block'
+                }}
+                className="group-hover:opacity-90"
+              />
             </button>
             
             {/* Desktop Navigation - Premium Typography */}
@@ -261,10 +273,10 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
             </div>
             
             {/* Cart and Mobile Menu */}
-            <div className="flex items-center gap-3" style={{ flexShrink: 0 }}>
-              {/* Auth Buttons - Desktop (Hydration-safe rendering) */}
+            <div className="flex items-center gap-2" style={{ flexShrink: 0, marginLeft: 'auto' }}>
+              {/* Auth Buttons - Visible on ALL screens (Hydration-safe rendering) */}
               {/* Always render container to prevent hydration mismatch */}
-              <div className="hidden md:flex items-center" style={{ gap: '8px' }}>
+              <div className="flex items-center" style={{ gap: '6px' }}>
                 {/* Only render auth buttons after client-side hydration */}
                 {isMounted && !isLoading && (
                   <>
@@ -273,7 +285,8 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
                         <button
                           onClick={() => setShowLoginModal(true)}
                           style={{
-                            padding: '10px 20px',
+                            height: '44px',
+                            padding: '0 14px',
                             background: 'white',
                             border: '2px solid #f97316',
                             color: '#f97316',
@@ -282,15 +295,20 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
                             fontSize: '14px',
                             transition: 'all 0.2s',
                             cursor: 'pointer',
+                            whiteSpace: 'nowrap',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
                           }}
-                          className="hover:bg-orange-50"
+                          className="hover:bg-orange-50 hidden sm:flex"
                         >
                           Login
                         </button>
                         <button
                           onClick={() => setShowRegisterModal(true)}
                           style={{
-                            padding: '10px 20px',
+                            height: '44px',
+                            padding: '0 14px',
                             background: 'linear-gradient(135deg, #f97316, #ea580c)',
                             border: 'none',
                             color: 'white',
@@ -300,31 +318,39 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
                             transition: 'all 0.2s',
                             cursor: 'pointer',
                             boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
+                            whiteSpace: 'nowrap',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
                           }}
-                          className="hover:shadow-lg"
+                          className="hover:shadow-lg hidden sm:flex"
                         >
                           Register
                         </button>
                       </>
                     ) : (
-                      <div className="flex items-center" style={{ gap: '12px' }}>
+                      <>
+                        {/* Desktop: Full profile button */}
                         <button
                           onClick={() => router.push('/profile')}
                           style={{
+                            height: '44px',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '0.75rem',
-                            padding: '0.875rem 1.5rem',
+                            gap: '6px',
+                            padding: '0 12px',
                             background: 'rgba(249, 115, 22, 0.1)',
                             border: 'none',
-                            borderRadius: '0.75rem',
+                            borderRadius: '12px',
                             cursor: 'pointer',
                             transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                            fontSize: '1rem',
+                            fontSize: '14px',
                             fontWeight: 600,
                             color: '#1f2937',
                             boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                            whiteSpace: 'nowrap',
                           }}
+                          className="hover:bg-orange-100 hidden sm:flex"
                           onMouseEnter={(e) => {
                             e.currentTarget.style.background = 'rgba(249, 115, 22, 0.15)';
                             e.currentTarget.style.transform = 'translateY(-1px)';
@@ -336,15 +362,16 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
                             e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
                           }}
                         >
-                          <User size={20} style={{ color: '#f97316' }} />
-                          <span style={{ fontSize: '1rem', fontWeight: 600, color: '#1f2937' }}>
-                            Hi, {user?.name?.split(' ')[0] || 'User'}
+                          <User size={18} style={{ color: '#f97316' }} />
+                          <span className="hidden md:inline" style={{ fontSize: '14px', fontWeight: 600, color: '#1f2937' }}>
+                            {user?.name?.split(' ')[0] || 'User'}
                           </span>
                         </button>
                         <button
                           onClick={() => setShowLogoutConfirm(true)}
                           style={{
-                            padding: '10px 16px',
+                            height: '44px',
+                            padding: '0 12px',
                             background: 'white',
                             border: '2px solid #e5e7eb',
                             color: '#6b7280',
@@ -357,12 +384,12 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
                             alignItems: 'center',
                             gap: '6px',
                           }}
-                          className="hover:border-red-300 hover:text-red-600"
+                          className="hover:border-red-300 hover:text-red-600 hidden sm:flex"
                         >
                           <LogOut size={16} />
-                          <span>Logout</span>
+                          <span className="hidden md:inline">Logout</span>
                         </button>
-                      </div>
+                      </>
                     )}
                   </>
                 )}
@@ -376,7 +403,9 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
                   background: 'none', 
                   border: 'none', 
                   cursor: 'pointer',
-                  padding: 0
+                  padding: 0,
+                  height: '44px',
+                  flexShrink: 0,
                 }}
                 className="group"
                 aria-label="Shopping Cart"
@@ -387,23 +416,15 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
                   alignItems: 'center',
                   background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
                   color: 'white',
-                  borderRadius: '14px',
+                  borderRadius: '12px',
                   transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                  boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 -1px 0 rgba(0, 0, 0, 0.1)',
-                  gap: '8px',
-                  padding: '11px 16px',
-                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
+                  gap: '6px',
+                  padding: '0 14px',
+                  height: '44px',
                   transform: 'translateY(0)',
                   fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif'
                 }} className="group-hover:shadow-lg group-hover:-translate-y-0.5 active:translate-y-0">
-                  {/* Inner Glow */}
-                  <div style={{
-                    position: 'absolute',
-                    inset: '1px',
-                    background: 'radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.2) 0%, transparent 60%)',
-                    borderRadius: '13px',
-                    pointerEvents: 'none'
-                  }}></div>
                   
                   <ShoppingCart 
                     size={20} 
@@ -414,10 +435,9 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
                     fontWeight: 700,
                     display: 'none',
                     whiteSpace: 'nowrap',
-                    fontSize: '15px',
+                    fontSize: '14px',
                     position: 'relative',
                     zIndex: 1,
-                    letterSpacing: '-0.01em'
                   }} className="sm:inline">
                     ₹{Math.round(cart.total)}
                   </span>
@@ -454,16 +474,19 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                 aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
                 style={{
+                  height: '44px',
+                  width: '44px',
+                  minWidth: '44px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   background: 'transparent',
                   border: 'none',
                   cursor: 'pointer',
-                  padding: '8px',
-                  borderRadius: '8px',
+                  borderRadius: '12px',
                   transition: 'all 0.2s',
                   color: '#374151',
+                  flexShrink: 0,
                 }}
                 className="lg:hidden"
                 onMouseEnter={(e) => {
@@ -476,9 +499,9 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
                 }}
               >
                 {isMobileMenuOpen ? (
-                  <X size={24} strokeWidth={2.5} />
+                  <X size={22} strokeWidth={2.5} />
                 ) : (
-                  <Menu size={24} strokeWidth={2.5} />
+                  <Menu size={22} strokeWidth={2.5} />
                 )}
               </button>
             </div>
@@ -549,135 +572,6 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
                   </button>
                 ))}
               </div>
-              
-              {/* Auth Section - Compact */}
-              {isMounted && !isLoading && (
-                <div style={{ marginBottom: '16px' }}>
-                  {!isAuthenticated ? (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                      <button
-                        onClick={() => {
-                          setShowLoginModal(true);
-                          setIsMobileMenuOpen(false);
-                        }}
-                        style={{
-                          padding: '10px 16px',
-                          background: 'white',
-                          border: '1px solid #f97316',
-                          color: '#f97316',
-                          borderRadius: '10px',
-                          fontWeight: 600,
-                          fontSize: '14px',
-                          transition: 'all 0.2s',
-                          cursor: 'pointer',
-                          fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif',
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = 'rgba(249, 115, 22, 0.1)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = 'white';
-                        }}
-                      >
-                        Login
-                      </button>
-                      <button
-                        onClick={() => {
-                          setShowRegisterModal(true);
-                          setIsMobileMenuOpen(false);
-                        }}
-                        style={{
-                          padding: '10px 16px',
-                          background: 'linear-gradient(135deg, #f97316, #ea580c)',
-                          border: 'none',
-                          color: 'white',
-                          borderRadius: '10px',
-                          fontWeight: 600,
-                          fontSize: '14px',
-                          transition: 'all 0.2s',
-                          cursor: 'pointer',
-                          fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif',
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.transform = 'translateY(-1px)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.transform = 'translateY(0)';
-                        }}
-                      >
-                        Register
-                      </button>
-                    </div>
-                  ) : (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                      <button
-                        onClick={() => {
-                          router.push('/profile');
-                          setIsMobileMenuOpen(false);
-                        }}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '6px',
-                          padding: '10px 12px',
-                          background: 'rgba(249, 115, 22, 0.1)',
-                          border: 'none',
-                          borderRadius: '10px',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s',
-                          fontSize: '14px',
-                          fontWeight: 600,
-                          color: '#1f2937',
-                          fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif',
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = 'rgba(249, 115, 22, 0.15)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = 'rgba(249, 115, 22, 0.1)';
-                        }}
-                      >
-                        <User size={16} style={{ color: '#f97316' }} />
-                        <span>Profile</span>
-                      </button>
-                      <button
-                        onClick={() => {
-                          setShowLogoutConfirm(true);
-                          setIsMobileMenuOpen(false);
-                        }}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '6px',
-                          padding: '10px 12px',
-                          background: 'white',
-                          border: '1px solid #e5e7eb',
-                          color: '#6b7280',
-                          borderRadius: '10px',
-                          fontWeight: 600,
-                          fontSize: '14px',
-                          transition: 'all 0.2s',
-                          cursor: 'pointer',
-                          fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif',
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.borderColor = '#ef4444';
-                          e.currentTarget.style.color = '#ef4444';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.borderColor = '#e5e7eb';
-                          e.currentTarget.style.color = '#6b7280';
-                        }}
-                      >
-                        <LogOut size={16} />
-                        <span>Logout</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
               
               {/* Contact Info - Compact Inline */}
               <div style={{ 

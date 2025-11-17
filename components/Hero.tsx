@@ -213,12 +213,13 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
                   overflow: 'hidden',
                   background: 'linear-gradient(135deg, #FF6B35 0%, #F77F00 50%, #EA580C 100%)',
                   color: 'white',
-                  padding: '14px 24px',
-                  borderRadius: '16px',
-                  fontWeight: 700,
-                  fontSize: '0.9375rem',
+                  height: '44px',
+                  padding: '0 24px',
+                  borderRadius: '12px',
+                  fontWeight: 600,
+                  fontSize: '14px',
                   letterSpacing: '-0.01em',
-                  boxShadow: '0 12px 32px rgba(255, 107, 53, 0.35), 0 4px 12px rgba(255, 107, 53, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.25)',
+                  boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
                   transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
                   transform: 'scale(1)',
                   whiteSpace: 'nowrap',
@@ -227,22 +228,19 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
                   flex: '1 1 auto',
                   minWidth: '140px',
                   fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif',
-                  WebkitFontSmoothing: 'antialiased'
+                  WebkitFontSmoothing: 'antialiased',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
                 }}
                 className="group"
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px) scale(1.02)';
-                  e.currentTarget.style.boxShadow = '0 16px 40px rgba(255, 107, 53, 0.4), 0 6px 16px rgba(255, 107, 53, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3)';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(249, 115, 22, 0.4)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0) scale(1)';
-                  e.currentTarget.style.boxShadow = '0 12px 32px rgba(255, 107, 53, 0.35), 0 4px 12px rgba(255, 107, 53, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.25)';
-                }}
-                onMouseDown={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0) scale(0.98)';
-                }}
-                onMouseUp={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px) scale(1.02)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(249, 115, 22, 0.3)';
                 }}
               >
                 <span style={{ 
@@ -275,13 +273,14 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
               <a
                 href="#menu"
                 style={{
-                  padding: '14px 24px',
+                  height: '44px',
+                  padding: '0 24px',
                   background: 'white',
                   border: '2px solid rgba(209, 213, 219, 0.5)',
                   color: '#374151',
-                  borderRadius: '16px',
+                  borderRadius: '12px',
                   fontWeight: 600,
-                  fontSize: '0.9375rem',
+                  fontSize: '14px',
                   letterSpacing: '-0.01em',
                   transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
                   display: 'inline-flex',
@@ -332,15 +331,15 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
                 borderRadius: '12px', 
                 boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)', 
                 border: '1px solid #D1FAE5', 
-                gap: '10px', 
-                padding: '10px 14px',
+                gap: '8px', 
+                padding: '8px 12px',
                 transition: 'box-shadow 0.3s',
                 flex: '1 1 auto',
                 minWidth: '140px'
               }} className="hover:shadow-lg">
                 <div style={{
-                  width: '40px',
-                  height: '40px',
+                  width: '36px',
+                  height: '36px',
                   background: 'linear-gradient(to bottom right, #4ADE80, #16A34A)',
                   borderRadius: '8px',
                   display: 'flex',
@@ -349,11 +348,11 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
                   boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
                   flexShrink: 0
                 }}>
-                  <Clock style={{ color: 'white' }} size={20} />
+                  <Clock style={{ color: 'white' }} size={18} />
                 </div>
-                <div style={{ textAlign: 'left', lineHeight: '1.3' }}>
-                  <p style={{ fontSize: '10px', color: '#6B7280', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ready in</p>
-                  <p style={{ fontSize: '1rem', fontWeight: 900, color: '#111827', whiteSpace: 'nowrap' }}>30-45 mins</p>
+                <div style={{ textAlign: 'left', lineHeight: '1.1' }}>
+                  <p style={{ fontSize: '9px', color: '#6B7280', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>Ready in</p>
+                  <p style={{ fontSize: '0.9375rem', fontWeight: 900, color: '#111827', whiteSpace: 'nowrap' }}>30-45 mins</p>
                 </div>
               </div>
               
@@ -364,15 +363,15 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
                 borderRadius: '12px', 
                 boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)', 
                 border: '1px solid #DBEAFE', 
-                gap: '10px', 
-                padding: '10px 14px',
+                gap: '8px', 
+                padding: '8px 12px',
                 transition: 'box-shadow 0.3s',
                 flex: '1 1 auto',
                 minWidth: '140px'
               }} className="hover:shadow-lg">
                 <div style={{
-                  width: '40px',
-                  height: '40px',
+                  width: '36px',
+                  height: '36px',
                   background: 'linear-gradient(to bottom right, #60A5FA, #2563EB)',
                   borderRadius: '8px',
                   display: 'flex',
@@ -381,18 +380,18 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
                   boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
                   flexShrink: 0
                 }}>
-                  <TruckIcon style={{ color: 'white' }} size={20} />
+                  <TruckIcon style={{ color: 'white' }} size={18} />
                 </div>
-                <div style={{ textAlign: 'left', lineHeight: '1.3' }}>
-                  <p style={{ fontSize: '10px', color: '#6B7280', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Free Delivery</p>
-                  <p style={{ fontSize: '1rem', fontWeight: 900, color: '#111827', whiteSpace: 'nowrap' }}>Over ₹{restaurantInfo.settings.freeDeliveryOver}</p>
+                <div style={{ textAlign: 'left', lineHeight: '1.1' }}>
+                  <p style={{ fontSize: '9px', color: '#6B7280', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>Free Delivery</p>
+                  <p style={{ fontSize: '0.9375rem', fontWeight: 900, color: '#111827', whiteSpace: 'nowrap' }}>Over ₹{restaurantInfo.settings.freeDeliveryOver}</p>
                 </div>
               </div>
             </div>
           </div>
           
           {/* Right Column - Stunning Food Grid */}
-          <div className="relative animate-slide-left">
+          <div className="relative animate-slide-left" style={{ paddingBottom: '80px' }}>
             {/* Food Grid - 2x2 Beautiful Layout */}
             <div className="grid grid-cols-2 gap-4 p-4">
                       {/* Biryani - Top Left */}
@@ -523,7 +522,7 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
             {/* Floating Discount Badge - Modern Promotional Style */}
             <div style={{ 
               position: 'absolute', 
-              bottom: '-40px', 
+              bottom: '10px', 
               left: '0',
               right: '0',
               zIndex: 10,

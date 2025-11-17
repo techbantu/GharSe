@@ -310,12 +310,12 @@ const LiveChat: React.FC<LiveChatProps> = ({ minimized = false, onMinimize, onRe
               fontWeight: 700,
               display: 'flex',
               alignItems: 'center',
-              gap: '2px',
+              gap: '3px',
               boxShadow: '0 2px 8px rgba(139, 92, 246, 0.5)',
             }}
           >
             <Sparkles size={10} />
-            AI Assistant
+            AI
           </div>
           {/* Unread messages indicator */}
           {messages.length > 0 && messages[messages.length - 1]?.role === 'assistant' && (
@@ -522,17 +522,57 @@ const LiveChat: React.FC<LiveChatProps> = ({ minimized = false, onMinimize, onRe
           style={{
             background: 'linear-gradient(135deg, #f97316, #ea580c)',
         color: 'white',
-        padding: '24px 32px',
+        padding: '20px 24px',
         borderRadius: '24px 24px 0 0',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         position: 'relative',
             flexShrink: 0,
+            gap: '12px',
           }}
         >
-          {/* Header Action Buttons (Minimize & Close) */}
-          <div style={{ position: 'absolute', top: '16px', right: '16px', display: 'flex', gap: '8px', zIndex: 10 }}>
+          {/* Logo and Badge - Left Side */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
+            {/* Small Logo */}
+            <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+              <img
+                src="/images/GharSe.png"
+                alt="GharSe"
+                style={{
+                  width: '70px',
+                  height: 'auto',
+                  objectFit: 'contain',
+                  filter: 'brightness(0) invert(1)',
+                  opacity: 0.95
+                }}
+              />
+            </div>
+            
+            {/* GharKha AI Assistant Badge */}
+            <div
+              style={{
+                background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+                padding: '8px 16px',
+                borderRadius: '9999px',
+                fontSize: '0.875rem',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: '0 2px 12px rgba(139, 92, 246, 0.5)',
+                flexShrink: 0,
+                color: 'white',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              <Sparkles size={16} />
+              GharKha AI Assistant
+            </div>
+          </div>
+
+          {/* Header Action Buttons (Minimize & Close) - Right Side */}
+          <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
             {/* Minimize Button */}
             <button
               onClick={() => {
@@ -586,45 +626,6 @@ const LiveChat: React.FC<LiveChatProps> = ({ minimized = false, onMinimize, onRe
             <X size={20} strokeWidth={3} />
         </button>
           </div>
-
-          <div style={{ flex: 1, paddingRight: '100px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '6px' }}>
-              <h3 style={{ fontWeight: 700, fontSize: '1.35rem', lineHeight: '1.25' }}>
-                AI Assistant
-              </h3>
-              <div
-                style={{
-                  background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
-                  padding: '4px 12px',
-                  borderRadius: '9999px',
-                  fontSize: '0.7rem',
-                  fontWeight: 700,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  boxShadow: '0 2px 8px rgba(139, 92, 246, 0.4)',
-                }}
-              >
-                <Sparkles size={12} />
-                Powered by AI
-              </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
-              <div
-                style={{
-                  width: '8px',
-                  height: '8px',
-                  borderRadius: '9999px',
-                  background: isConnected ? '#10b981' : '#ef4444',
-                  boxShadow: `0 0 10px ${isConnected ? '#10b981' : '#ef4444'}`,
-                  flexShrink: 0,
-                }}
-              />
-              <p style={{ fontSize: '0.875rem', color: 'rgba(255, 255, 255, 0.95)', lineHeight: '1', margin: 0 }}>
-                {isConnected ? 'Connected • Real-time AI' : 'Reconnecting...'}
-              </p>
-            </div>
-          </div>
         </div>
 
         {/* Messages Area */}
@@ -632,10 +633,10 @@ const LiveChat: React.FC<LiveChatProps> = ({ minimized = false, onMinimize, onRe
           style={{
             flex: 1,
             overflowY: 'auto',
-            padding: '24px 28px',
+            padding: '20px 24px',
             display: 'flex',
         flexDirection: 'column',
-            gap: '18px',
+            gap: '12px',
         background: 'linear-gradient(to bottom, #F9FAFB, white)',
         flexShrink: 1,
             minHeight: 0,
@@ -673,7 +674,7 @@ const LiveChat: React.FC<LiveChatProps> = ({ minimized = false, onMinimize, onRe
               <div
                 style={{
                   maxWidth: '75%',
-                  padding: '14px 18px',
+                  padding: '12px 16px',
                   borderRadius: message.role === 'user' ? '20px 20px 4px 20px' : '20px 20px 20px 4px',
                   boxShadow: '0 2px 4px rgba(0, 0, 0, 0.08)',
                   background:
@@ -686,9 +687,9 @@ const LiveChat: React.FC<LiveChatProps> = ({ minimized = false, onMinimize, onRe
                   border: message.role === 'user' ? 'none' : '1px solid #E5E7EB',
                 }}
               >
-                <p style={{ fontSize: '0.925rem', lineHeight: '1.65', marginBottom: '6px', whiteSpace: 'pre-wrap' }}>
+                <div style={{ fontSize: '0.925rem', lineHeight: '1.5', whiteSpace: 'pre-line' }}>
                   {renderMessageWithHighlights(message)}
-                </p>
+                </div>
                 
                 {/* GENIUS FEATURE: Menu Item Cards with Quantity Controls */}
                 {message.actions && message.actions.length > 0 && (

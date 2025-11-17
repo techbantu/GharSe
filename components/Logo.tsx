@@ -53,11 +53,12 @@ const Logo: React.FC<LogoProps> = ({
             width={config.width}
             height={config.height}
             style={{ 
-              maxWidth: variant === 'small' ? '180px' : variant === 'large' ? '300px' : '240px',
+              maxWidth: style?.maxWidth || (variant === 'small' ? '180px' : variant === 'large' ? '300px' : '240px'),
               height: 'auto',
               objectFit: 'contain',
               imageRendering: 'crisp-edges',
-              display: 'block'
+              display: 'block',
+              ...style
             }}
             loading="eager"
           />
