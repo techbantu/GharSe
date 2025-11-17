@@ -108,7 +108,7 @@ function getVersionChangeEmailHtml(
     
     <p style="font-size: 13px; color: #6B7280; text-align: center; margin: 20px 0 0 0;">
       GharSe - From Real Homes To Your Hungry Heart<br>
-      Hayatnagar, Hyderabad 501505<br>
+      Hayathnagar, Hyderabad 501505<br>
       <a href="tel:+919010460964" style="color: #F97316; text-decoration: none;">+91 90104 60964</a> | 
       <a href="mailto:orders@gharse.app" style="color: #F97316; text-decoration: none;">orders@gharse.app</a>
     </p>

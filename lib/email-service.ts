@@ -158,7 +158,7 @@ export function getEmailLegalFooter(): string {
         FSSAI Registration: <strong>23625028002731</strong> (Valid until: 23 June 2027)
       </p>
       <p style="font-size: 11px; color: #9CA3AF; margin-bottom: 4px;">
-        Plot no 17, Road no 3, Padmalaya Nagar, Hayatnagar<br />
+        Plot no 17, Road no 3, Padmalaya Nagar, Hayathnagar<br />
         Pedda Amberpet (Kalan), Hayathnagar, Rangareddy, Telangana - 501505
       </p>
       <p style="font-size: 11px; color: #9CA3AF; margin-top: 12px;">

@@ -58,7 +58,7 @@ async function main() {
       customerEmail: 'priya@example.com',
       customerPhone: '+91 90104 60964',
       deliveryAddress: 'Plot 45, Sunrise Apartments',
-      deliveryCity: 'Hayatnagar',
+      deliveryCity: 'Hayathnagar',
       deliveryZip: '501505',
       status: 'OUT_FOR_DELIVERY',
       paymentStatus: 'PAID',

@@ -748,7 +748,7 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
                       >
                         <img
                           src={item.image}
-                          alt={`${item.name} - ${item.description} | Order online from Bantu's Kitchen in Hayatnagar, Hyderabad`}
+                          alt={`${item.name} - ${item.description} | Order online from Bantu's Kitchen in Hayathnagar, Hyderabad`}
                           style={{
                             width: '100%',
                             height: '100%',

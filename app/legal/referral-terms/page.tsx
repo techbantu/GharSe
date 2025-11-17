@@ -381,7 +381,7 @@ export default function ReferralTermsPage() {
           Name: [To be designated]<br />
           Email: <a href="mailto:referrals@gharse.app" style={{ color: '#FF6B35' }}>referrals@gharse.app</a><br />
           Phone: +91 90104 60964 (Mon-Sat, 10 AM - 6 PM)<br />
-          Address: GharSe, Hayatnagar, Hyderabad, Telangana - 501505<br />
+          Address: GharSe, Hayathnagar, Hyderabad, Telangana - 501505<br />
           Response Time: Within 48 hours (7 days for fraud investigations)
         </ContactBox>
       </Section>

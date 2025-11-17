@@ -2278,7 +2278,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                 <strong style={{ color: '#374151' }}>Food prepared by:</strong> Bantu'S kitchen (FSSAI: 23625028002731)
                 <br />
                 <span style={{ color: '#9CA3AF', fontSize: '0.6875rem' }}>
-                  Plot no 17, Road no 3, Padmalaya Nagar, Hayatnagar, Rangareddy, Telangana - 501505
+                  Plot no 17, Road no 3, Padmalaya Nagar, Hayathnagar, Rangareddy, Telangana - 501505
                 </span>
               </p>
             </div>

@@ -380,7 +380,7 @@ export default function IPProtectionPage() {
           <Bold>IP Legal Department:</Bold><br />
           Email: <a href="mailto:legal@gharse.app" style={{ color: '#FF6B35' }}>legal@gharse.app</a><br />
           Phone: +91 90104 60964<br />
-          Address: GharSe, Hayatnagar, Hyderabad, Telangana - 501505<br />
+          Address: GharSe, Hayathnagar, Hyderabad, Telangana - 501505<br />
           <br />
           <Bold>Trademark Inquiries:</Bold> <a href="mailto:trademark@gharse.app" style={{ color: '#FF6B35' }}>trademark@gharse.app</a><br />
           <Bold>Licensing Requests:</Bold> <a href="mailto:licensing@gharse.app" style={{ color: '#FF6B35' }}>licensing@gharse.app</a><br />

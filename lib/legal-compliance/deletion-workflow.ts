@@ -307,7 +307,7 @@ async function sendDeletionRequestEmail(
     <div class="footer">
       <p>This email is required by GDPR Article 17 and DPDPA 2023.</p>
       <p>Bantu's Kitchen (Doing business as GharSe)<br>
-      Hayatnagar, Hyderabad, Telangana, India</p>
+      Hayathnagar, Hyderabad, Telangana, India</p>
     </div>
   </div>
 </body>
@@ -429,7 +429,7 @@ async function sendCancellationEmail(user: any): Promise<boolean> {
 
     <div class="footer">
       <p>Bantu's Kitchen (Doing business as GharSe)<br>
-      Hayatnagar, Hyderabad, Telangana, India</p>
+      Hayathnagar, Hyderabad, Telangana, India</p>
     </div>
   </div>
 </body>
@@ -581,7 +581,7 @@ async function sendDeletionExecutedEmail(user: any): Promise<boolean> {
 
     <div class="footer">
       <p>Bantu's Kitchen (Doing business as GharSe)<br>
-      Hayatnagar, Hyderabad, Telangana, India</p>
+      Hayathnagar, Hyderabad, Telangana, India</p>
     </div>
   </div>
 </body>
