@@ -1270,7 +1270,8 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
                   WebkitBackdropFilter: 'blur(10px)',
                   display: 'flex',
                   flexDirection: 'column',
-                  height: '100%'
+                  height: '100%',
+                  padding: 0
                 }}
                 onClick={() => {
                   setSelectedItem(item);
@@ -1287,11 +1288,18 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
                   e.currentTarget.style.borderColor = 'rgba(0, 0, 0, 0.06)';
                 }}
               >
-                {/* Image Container - Proper Aspect Ratio */}
+                {/* Image Container - Full Cover with No Gaps */}
                 <div className="relative bg-gray-100 overflow-hidden" style={{ 
                   aspectRatio: '4/3',
                   minHeight: isDesktop ? '200px' : '160px',
-                  maxHeight: isDesktop ? '240px' : '200px'
+                  maxHeight: isDesktop ? '240px' : '200px',
+                  borderTopLeftRadius: '1rem',
+                  borderTopRightRadius: '1rem',
+                  borderBottomLeftRadius: 0,
+                  borderBottomRightRadius: 0,
+                  margin: 0,
+                  padding: 0,
+                  width: '100%'
                 }}>
                   {imageLoading.has(item.id) && (
                     <div className="absolute inset-0 flex items-center justify-center">
@@ -1313,7 +1321,10 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
                         transform: item.imagePosition 
                           ? `scale(${item.imagePosition.scale})` 
                           : 'scale(1)',
-                        transition: 'transform 0.3s ease'
+                        transition: 'transform 0.3s ease',
+                        display: 'block',
+                        margin: 0,
+                        padding: 0
                       }}
                       className="group-hover:scale-110"
                       loading="lazy"
