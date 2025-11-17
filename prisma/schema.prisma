@@ -163,6 +163,7 @@ model MenuItem {
   orderItems       OrderItem[]
   cartReservations CartReservation[]
   demandHistory    ItemDemandHistory[]
+  ratings          DishRating[]
 
   @@index([category])
   @@index([isAvailable])
@@ -244,6 +245,9 @@ model Order {
 
   // Delivery Tracking (NEW!)
   delivery Delivery?
+
+  // Ratings (NEW!)
+  ratings DishRating[]
 
   @@index([orderNumber])
   @@index([customerId]) // NEW! Fast customer order lookup
@@ -2069,4 +2073,462 @@ model DeviceFingerprint {
 
   @@index([fingerprintId])
   @@index([lastSeen])
+}
+
+// ===== RATINGS & REVIEWS SYSTEM =====
+
+// Dish/Menu Item Ratings (only from verified purchasers)
+model DishRating {
+  id              String   @id @default(cuid())
+  menuItemId      String
+  menuItem        MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+
+  // Customer Info
+  customerId      String?  // If logged in
+  customerName    String
+  orderId         String   // Verified purchase
+  order           Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  // Rating Components (1-5 stars each)
+  overallRating   Int      // Overall experience (1-5)
+  tasteRating     Int?     // How it tasted (1-5)
+  presentationRating Int?  // Visual appeal (1-5)
+  portionRating   Int?     // Portion size (1-5)
+  valueRating     Int?     // Value for money (1-5)
+  freshnessRating Int?     // Freshness of ingredients (1-5)
+
+  // Review
+  title           String?  // Review headline
+  review          String?  @db.Text // Detailed review
+
+  // Sentiment Analysis (auto-generated)
+  sentiment       String?  // positive, neutral, negative
+  sentimentScore  Float?   // -1 to 1
+
+  // Tags (customer-selected or auto-detected)
+  tags            String?  @db.Text // JSON: ["spicy", "authentic", "fresh", "delicious"]
+
+  // Media
+  photos          String?  @db.Text // JSON array of photo URLs
+
+  // Helpful votes
+  helpfulCount    Int      @default(0)
+  notHelpfulCount Int      @default(0)
+
+  // Verification
+  isVerifiedPurchase Boolean @default(true)
+
+  // Moderation
+  isApproved      Boolean  @default(false)
+  isFlagged       Boolean  @default(false)
+  flagReason      String?
+  moderatedAt     DateTime?
+  moderatedBy     String?
+
+  // Response from restaurant
+  response        String?  @db.Text
+  respondedAt     DateTime?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([orderId, menuItemId]) // One rating per item per order
+  @@index([menuItemId])
+  @@index([customerId])
+  @@index([orderId])
+  @@index([overallRating])
+  @@index([createdAt])
+  @@index([isApproved])
+}
+
+// ===== ADVANCED ANALYTICS FOR DATA MONETIZATION =====
+
+// Taste Preference Profiling (GOLD DATA!)
+model TastePreference {
+  id              String   @id @default(cuid())
+  customerId      String?
+  fingerprintId   String?  // For anonymous users
+
+  // Flavor Preferences (0-1 scale, learned from ratings)
+  spicyPreference    Float @default(0.5)
+  sweetPreference    Float @default(0.5)
+  sourPreference     Float @default(0.5)
+  saltyPreference    Float @default(0.5)
+  bitterPreference   Float @default(0.5)
+  umamiPreference    Float @default(0.5)
+  creamyPreference   Float @default(0.5)
+  crunchyPreference  Float @default(0.5)
+
+  // Cuisine Preferences
+  cuisineScores      Json? // {"Indian": 0.9, "Chinese": 0.7, "Italian": 0.6}
+
+  // Dietary Patterns
+  vegetarianScore    Float @default(0.5) // Likelihood of being vegetarian
+  veganScore         Float @default(0.5)
+  healthConscious    Float @default(0.5)
+  adventurous        Float @default(0.5) // Tries new things
+
+  // Price Sensitivity
+  priceElasticity    Float @default(0.5) // 0 = price insensitive, 1 = very sensitive
+  avgOrderValue      Float @default(0)
+  maxOrderValue      Float @default(0)
+
+  // Ordering Patterns
+  lunchFrequency     Float @default(0)
+  dinnerFrequency    Float @default(0)
+  weekendFrequency   Float @default(0)
+
+  // Last updated
+  updatedAt          DateTime @updatedAt
+  createdAt          DateTime @default(now())
+
+  @@index([customerId])
+  @@index([fingerprintId])
+}
+
+// Menu Item Performance Analytics
+model MenuItemAnalytics {
+  id              String   @id @default(cuid())
+  menuItemId      String
+  date            DateTime // Daily aggregation
+
+  // Sales Metrics
+  ordersCount     Int      @default(0)
+  quantity        Int      @default(0)
+  revenue         Float    @default(0)
+
+  // Rating Metrics
+  avgRating       Float?
+  ratingCount     Int      @default(0)
+
+  // Component Ratings
+  avgTaste        Float?
+  avgPresentation Float?
+  avgPortion      Float?
+  avgValue        Float?
+  avgFreshness    Float?
+
+  // Sentiment
+  positiveReviews Int      @default(0)
+  neutralReviews  Int      @default(0)
+  negativeReviews Int      @default(0)
+
+  // Return Rate
+  repeatOrders    Int      @default(0) // Same customer ordered again
+  repeatRate      Float?   // Percentage
+
+  // Pairing Analytics (GOLD!)
+  frequentPairs   Json?    // Items often ordered with this one
+
+  // Time-based patterns
+  morningOrders   Int      @default(0)
+  afternoonOrders Int      @default(0)
+  eveningOrders   Int      @default(0)
+  nightOrders     Int      @default(0)
+
+  // Weather correlation (GOLD!)
+  rainyDayOrders  Int      @default(0)
+  sunnyDayOrders  Int      @default(0)
+  coldDayOrders   Int      @default(0)
+  hotDayOrders    Int      @default(0)
+
+  updatedAt       DateTime @updatedAt
+
+  @@unique([menuItemId, date])
+  @@index([menuItemId])
+  @@index([date])
+  @@index([avgRating])
+  @@index([revenue])
+}
+
+// Customer Lifetime Value Prediction (GOLD!)
+model CustomerLTV {
+  id              String   @id @default(cuid())
+  customerId      String   @unique
+
+  // Historical Data
+  firstOrderDate  DateTime
+  lastOrderDate   DateTime
+  totalOrders     Int      @default(0)
+  totalSpent      Float    @default(0)
+  avgOrderValue   Float    @default(0)
+
+  // Predicted Future Value
+  predictedLTV    Float?   // Next 12 months
+  ltv30Days       Float?
+  ltv90Days       Float?
+  ltv365Days      Float?
+
+  // Churn Prediction
+  churnRisk       Float?   // 0-1, probability of not ordering again
+  churnScore      String?  // low, medium, high
+
+  // Engagement Metrics
+  daysSinceLastOrder Int   @default(0)
+  avgDaysBetweenOrders Float @default(0)
+  orderFrequency   String? // daily, weekly, monthly, occasional
+
+  // Segmentation
+  segment          String? // vip, regular, at_risk, churned, new
+
+  // Monetization Potential
+  upsellPotential  Float?  // Likelihood to buy premium items
+  referralPotential Float? // Likelihood to refer others
+
+  updatedAt        DateTime @updatedAt
+  createdAt        DateTime @default(now())
+
+  @@index([customerId])
+  @@index([predictedLTV])
+  @@index([churnRisk])
+  @@index([segment])
+}
+
+// Food Trend Detection (GOLD!)
+model FoodTrend {
+  id              String   @id @default(cuid())
+
+  // Trend Identification
+  trendName       String   // e.g., "Plant-based proteins", "Korean flavors"
+  category        String?  // cuisine, ingredient, dietary, flavor
+
+  // Metrics
+  growthRate      Float    // Percentage growth
+  velocity        Float    // Acceleration
+  peakPrediction  DateTime? // When will it peak
+
+  // Affected Items
+  relatedItems    Json     // Menu items in this trend
+
+  // Geographic
+  topCities       Json?    // Where is this trending
+
+  // Demographics
+  ageGroup        String?  // Which age group drives this
+  timeOfDay       String?  // When is it most popular
+
+  // Monetization Score
+  monetizationPotential Float? // How much can we capitalize
+
+  // Status
+  status          String   // emerging, growing, peaking, declining
+  confidence      Float    // How confident in this trend (0-1)
+
+  detectedAt      DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([trendName])
+  @@index([status])
+  @@index([growthRate])
+}
+
+// Viral Food Prediction (GOLD!)
+model ViralPrediction {
+  id              String   @id @default(cuid())
+  menuItemId      String
+
+  // Virality Indicators
+  socialShareRate Float    @default(0) // How often shared
+  photoUploadRate Float    @default(0) // How often photographed
+  reviewRate      Float    @default(0) // Reviews per order
+  repeatOrderRate Float    @default(0) // Reorders
+
+  // Velocity Metrics
+  orderVelocity   Float    @default(0) // Orders per day
+  velocityGrowth  Float    @default(0) // Growth rate
+
+  // Virality Score
+  viralityScore   Float    @default(0) // 0-100
+  viralPotential  String   // low, medium, high, viral
+
+  // Prediction
+  predictedOrders Int?     // Next 7 days
+  peakDate        DateTime? // When will it peak
+
+  // Recommendations
+  actionItems     Json?    // What to do (increase stock, promote, etc.)
+
+  calculatedAt    DateTime @default(now())
+
+  @@unique([menuItemId])
+  @@index([viralityScore])
+  @@index([viralPotential])
+}
+
+// Price Optimization Analytics (GOLD!)
+model PriceOptimization {
+  id              String   @id @default(cuid())
+  menuItemId      String
+
+  // Current Pricing
+  currentPrice    Float
+
+  // Optimal Pricing
+  recommendedPrice Float?
+  minPrice        Float?   // Floor
+  maxPrice        Float?   // Ceiling
+
+  // Elasticity
+  priceElasticity Float?   // How sensitive to price changes
+
+  // Revenue Projection
+  currentRevenue  Float    @default(0)
+  projectedRevenue Float?  // At recommended price
+  revenueUplift   Float?   // Potential increase %
+
+  // Demand Curve Data
+  demandCurve     Json?    // Price vs quantity data
+
+  // A/B Test Results
+  testPrices      Json?    // Prices tested
+  testResults     Json?    // Results of tests
+
+  // Competition
+  competitorPrice Float?
+  pricePosition   String?  // premium, competitive, value
+
+  // Recommendations
+  strategy        String?  // increase, decrease, maintain, dynamic
+  confidence      Float?   // 0-1
+
+  calculatedAt    DateTime @default(now())
+
+  @@unique([menuItemId])
+  @@index([recommendedPrice])
+  @@index([revenueUplift])
+}
+
+// Ingredient Intelligence (GOLD!)
+model IngredientTrend {
+  id              String   @id @default(cuid())
+  ingredientName  String   @unique
+
+  // Popularity Metrics
+  usageCount      Int      @default(0) // How many dishes use it
+  orderFrequency  Float    @default(0) // Orders of dishes with this
+
+  // Trend
+  growthRate      Float    @default(0)
+  trendDirection  String   @default("stable") // rising, stable, falling
+
+  // Health Data
+  healthScore     Float?   // Nutrition/health rating
+  allergenInfo    String?  // Common allergen?
+
+  // Sustainability
+  sustainabilityScore Float? // Environmental impact
+  localAvailability Boolean @default(true)
+
+  // Pricing
+  avgCost         Float?   // Cost per unit
+  priceVolatility Float?   // How much price fluctuates
+
+  // Seasonality
+  seasonalPattern Json?    // When is it in season
+
+  updatedAt       DateTime @updatedAt
+  createdAt       DateTime @default(now())
+
+  @@index([ingredientName])
+  @@index([growthRate])
+  @@index([trendDirection])
+}
+
+// Customer Segmentation (GOLD!)
+model CustomerSegment {
+  id              String   @id @default(cuid())
+  segmentName     String   @unique
+
+  // Segment Criteria
+  criteria        Json     // Rules for this segment
+
+  // Size
+  customerCount   Int      @default(0)
+  percentOfTotal  Float    @default(0)
+
+  // Value
+  avgLTV          Float?
+  totalRevenue    Float    @default(0)
+
+  // Behavior
+  avgOrderValue   Float?
+  avgFrequency    Float?
+  preferredTime   String?
+  preferredItems  Json?
+
+  // Marketing
+  conversionRate  Float?
+  responseRate    Float?   // To marketing campaigns
+
+  // Recommendations
+  targetingStrategy String? @db.Text
+  recommendations Json?
+
+  updatedAt       DateTime @updatedAt
+  createdAt       DateTime @default(now())
+
+  @@index([segmentName])
+  @@index([customerCount])
+}
+
+// Competitive Intelligence (GOLD!)
+model CompetitorAnalysis {
+  id              String   @id @default(cuid())
+  competitorName  String
+
+  // Menu Comparison
+  sharedItems     Json?    // Items both have
+  uniqueItems     Json?    // Items only they have
+
+  // Pricing
+  avgPriceDiff    Float?   // How our prices compare
+
+  // Performance
+  estimatedOrders Int?
+  marketShare     Float?
+
+  // Strengths/Weaknesses
+  strengths       String?  @db.Text
+  weaknesses      String?  @db.Text
+
+  // Opportunities
+  gaps            String?  @db.Text // What we could add
+  threats         String?  @db.Text
+
+  updatedAt       DateTime @updatedAt
+  createdAt       DateTime @default(now())
+
+  @@index([competitorName])
+}
+
+// Seasonal Intelligence (GOLD!)
+model SeasonalPattern {
+  id              String   @id @default(cuid())
+  itemType        String   // menu_item, category, cuisine
+  itemId          String
+
+  // Patterns
+  monthlyPattern  Json     // Sales by month
+  weeklyPattern   Json     // Sales by day of week
+  hourlyPattern   Json     // Sales by hour
+
+  // Weather Correlation
+  weatherImpact   Json?    // How weather affects sales
+
+  // Events
+  eventImpact     Json?    // Festivals, holidays impact
+
+  // Predictions
+  nextPeak        DateTime?
+  nextLow         DateTime?
+
+  // Recommendations
+  stockingAdvice  String?  @db.Text
+  pricingAdvice   String?  @db.Text
+
+  updatedAt       DateTime @updatedAt
+
+  @@unique([itemType, itemId])
+  @@index([itemType])
+  @@index([itemId])
 }
