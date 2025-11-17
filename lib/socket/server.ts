@@ -26,7 +26,7 @@ export function initializeSocketServer(httpServer: HTTPServer) {
       methods: ['GET', 'POST'],
       credentials: true,
     },
-    path: '/api/socketio',
+    path: '/api/socket',
     transports: ['websocket', 'polling'],
   });
 

@@ -47,7 +47,7 @@ export function useSocket(options: UseSocketOptions = {}): UseSocketReturn {
     const socketUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
     socketRef.current = io(socketUrl, {
-      path: '/api/socketio',
+      path: '/api/socket',
       transports: ['websocket', 'polling'],
       reconnection,
       reconnectionAttempts,

@@ -15,10 +15,10 @@ export const GET = async (req: NextRequest) => {
   return NextResponse.json({
     status: 'Socket.IO Ready',
     message: 'WebSocket server is running',
-    path: '/api/socketio',
+    path: '/api/socket',
     transports: ['websocket', 'polling'],
     documentation: {
-      connect: 'io("' + (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000') + '", { path: "/api/socketio" })',
+      connect: 'io("' + (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000') + '", { path: "/api/socket" })',
       events: {
         'join:order': 'Join room for specific order updates',
         'join:customer': 'Join room for customer order notifications',
