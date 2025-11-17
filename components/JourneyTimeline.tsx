@@ -27,7 +27,6 @@ import {
   Clock,
   Package,
   Truck,
-  XCircle,
   UtensilsCrossed,
   PartyPopper,
   Crown,
@@ -59,7 +58,7 @@ interface Order {
 interface JourneyTimelineProps {
   orders: Order[];
   onReorder: (orderId: string) => void;
-  onCancel?: (order: Order) => void;
+  // onCancel?: (order: Order) => void; // Future implementation
 }
 
 // Status configurations
@@ -74,46 +73,34 @@ const STATUS_CONFIG = {
 };
 
 // Cancellation window in minutes (should match server-side config)
-const CANCELLATION_WINDOW_MINUTES = 10;
-const CANCELLATION_WINDOW_MS = CANCELLATION_WINDOW_MINUTES * 60 * 1000;
+// const CANCELLATION_WINDOW_MINUTES = 10;
+// const CANCELLATION_WINDOW_MS = CANCELLATION_WINDOW_MINUTES * 60 * 1000;
 
 /**
  * Check if an order can be cancelled by customer
  * Client-side check (server-side validation is authoritative)
+ * Currently unused but kept for future implementation
  */
-const canCancelOrder = (order: Order): boolean => {
-  // Normalize status to uppercase for comparison (handle both cases)
-  const normalizedStatus = order.status.toUpperCase();
+// const canCancelOrder = (order: Order): boolean => {
+//   const normalizedStatus = order.status.toUpperCase();
+//   if (normalizedStatus === 'CANCELLED' || normalizedStatus === 'DELIVERED') {
+//     return false;
+//   }
+//   if (order.preparingAt) {
+//     return false;
+//   }
+//   const timeSinceCreation = Date.now() - new Date(order.createdAt).getTime();
+//   const isWithinTimeWindow = timeSinceCreation < CANCELLATION_WINDOW_MS;
+//   if (normalizedStatus === 'PENDING') {
+//     return isWithinTimeWindow;
+//   }
+//   if (normalizedStatus === 'CONFIRMED') {
+//     return isWithinTimeWindow;
+//   }
+//   return false;
+// };
 
-  // Cannot cancel if already cancelled or delivered
-  if (normalizedStatus === 'CANCELLED' || normalizedStatus === 'DELIVERED') {
-    return false;
-  }
-
-  // Cannot cancel if preparation has started
-  if (order.preparingAt) {
-    return false;
-  }
-
-  // Calculate time since order creation
-  const timeSinceCreation = Date.now() - new Date(order.createdAt).getTime();
-  const isWithinTimeWindow = timeSinceCreation < CANCELLATION_WINDOW_MS;
-
-  // PENDING orders can be cancelled if within time window
-  if (normalizedStatus === 'PENDING') {
-    return isWithinTimeWindow;
-  }
-
-  // CONFIRMED orders can be cancelled if within time window and not preparing
-  if (normalizedStatus === 'CONFIRMED') {
-    return isWithinTimeWindow;
-  }
-
-  // All other statuses cannot be cancelled
-  return false;
-};
-
-const JourneyTimeline: React.FC<JourneyTimelineProps> = ({ orders, onReorder, onCancel }) => {
+const JourneyTimeline: React.FC<JourneyTimelineProps> = ({ orders, onReorder }) => {
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
 
   const toggleExpanded = (orderId: string) => {
@@ -174,9 +161,49 @@ const JourneyTimeline: React.FC<JourneyTimelineProps> = ({ orders, onReorder, on
   return (
     <>
       <style jsx>{`
+        /* Mobile: 2 columns with equal width */
         @media (max-width: 640px) {
           .grid {
-            grid-template-columns: 1fr !important;
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 0.5rem !important;
+          }
+          
+          /* Make hero images taller on mobile for stunning visuals */
+          .hero-image {
+            height: 12rem !important;
+          }
+          
+          /* Adjust card text for mobile readability */
+          .order-title {
+            font-size: 0.8125rem !important;
+            line-height: 1.125rem !important;
+          }
+          
+          .order-price {
+            font-size: 1.125rem !important;
+          }
+          
+          /* Smaller badges on mobile */
+          .date-badge, .status-badge {
+            padding: 0.1875rem 0.375rem !important;
+          }
+          
+          .date-badge span, .status-badge span {
+            font-size: 0.625rem !important;
+          }
+        }
+        
+        /* Tablet: 3 columns */
+        @media (min-width: 641px) and (max-width: 1024px) {
+          .grid {
+            grid-template-columns: repeat(3, 1fr) !important;
+          }
+        }
+        
+        /* Desktop: auto-fill with min/max */
+        @media (min-width: 1025px) {
+          .grid {
+            grid-template-columns: repeat(auto-fill, minmax(260px, 320px)) !important;
           }
         }
       `}</style>
@@ -202,6 +229,7 @@ const JourneyTimeline: React.FC<JourneyTimelineProps> = ({ orders, onReorder, on
         className="grid"
         style={{
           gap: '1rem',
+          display: 'grid',
           gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 320px))',
           justifyContent: 'start',
         }}
@@ -213,18 +241,26 @@ const JourneyTimeline: React.FC<JourneyTimelineProps> = ({ orders, onReorder, on
           const heroItem = order.items[0];
 
           // Extract menu item data (handle both structures: direct and nested)
-          const getItemName = (item: any) => item.name || item.menuItem?.name || 'Delicious Dish';
-          const getItemImage = (item: any) => {
+          const getItemName = (item: OrderItem | { menuItem?: { name?: string } }): string => {
+            if ('name' in item && item.name) return item.name;
+            if ('menuItem' in item && item.menuItem?.name) return item.menuItem.name;
+            return 'Delicious Dish';
+          };
+          
+          const getItemImage = (item: OrderItem | { menuItem?: { image?: string }; image?: string; dish?: { image?: string } }): string | null => {
             // Try multiple paths to find the image
-            const image = item.image || item.menuItem?.image || item.dish?.image || null;
+            let image: string | undefined | null = null;
+            if ('image' in item && item.image) image = item.image;
+            else if ('menuItem' in item && item.menuItem?.image) image = item.menuItem.image;
+            else if ('dish' in item && item.dish?.image) image = item.dish.image;
             
             // If we have an image and it's not a full URL, construct the full path
-            if (image && !image.startsWith('http://') && !image.startsWith('https://') && !image.startsWith('/')) {
+            if (image && typeof image === 'string' && !image.startsWith('http://') && !image.startsWith('https://') && !image.startsWith('/')) {
               // Prepend forward slash if missing
               return `/${image}`;
             }
             
-            return image;
+            return image || null;
           };
 
           // Safety check: fallback to PENDING if status not found
@@ -261,7 +297,7 @@ const JourneyTimeline: React.FC<JourneyTimelineProps> = ({ orders, onReorder, on
                 pointerEvents: 'none',
               }}>
                 {/* Left: Date Badge */}
-                <div style={{
+                <div className="date-badge" style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.25rem',
@@ -282,7 +318,7 @@ const JourneyTimeline: React.FC<JourneyTimelineProps> = ({ orders, onReorder, on
                 </div>
 
                 {/* Right: Status Badge */}
-                <div style={{
+                <div className="status-badge" style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.25rem',
@@ -304,21 +340,28 @@ const JourneyTimeline: React.FC<JourneyTimelineProps> = ({ orders, onReorder, on
                 </div>
               </div>
 
-              {/* Hero Image Section - Ultra Compact */}
-              <div style={{
+              {/* Hero Image Section - Full Beautiful Display */}
+              <div className="hero-image" style={{
                 position: 'relative',
                 width: '100%',
-                height: '6rem',
+                height: '10rem',
                 backgroundColor: '#F97316',
                 overflow: 'hidden',
+                borderTopLeftRadius: '0.75rem',
+                borderTopRightRadius: '0.75rem',
               }}>
                 {getItemImage(heroItem) ? (
                   <Image
                     src={getItemImage(heroItem)}
                     alt={getItemName(heroItem)}
                     fill
-                    style={{ objectFit: 'cover' }}
-                    priority
+                    style={{ 
+                      objectFit: 'cover',
+                      objectPosition: 'center',
+                    }}
+                    quality={95}
+                    priority={index < 4}
+                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 320px"
                   />
                 ) : (
                   <div style={{
@@ -343,7 +386,7 @@ const JourneyTimeline: React.FC<JourneyTimelineProps> = ({ orders, onReorder, on
               }}>
 
                 {/* Order Title - Smaller */}
-                <h3 style={{
+                <h3 className="order-title" style={{
                   fontSize: '0.875rem',
                   lineHeight: '1.125rem',
                   fontWeight: 700,
@@ -369,7 +412,7 @@ const JourneyTimeline: React.FC<JourneyTimelineProps> = ({ orders, onReorder, on
                     <ShoppingBag size={12} style={{ color: '#6B7280' }} />
                     <span>{order.items.length} item{order.items.length !== 1 ? 's' : ''}</span>
                   </div>
-                  <span style={{
+                  <span className="order-price" style={{
                     fontSize: '1rem',
                     fontWeight: 700,
                     color: '#111827',
@@ -520,9 +563,17 @@ const JourneyTimeline: React.FC<JourneyTimelineProps> = ({ orders, onReorder, on
 
                 {/* Items - Minimal Spacing */}
                 <div style={{ marginBottom: '0.375rem' }}>
-                  {order.items.map((item: any, idx: number) => {
-                    const getItemName = (item: any) => item.name || item.menuItem?.name || 'Item';
-                    const getItemPrice = (item: any) => item.price || item.menuItem?.price || 0;
+                  {order.items.map((item: OrderItem | { quantity: number; name?: string; price?: number; menuItem?: { name?: string; price?: number } }, idx: number) => {
+                    const getItemNameInternal = (item: OrderItem | { name?: string; menuItem?: { name?: string } }): string => {
+                      if ('name' in item && item.name) return item.name;
+                      if ('menuItem' in item && item.menuItem?.name) return item.menuItem.name;
+                      return 'Item';
+                    };
+                    const getItemPriceInternal = (item: OrderItem | { price?: number; menuItem?: { price?: number } }): number => {
+                      if ('price' in item && item.price) return item.price;
+                      if ('menuItem' in item && item.menuItem?.price) return item.menuItem.price;
+                      return 0;
+                    };
                     
                     return (
                       <div
@@ -538,14 +589,14 @@ const JourneyTimeline: React.FC<JourneyTimelineProps> = ({ orders, onReorder, on
                           fontSize: '0.6875rem',
                           color: '#374151',
                         }}>
-                          {item.quantity}x {getItemName(item)}
+                          {item.quantity}x {getItemNameInternal(item)}
                         </span>
                         <span style={{
                           fontSize: '0.6875rem',
                           fontWeight: 600,
                           color: '#111827',
                         }}>
-                          ₹{(item.quantity * getItemPrice(item)).toFixed(2)}
+                          ₹{(item.quantity * getItemPriceInternal(item)).toFixed(2)}
                         </span>
                       </div>
                     );

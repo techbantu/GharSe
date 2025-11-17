@@ -64,38 +64,39 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
   return (
     <>
       <style dangerouslySetInnerHTML={{__html: `
-        @media (min-width: 1920px) {
-          .hero-section {
-            min-height: auto !important;
-          }
-          .hero-container {
-            padding-top: 1.5rem !important;
-            padding-bottom: 1.5rem !important;
-          }
-          .hero-content {
-            gap: 1rem !important;
-          }
-          .hero-content > * {
-            margin-bottom: 0.75rem !important;
-          }
-          .hero-headline {
-            margin-bottom: 0.5rem !important;
-          }
-          .hero-headline h1 {
-            margin-bottom: 0.25rem !important;
-          }
-          .hero-headline h1 span {
-            margin-bottom: 0.25rem !important;
-          }
-          .hero-description {
-            margin-top: 0.25rem !important;
-          }
-          .hero-buttons {
-            padding-top: 1rem !important;
-          }
-          .hero-pills {
-            padding-top: 0.75rem !important;
-          }
+        /* Compact spacing for all screen sizes */
+        .hero-section {
+          min-height: auto !important;
+        }
+        .hero-container {
+          padding-top: 1.5rem !important;
+          padding-bottom: 1.5rem !important;
+        }
+        .hero-content {
+          gap: 0.75rem !important;
+        }
+        .hero-content > * {
+          margin-bottom: 0.5rem !important;
+        }
+        .hero-headline {
+          margin-bottom: 0.5rem !important;
+        }
+        .hero-headline h1 {
+          margin-bottom: 0.25rem !important;
+        }
+        .hero-headline h1 span {
+          margin-bottom: 0.25rem !important;
+        }
+        .hero-description {
+          margin-top: 0.25rem !important;
+          margin-bottom: 0.5rem !important;
+        }
+        .hero-buttons {
+          padding-top: 1rem !important;
+          margin-bottom: 0.75rem !important;
+        }
+        .hero-pills {
+          padding-top: 0.75rem !important;
         }
         
         /* Shine animation for discount badge */
@@ -108,7 +109,7 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
           }
         }
       `}} />
-    <section id="home" className="relative min-h-[90vh] flex items-center overflow-hidden bg-gradient-to-br from-orange-50 via-white to-yellow-50 hero-section" suppressHydrationWarning>
+    <section id="home" className="relative flex items-center overflow-hidden bg-gradient-to-br from-orange-50 via-white to-yellow-50 hero-section" style={{ minHeight: 'auto' }} suppressHydrationWarning>
       {/* Decorative Background Pattern */}
       <div className="absolute inset-0 opacity-5">
         <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
@@ -128,10 +129,10 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
         <div className="absolute top-1/3 left-1/4 w-64 h-64 bg-gradient-to-br from-orange-300 to-yellow-300 rounded-full opacity-10 blur-2xl animate-float" style={{ animationDelay: '1s' }}></div>
       </div>
       
-      <div className="container-custom mx-auto px-12 sm:px-16 lg:px-20 pt-40 pb-32 md:pt-48 md:pb-40 lg:pt-56 lg:pb-48 relative z-10 hero-container">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 xl:gap-24 items-center max-w-7xl mx-auto">
+      <div className="container-custom mx-auto px-6 sm:px-8 lg:px-12 py-12 md:py-16 lg:py-20 relative z-10 hero-container">
+        <div className="grid lg:grid-cols-2 gap-6 lg:gap-10 xl:gap-12 items-center max-w-7xl mx-auto">
           {/* Left Column - Content */}
-          <div className="text-center lg:text-left space-y-8 animate-slide-up hero-content" style={{ paddingTop: '1rem' }}>
+          <div className="text-center lg:text-left space-y-4 animate-slide-up hero-content">
             {/* Badge - Trust Indicator with Icon */}
             <div className="inline-flex items-center" style={{ gap: '8px' }}>
               <div className="flex items-center" style={{ gap: '2px' }}>
@@ -149,8 +150,8 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
             </div>
             
             {/* Main Headline - Jobs-Level Typography */}
-            <div className="space-y-8 hero-headline">
-              <h1 className="text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black leading-[1.05] tracking-[-0.04em]">
+            <div className="space-y-3 hero-headline">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-black leading-[1.05] tracking-[-0.04em]">
                 <span className="text-[#1d1d1f] block mb-2" style={{ 
                   fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif',
                   fontWeight: 800,
@@ -186,11 +187,11 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
                   lineHeight: '1.05'
                 }}>Delivered Fresh</span>
               </h1>
-              <p className="text-lg md:text-xl lg:text-2xl text-[#4B5563] leading-[1.7] max-w-2xl mx-auto lg:mx-0 mt-6 hero-description" style={{
+              <p className="text-base md:text-lg lg:text-xl text-[#4B5563] leading-[1.6] max-w-2xl mx-auto lg:mx-0 mt-3 hero-description" style={{
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif',
                 fontWeight: 400,
                 letterSpacing: '-0.011em',
-                lineHeight: '1.75'
+                lineHeight: '1.6'
               }}>
                 Authentic home-cooked meals prepared with love, traditional family recipes, and the finest spices. Experience India's flavors at your doorstep.
               </p>
@@ -200,10 +201,10 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
             <div style={{ 
               display: 'flex', 
               flexDirection: 'row', 
-              gap: '12px', 
+              gap: '10px', 
               justifyContent: 'center', 
               alignItems: 'center',
-              paddingTop: '48px',
+              paddingTop: '24px',
               flexWrap: 'wrap'
             }} className="lg:justify-start hero-buttons">
               <button
@@ -213,8 +214,8 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
                   overflow: 'hidden',
                   background: 'linear-gradient(135deg, #FF6B35 0%, #F77F00 50%, #EA580C 100%)',
                   color: 'white',
-                  height: '44px',
-                  padding: '0 24px',
+                  height: '40px',
+                  padding: '0 20px',
                   borderRadius: '12px',
                   fontWeight: 600,
                   fontSize: '14px',
@@ -273,8 +274,8 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
               <a
                 href="#menu"
                 style={{
-                  height: '44px',
-                  padding: '0 24px',
+                  height: '40px',
+                  padding: '0 20px',
                   background: 'white',
                   border: '2px solid rgba(209, 213, 219, 0.5)',
                   color: '#374151',
@@ -322,24 +323,24 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
               flexWrap: 'wrap', 
               justifyContent: 'center', 
               gap: '8px', 
-              paddingTop: '24px' 
+              paddingTop: '16px' 
             }} className="lg:justify-start hero-pills">
               <div style={{ 
                 display: 'flex', 
                 alignItems: 'center', 
                 background: 'white', 
-                borderRadius: '12px', 
-                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)', 
+                borderRadius: '10px', 
+                boxShadow: '0 3px 5px rgba(0, 0, 0, 0.1)', 
                 border: '1px solid #D1FAE5', 
-                gap: '8px', 
-                padding: '8px 12px',
+                gap: '6px', 
+                padding: '6px 10px',
                 transition: 'box-shadow 0.3s',
                 flex: '1 1 auto',
-                minWidth: '140px'
+                minWidth: '130px'
               }} className="hover:shadow-lg">
                 <div style={{
-                  width: '36px',
-                  height: '36px',
+                  width: '32px',
+                  height: '32px',
                   background: 'linear-gradient(to bottom right, #4ADE80, #16A34A)',
                   borderRadius: '8px',
                   display: 'flex',
@@ -360,18 +361,18 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
                 display: 'flex', 
                 alignItems: 'center', 
                 background: 'white', 
-                borderRadius: '12px', 
-                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)', 
+                borderRadius: '10px', 
+                boxShadow: '0 3px 5px rgba(0, 0, 0, 0.1)', 
                 border: '1px solid #DBEAFE', 
-                gap: '8px', 
-                padding: '8px 12px',
+                gap: '6px', 
+                padding: '6px 10px',
                 transition: 'box-shadow 0.3s',
                 flex: '1 1 auto',
-                minWidth: '140px'
+                minWidth: '130px'
               }} className="hover:shadow-lg">
                 <div style={{
-                  width: '36px',
-                  height: '36px',
+                  width: '32px',
+                  height: '32px',
                   background: 'linear-gradient(to bottom right, #60A5FA, #2563EB)',
                   borderRadius: '8px',
                   display: 'flex',
@@ -391,9 +392,9 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
           </div>
           
           {/* Right Column - Stunning Food Grid */}
-          <div className="relative animate-slide-left" style={{ paddingBottom: '80px' }}>
+          <div className="relative animate-slide-left" style={{ paddingBottom: '40px' }}>
             {/* Food Grid - 2x2 Beautiful Layout */}
-            <div className="grid grid-cols-2 gap-4 p-4">
+            <div className="grid grid-cols-2 gap-3 p-2">
                       {/* Biryani - Top Left */}
                       <div 
                         className="relative group cursor-pointer" 
@@ -407,7 +408,7 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
                           }
                         }}
                       >
-                        <div className="relative rounded-3xl overflow-hidden shadow-2xl transform group-hover:scale-105 transition-all duration-500 aspect-square">
+                        <div className="relative rounded-2xl overflow-hidden shadow-xl transform group-hover:scale-105 transition-all duration-500 aspect-square">
                           <img
                             src="https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=800&h=800&fit=crop&q=80"
                             alt="Authentic Hyderabadi Biryani - Traditional Indian rice dish with spices and meat, delivered fresh in Hayathnagar, Hyderabad"
@@ -417,9 +418,9 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
                             }}
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
-                                <div className="absolute bottom-4 left-4 text-white" style={{ zIndex: 10 }}>
-                                  <p className="text-xs font-semibold opacity-90" style={{ color: '#ffffff', textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)', fontWeight: 800 }}>Popular</p>
-                                  <p className="text-lg font-black" style={{ color: '#ffffff', textShadow: '0 2px 8px rgba(0, 0, 0, 0.6)', fontWeight: 900 }}>Biryani</p>
+                                <div className="absolute bottom-3 left-3 text-white" style={{ zIndex: 10 }}>
+                                  <p className="text-[10px] font-semibold opacity-90" style={{ color: '#ffffff', textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)', fontWeight: 800 }}>Popular</p>
+                                  <p className="text-base font-black" style={{ color: '#ffffff', textShadow: '0 2px 8px rgba(0, 0, 0, 0.6)', fontWeight: 900 }}>Biryani</p>
                                   <p className="text-sm font-bold text-yellow-400" style={{ color: '#FBBF24', textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)', fontWeight: 900 }}>From ₹299</p>
                                 </div>
                         </div>
@@ -427,7 +428,7 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
                       
                       {/* Butter Chicken - Top Right */}
                       <div 
-                        className="relative group mt-8 cursor-pointer"
+                        className="relative group mt-6 cursor-pointer"
                         onClick={() => handleCategoryClick('Curries')}
                         role="button"
                         tabIndex={0}
@@ -438,7 +439,7 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
                           }
                         }}
                       >
-                        <div className="relative rounded-3xl overflow-hidden shadow-2xl transform group-hover:scale-105 transition-all duration-500 aspect-square">
+                        <div className="relative rounded-2xl overflow-hidden shadow-xl transform group-hover:scale-105 transition-all duration-500 aspect-square">
                           <img
                             src="https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=800&h=800&fit=crop&q=80"
                             alt="Indian Curry Dishes - Creamy butter chicken, dal makhani, and paneer curry from Bantu's Kitchen in Hyderabad"
@@ -448,9 +449,9 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
                             }}
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
-                                <div className="absolute bottom-4 left-4 text-white" style={{ zIndex: 10 }}>
-                                  <p className="text-xs font-semibold opacity-90" style={{ color: '#ffffff', textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)', fontWeight: 800 }}>Signature</p>
-                                  <p className="text-lg font-black" style={{ color: '#ffffff', textShadow: '0 2px 8px rgba(0, 0, 0, 0.6)', fontWeight: 900 }}>Curries</p>
+                                <div className="absolute bottom-3 left-3 text-white" style={{ zIndex: 10 }}>
+                                  <p className="text-[10px] font-semibold opacity-90" style={{ color: '#ffffff', textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)', fontWeight: 800 }}>Signature</p>
+                                  <p className="text-base font-black" style={{ color: '#ffffff', textShadow: '0 2px 8px rgba(0, 0, 0, 0.6)', fontWeight: 900 }}>Curries</p>
                                   <p className="text-sm font-bold text-yellow-400" style={{ color: '#FBBF24', textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)', fontWeight: 900 }}>From ₹249</p>
                                 </div>
                         </div>
@@ -458,7 +459,7 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
                       
                       {/* Paneer Tikka - Bottom Left */}
                       <div 
-                        className="relative group -mt-4 cursor-pointer"
+                        className="relative group -mt-3 cursor-pointer"
                         onClick={() => handleCategoryClick('Appetizers')}
                         role="button"
                         tabIndex={0}
@@ -469,7 +470,7 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
                           }
                         }}
                       >
-                        <div className="relative rounded-3xl overflow-hidden shadow-2xl transform group-hover:scale-105 transition-all duration-500 aspect-square">
+                        <div className="relative rounded-2xl overflow-hidden shadow-xl transform group-hover:scale-105 transition-all duration-500 aspect-square">
                           <img
                             src="https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?w=800&h=800&fit=crop&q=80"
                             alt="Indian Appetizers - Paneer tikka, samosa, and chicken 65 starters from Bantu's Kitchen in Hayathnagar"
@@ -479,9 +480,9 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
                             }}
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
-                                <div className="absolute bottom-4 left-4 text-white" style={{ zIndex: 10 }}>
-                                  <p className="text-xs font-semibold opacity-90" style={{ color: '#ffffff', textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)', fontWeight: 800 }}>Best Seller</p>
-                                  <p className="text-lg font-black" style={{ color: '#ffffff', textShadow: '0 2px 8px rgba(0, 0, 0, 0.6)', fontWeight: 900 }}>Starters</p>
+                                <div className="absolute bottom-3 left-3 text-white" style={{ zIndex: 10 }}>
+                                  <p className="text-[10px] font-semibold opacity-90" style={{ color: '#ffffff', textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)', fontWeight: 800 }}>Best Seller</p>
+                                  <p className="text-base font-black" style={{ color: '#ffffff', textShadow: '0 2px 8px rgba(0, 0, 0, 0.6)', fontWeight: 900 }}>Starters</p>
                                   <p className="text-sm font-bold text-yellow-400" style={{ color: '#FBBF24', textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)', fontWeight: 900 }}>From ₹49</p>
                                 </div>
                         </div>
@@ -500,7 +501,7 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
                           }
                         }}
                       >
-                        <div className="relative rounded-3xl overflow-hidden shadow-2xl transform group-hover:scale-105 transition-all duration-500 aspect-square">
+                        <div className="relative rounded-2xl overflow-hidden shadow-xl transform group-hover:scale-105 transition-all duration-500 aspect-square">
                           <img
                             src="https://images.unsplash.com/photo-1631452180519-c014fe946bc7?w=800&h=800&fit=crop&q=80"
                             alt="Indian Desserts - Gulab jamun, rasmalai, and kheer traditional sweets from Bantu's Kitchen Hyderabad"
@@ -510,9 +511,9 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
                             }}
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
-                                <div className="absolute bottom-4 left-4 text-white" style={{ zIndex: 10 }}>
-                                  <p className="text-xs font-semibold opacity-90" style={{ color: '#ffffff', textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)', fontWeight: 800 }}>Sweet</p>
-                                  <p className="text-lg font-black" style={{ color: '#ffffff', textShadow: '0 2px 8px rgba(0, 0, 0, 0.6)', fontWeight: 900 }}>Desserts</p>
+                                <div className="absolute bottom-3 left-3 text-white" style={{ zIndex: 10 }}>
+                                  <p className="text-[10px] font-semibold opacity-90" style={{ color: '#ffffff', textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)', fontWeight: 800 }}>Sweet</p>
+                                  <p className="text-base font-black" style={{ color: '#ffffff', textShadow: '0 2px 8px rgba(0, 0, 0, 0.6)', fontWeight: 900 }}>Desserts</p>
                                   <p className="text-sm font-bold text-yellow-400" style={{ color: '#FBBF24', textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)', fontWeight: 900 }}>From ₹79</p>
                                 </div>
                         </div>
@@ -522,24 +523,24 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
             {/* Floating Discount Badge - Modern Promotional Style */}
             <div style={{ 
               position: 'absolute', 
-              bottom: '10px', 
+              bottom: '5px', 
               left: '0',
               right: '0',
               zIndex: 10,
               display: 'flex',
               justifyContent: 'center',
               alignItems: 'center',
-              padding: '0 16px'
+              padding: '0 12px'
             }}>
-              <div style={{ position: 'relative', width: '100%', maxWidth: '200px' }}>
+              <div style={{ position: 'relative', width: '100%', maxWidth: '180px' }}>
                 {/* Main Badge - Pill Shape (Not Circular) */}
                 <div style={{
                   background: 'linear-gradient(135deg, #F97316 0%, #EA580C 50%, #DC2626 100%)',
                   color: 'white',
                   borderRadius: '50px', // Pill shape instead of perfect circle
-                  boxShadow: '0 8px 24px rgba(249, 115, 22, 0.4), 0 4px 12px rgba(0, 0, 0, 0.15)',
-                  border: '3px solid white',
-                  padding: '12px 20px',
+                  boxShadow: '0 6px 18px rgba(249, 115, 22, 0.4), 0 3px 10px rgba(0, 0, 0, 0.15)',
+                  border: '2px solid white',
+                  padding: '8px 16px',
                   width: '100%',
                   display: 'flex',
                   alignItems: 'center',
@@ -576,7 +577,7 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
                     zIndex: 1
                   }}>
                     <p style={{ 
-                      fontSize: '1.1rem', 
+                      fontSize: '0.95rem', 
                       fontWeight: 900, 
                       whiteSpace: 'nowrap',
                       letterSpacing: '-0.02em',
@@ -584,12 +585,12 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
                       textShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
                     }}>20% OFF</p>
                     <p style={{ 
-                      fontSize: '0.65rem', 
+                      fontSize: '0.6rem', 
                       fontWeight: 700, 
                       textTransform: 'uppercase', 
                       letterSpacing: '0.1em', 
                       whiteSpace: 'nowrap', 
-                      marginTop: '2px',
+                      marginTop: '1px',
                       opacity: 0.95,
                       margin: 0
                     }}>First Order</p>
@@ -599,10 +600,10 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
                 {/* Subtle Glow Effect */}
                 <div style={{
                   position: 'absolute',
-                  inset: '-4px',
+                  inset: '-3px',
                   background: 'linear-gradient(135deg, #F97316, #DC2626)',
-                  borderRadius: '54px',
-                  filter: 'blur(12px)',
+                  borderRadius: '53px',
+                  filter: 'blur(10px)',
                   opacity: 0.4,
                   zIndex: -1,
                   animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
