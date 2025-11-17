@@ -414,10 +414,10 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       // Update cart items with fresh prices
       const updatedItems = cart.items.map((cartItem) => {
-        const freshMenuItem = menuItemMap.get(cartItem.menuItem.id);
+        const freshMenuItem = menuItemMap.get(cartItem.menuItem.id) as MenuItem | undefined;
         
-        if (!freshMenuItem) {
-          console.warn(`[Cart Price Validation] Menu item not found: ${cartItem.menuItem.name} (${cartItem.menuItem.id})`);
+        if (!freshMenuItem || typeof freshMenuItem.price !== 'number') {
+          console.warn(`[Cart Price Validation] Menu item not found or invalid: ${cartItem.menuItem.name} (${cartItem.menuItem.id})`);
           return cartItem; // Keep original if item not found
         }
         
