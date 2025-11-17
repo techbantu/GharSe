@@ -653,7 +653,10 @@ const CartSidebar: React.FC<CartSidebarProps> = ({ isOpen, onClose, onCheckout }
                           color: '#f97316',
                           fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif'
                         }}>
-                          ₹{Math.round(item.subtotal)}
+                          {/* GENIUS FIX: Handle NaN and ensure valid number */}
+                          ₹{isNaN(item.subtotal) || !isFinite(item.subtotal) 
+                            ? (item.quantity * (item.menuItem?.price || 0)) 
+                            : Math.round(item.subtotal)}
                         </span>
                       </div>
                     </div>
