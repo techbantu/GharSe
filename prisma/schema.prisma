@@ -1726,3 +1726,347 @@ model RevenueInsight {
   @@index([date])
   @@index([earnings])
 }
+
+// ===== COMPREHENSIVE ANALYTICS & TRACKING SYSTEM =====
+
+// User Sessions - Track every visitor
+model UserSession {
+  id              String   @id @default(cuid())
+  sessionId       String   @unique // Generated client-side, persistent
+  fingerprintId   String?  // Device fingerprint for tracking across sessions
+
+  // User Info
+  userId          String?  // If logged in
+  isAuthenticated Boolean  @default(false)
+  userType        String?  // customer, admin, driver, guest
+
+  // Geographic Location
+  ipAddress       String?
+  country         String?
+  countryCode     String?  // US, IN, GB, etc.
+  region          String?  // State/Province
+  city            String?
+  zipCode         String?
+  latitude        Float?
+  longitude       Float?
+  timezone        String?
+  isp             String?  // Internet Service Provider
+
+  // Device & Browser Info
+  userAgent       String?  @db.Text
+  browser         String?  // Chrome, Firefox, Safari, etc.
+  browserVersion  String?
+  os              String?  // Windows, macOS, iOS, Android, Linux
+  osVersion       String?
+  device          String?  // desktop, mobile, tablet
+  deviceVendor    String?  // Apple, Samsung, etc.
+  deviceModel     String?
+  screenWidth     Int?
+  screenHeight    Int?
+  language        String?  // en-US, hi-IN, etc.
+
+  // Traffic Source
+  referrer        String?  @db.Text // Previous URL
+  referrerDomain  String?
+  utmSource       String?  // google, facebook, email, etc.
+  utmMedium       String?  // cpc, organic, email, social
+  utmCampaign     String?
+  utmTerm         String?
+  utmContent      String?
+
+  // Session Metrics
+  landingPage     String?  @db.Text
+  exitPage        String?  @db.Text
+  pageViewCount   Int      @default(0)
+  clickCount      Int      @default(0)
+  duration        Int      @default(0) // seconds
+  bounced         Boolean  @default(false) // Single page visit
+  converted       Boolean  @default(false) // Completed goal
+
+  // Timestamps
+  startedAt       DateTime @default(now())
+  lastActivityAt  DateTime @default(now())
+  endedAt         DateTime?
+
+  // Relations
+  pageViews       PageView[]
+  clickEvents     ClickEvent[]
+  interactions    UserInteraction[]
+  conversions     Conversion[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([sessionId])
+  @@index([fingerprintId])
+  @@index([userId])
+  @@index([ipAddress])
+  @@index([country])
+  @@index([city])
+  @@index([startedAt])
+  @@index([converted])
+}
+
+// Page Views - Every page visited
+model PageView {
+  id              String      @id @default(cuid())
+  sessionId       String
+  session         UserSession @relation(fields: [sessionId], references: [sessionId], onDelete: Cascade)
+
+  // Page Info
+  url             String      @db.Text
+  path            String      // /menu, /admin, /checkout
+  title           String?
+  referrer        String?     @db.Text
+
+  // Performance Metrics
+  loadTime        Int?        // milliseconds
+  timeOnPage      Int?        // seconds
+  scrollDepth     Int?        // 0-100%
+
+  // Exit tracking
+  isExit          Boolean     @default(false)
+  exitedAt        DateTime?
+
+  viewedAt        DateTime    @default(now())
+
+  @@index([sessionId])
+  @@index([path])
+  @@index([viewedAt])
+}
+
+// Click Events - Every click tracked
+model ClickEvent {
+  id              String      @id @default(cuid())
+  sessionId       String
+  session         UserSession @relation(fields: [sessionId], references: [sessionId], onDelete: Cascade)
+
+  // Click Details
+  page            String      // Which page
+  elementType     String?     // button, link, image, input
+  elementId       String?     // HTML id attribute
+  elementClass    String?     // HTML class
+  elementText     String?     @db.Text // Button text or link text
+  elementSelector String?     @db.Text // CSS selector
+
+  // Position
+  xPosition       Int?        // X coordinate on page
+  yPosition       Int?        // Y coordinate on page
+
+  // Context
+  targetUrl       String?     @db.Text // Where click leads
+
+  clickedAt       DateTime    @default(now())
+
+  @@index([sessionId])
+  @@index([page])
+  @@index([elementType])
+  @@index([clickedAt])
+}
+
+// User Interactions - Form submissions, searches, etc.
+model UserInteraction {
+  id              String      @id @default(cuid())
+  sessionId       String
+  session         UserSession @relation(fields: [sessionId], references: [sessionId], onDelete: Cascade)
+
+  // Interaction Details
+  type            String      // search, form_submit, add_to_cart, filter_change, etc.
+  page            String
+
+  // Data
+  data            Json?       // Interaction-specific data
+  value           String?     @db.Text // Search query, form values, etc.
+
+  // Metadata
+  duration        Int?        // Time spent on interaction (ms)
+  successful      Boolean     @default(true)
+  errorMessage    String?
+
+  createdAt       DateTime    @default(now())
+
+  @@index([sessionId])
+  @@index([type])
+  @@index([page])
+  @@index([createdAt])
+}
+
+// Conversions - Goal completions
+model Conversion {
+  id              String      @id @default(cuid())
+  sessionId       String
+  session         UserSession @relation(fields: [sessionId], references: [sessionId], onDelete: Cascade)
+
+  // Conversion Details
+  goalType        String      // order_placed, signup, newsletter, download, etc.
+  goalValue       Float?      // Monetary value (order amount, etc.)
+
+  // Journey
+  touchpoints     Int         @default(1) // How many interactions before conversion
+  timeToConvert   Int?        // Seconds from session start to conversion
+
+  // Attribution
+  firstSource     String?     // First touch attribution
+  lastSource      String?     // Last touch attribution
+
+  // Order Info (if applicable)
+  orderId         String?
+  orderValue      Float?
+
+  convertedAt     DateTime    @default(now())
+
+  @@index([sessionId])
+  @@index([goalType])
+  @@index([convertedAt])
+}
+
+// Location Analytics - Aggregated by location
+model LocationAnalytics {
+  id              String   @id @default(cuid())
+
+  // Location
+  country         String
+  countryCode     String
+  region          String?
+  city            String?
+  latitude        Float?
+  longitude       Float?
+
+  // Date
+  date            DateTime // Day-level aggregation
+
+  // Metrics
+  sessions        Int      @default(0)
+  uniqueUsers     Int      @default(0)
+  pageViews       Int      @default(0)
+  clicks          Int      @default(0)
+  conversions     Int      @default(0)
+  totalRevenue    Float    @default(0)
+  avgSessionDuration Int   @default(0) // seconds
+  bounceRate      Float    @default(0) // percentage
+
+  updatedAt       DateTime @updatedAt
+
+  @@unique([country, city, date])
+  @@index([country])
+  @@index([city])
+  @@index([date])
+  @@index([sessions])
+}
+
+// Click Heatmap Data - For heatmap visualization
+model HeatmapData {
+  id              String   @id @default(cuid())
+
+  // Page
+  path            String   // /menu, /checkout, etc.
+
+  // Click Position
+  xPosition       Int
+  yPosition       Int
+
+  // Aggregation
+  clickCount      Int      @default(1)
+  date            DateTime
+
+  // Viewport info (for responsive heatmaps)
+  screenWidth     Int?
+  screenHeight    Int?
+
+  updatedAt       DateTime @updatedAt
+
+  @@unique([path, xPosition, yPosition, date])
+  @@index([path])
+  @@index([date])
+  @@index([clickCount])
+}
+
+// User Journey - Path through website
+model UserJourney {
+  id              String      @id @default(cuid())
+  sessionId       String
+
+  // Journey Path
+  steps           Json        // Array of pages visited in order
+  duration        Int         // Total journey time (seconds)
+
+  // Outcome
+  converted       Boolean     @default(false)
+  conversionType  String?
+  exitPage        String?
+
+  createdAt       DateTime    @default(now())
+
+  @@index([sessionId])
+  @@index([converted])
+  @@index([createdAt])
+}
+
+// Traffic Source Analytics - Aggregated by source
+model TrafficSource {
+  id              String   @id @default(cuid())
+
+  // Source
+  source          String   // google, facebook, direct, etc.
+  medium          String?  // organic, cpc, email, social
+  campaign        String?
+
+  // Date
+  date            DateTime
+
+  // Metrics
+  sessions        Int      @default(0)
+  users           Int      @default(0)
+  conversions     Int      @default(0)
+  revenue         Float    @default(0)
+  avgSessionDuration Int   @default(0)
+  bounceRate      Float    @default(0)
+
+  updatedAt       DateTime @updatedAt
+
+  @@unique([source, medium, campaign, date])
+  @@index([source])
+  @@index([date])
+}
+
+// Real-time Analytics - Current active users
+model RealTimeAnalytics {
+  id              String   @id @default(cuid())
+
+  // Current Stats (last 5 minutes)
+  activeUsers     Int      @default(0)
+  activeSessions  Json?    // Array of active session IDs
+  topPages        Json?    // Array of top pages right now
+  topLocations    Json?    // Array of top cities/countries
+  recentEvents    Json?    // Last 10 events
+
+  // Snapshot time
+  timestamp       DateTime @default(now())
+
+  @@index([timestamp])
+}
+
+// Device Fingerprint - For user identification across sessions
+model DeviceFingerprint {
+  id              String   @id @default(cuid())
+  fingerprintId   String   @unique
+
+  // Fingerprint Components
+  userAgent       String?  @db.Text
+  screenResolution String?
+  timezone        String?
+  language        String?
+  platform        String?
+  plugins         String?  @db.Text
+  canvas          String?  // Canvas fingerprint
+  webgl           String?  // WebGL fingerprint
+  fonts           String?  @db.Text // Installed fonts
+
+  // Tracking
+  firstSeen       DateTime @default(now())
+  lastSeen        DateTime @default(now())
+  sessionCount    Int      @default(0)
+
+  @@index([fingerprintId])
+  @@index([lastSeen])
+}
