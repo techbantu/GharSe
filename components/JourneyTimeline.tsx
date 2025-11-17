@@ -352,7 +352,7 @@ const JourneyTimeline: React.FC<JourneyTimelineProps> = ({ orders, onReorder }) 
               }}>
                 {getItemImage(heroItem) ? (
                   <Image
-                    src={getItemImage(heroItem)}
+                    src={getItemImage(heroItem) || '/placeholder-dish.jpg'}
                     alt={getItemName(heroItem)}
                     fill
                     style={{ 
