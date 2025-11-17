@@ -1,11 +1,7 @@
 /**
- * FIRST ORDER DISCOUNT SERVICE (SERVER-SIDE ONLY)
+ * FIRST ORDER DISCOUNT CLIENT SERVICE
  * 
- * ⚠️ WARNING: DO NOT IMPORT THIS IN CLIENT COMPONENTS ⚠️
- * This file uses Prisma which only runs in Node.js (server-side)
- * 
- * For client components, use: @/lib/first-order-discount-client
- * For API routes, use: @/lib/first-order-discount (this file)
+ * CLIENT-SAFE version that calls API routes (no Prisma in browser)
  * 
  * Purpose: Manages automatic 20% discount for first-time customers
  * 
@@ -23,9 +19,6 @@
  * - If order cancelled, discount remains available
  */
 
-import prisma from '@/lib/prisma';
-import { logger } from '@/lib/logger';
-
 export interface FirstOrderDiscountResult {
   eligible: boolean;
   discountAmount: number;
@@ -36,6 +29,7 @@ export interface FirstOrderDiscountResult {
 
 /**
  * Check if customer is eligible for first order discount
+ * CLIENT-SAFE: Calls API route instead of using Prisma directly
  * 
  * @param customerId - Customer ID (required - must be logged in)
  * @returns Promise<FirstOrderDiscountResult>
@@ -54,55 +48,26 @@ export async function checkFirstOrderDiscount(
       };
     }
 
-    // Get customer
-    const customer = await prisma.customer.findUnique({
-      where: { id: customerId },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        totalOrders: true,
-        firstOrderEligible: true,
-      },
-    });
+    // Call API route (server handles Prisma)
+    const response = await fetch(
+      `/api/first-order-discount?customerId=${encodeURIComponent(customerId)}`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    );
 
-    if (!customer) {
-      return {
-        eligible: false,
-        discountAmount: 0,
-        discountPercent: 0,
-        message: 'Customer not found',
-      };
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
     }
 
-    // Check if eligible - MUST have both:
-    // 1. firstOrderEligible flag set to true
-    // 2. AND totalOrders = 0 (never completed an order)
-    const isEligible = customer.firstOrderEligible && customer.totalOrders === 0;
+    const result = await response.json();
+    return result;
 
-    if (!isEligible) {
-      return {
-        eligible: false,
-        discountAmount: 0,
-        discountPercent: 0,
-        message: 'First order discount already used',
-        customerId: customer.id,
-      };
-    }
-
-    // Eligible for first order discount!
-    return {
-      eligible: true,
-      discountAmount: 0, // Will be calculated when subtotal is known
-      discountPercent: 20,
-      message: '🎉 Welcome! 20% off your first order automatically applied',
-      customerId: customer.id,
-    };
   } catch (error) {
-    logger.error('Failed to check first order discount', {
-      customerId,
-      error: error instanceof Error ? error.message : String(error),
-    });
+    console.error('[First Order Discount] Failed to check eligibility:', error);
 
     return {
       eligible: false,
@@ -133,43 +98,36 @@ export async function calculateFirstOrderDiscount(
   // 20% discount on subtotal
   const discount = Math.round(subtotal * 0.2 * 100) / 100; // Round to 2 decimal places
   
-  logger.info('First order discount calculated', {
-    customerId,
-    subtotal,
-    discount,
-    discountPercent: 20,
-  });
-
   return discount;
 }
 
 /**
  * Mark first order discount as used
  * Called when order is successfully completed
+ * CLIENT-SAFE: Calls API route instead of using Prisma directly
  * 
  * @param customerId - Customer ID
  * @returns Promise<boolean>
  */
 export async function markFirstOrderUsed(customerId: string): Promise<boolean> {
   try {
-    await prisma.customer.update({
-      where: { id: customerId },
-      data: {
-        firstOrderEligible: false,
+    const response = await fetch('/api/first-order-discount/mark-used', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
+      body: JSON.stringify({ customerId }),
     });
 
-    logger.info('First order discount marked as used', {
-      customerId,
-    });
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
 
-    return true;
+    const result = await response.json();
+    return result.success;
+
   } catch (error) {
-    logger.error('Failed to mark first order as used', {
-      customerId,
-      error: error instanceof Error ? error.message : String(error),
-    });
-
+    console.error('[First Order Discount] Failed to mark as used:', error);
     return false;
   }
 }
@@ -178,7 +136,7 @@ export async function markFirstOrderUsed(customerId: string): Promise<boolean> {
  * Get first order discount status for UI display
  * 
  * @param customerId - Customer ID
- * @returns Promise<{ available: boolean; message: string }>
+ * @returns Promise<{ available: boolean; message: string; discountPercent: number }>
  */
 export async function getFirstOrderDiscountStatus(
   customerId: string | null

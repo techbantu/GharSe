@@ -40,6 +40,13 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [orderStatus, setOrderStatus] = useState<string>('PENDING_CONFIRMATION');
   const [orderTotal, setOrderTotal] = useState<number>(0);
+  
+  // Notification status state
+  const [notificationStatus, setNotificationStatus] = useState<{
+    email?: { success: boolean; error?: string; skipped?: boolean };
+    sms?: { success: boolean; error?: string; skipped?: boolean };
+    overall: boolean;
+  } | null>(null);
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
@@ -335,6 +342,11 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
             
             if (!data.success) {
               return Err(new ValidationError(data.error || 'Order creation failed'));
+            }
+            
+            // Store notification status
+            if (data.notifications) {
+              setNotificationStatus(data.notifications);
             }
             
             return Ok(data.order) as Result<Order, AppError>;
@@ -764,7 +776,19 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                       type="text"
                       name="name"
                       value={formData.name}
-                      onChange={handleChange}
+                      onChange={(e) => {
+                        handleChange(e);
+                        // Real-time validation: clear error when name becomes valid
+                        const nameValue = e.target.value;
+                        if (nameValue.trim() && !/\d/.test(nameValue)) {
+                          // Valid name - clear error
+                          setErrors(prev => {
+                            const newErrors = { ...prev };
+                            delete newErrors.name;
+                            return newErrors;
+                          });
+                        }
+                      }}
                       pattern="[a-zA-Z\s\-'\.\u00C0-\u024F\u1E00-\u1EFF\u0400-\u04FF\u0900-\u097F]+"
                       inputMode="text"
                       style={{
@@ -781,11 +805,17 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                       }}
                       onFocus={(e) => {
                         e.currentTarget.style.borderColor = errors.name ? '#EF4444' : '#f97316';
-                        e.currentTarget.style.boxShadow = '0 0 0 3px rgba(249, 115, 22, 0.1)';
+                        e.currentTarget.style.boxShadow = errors.name ? '0 0 0 3px rgba(239, 68, 68, 0.1)' : '0 0 0 3px rgba(249, 115, 22, 0.1)';
                       }}
                       onBlur={(e) => {
                         e.currentTarget.style.borderColor = errors.name ? '#EF4444' : '#E5E7EB';
                         e.currentTarget.style.boxShadow = 'none';
+                        // Instant validation on blur
+                        if (!formData.name.trim()) {
+                          setErrors(prev => ({ ...prev, name: 'Name is required' }));
+                        } else if (/\d/.test(formData.name)) {
+                          setErrors(prev => ({ ...prev, name: 'Name cannot contain numbers' }));
+                        }
                       }}
                       onKeyPress={(e) => {
                         // Prevent numbers from being typed
@@ -795,7 +825,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                       }}
                       placeholder="Ravi Kumar"
                     />
-                    {errors.name && <p style={{ color: '#EF4444', fontSize: '0.8125rem', marginTop: '6px', marginBottom: 0 }}>{errors.name}</p>}
+                    {errors.name && <p style={{ color: '#EF4444', fontSize: '0.8125rem', marginTop: '6px', marginBottom: 0, fontWeight: 600 }}>{errors.name}</p>}
                     {errors.general && <p style={{ color: '#EF4444', fontSize: '0.8125rem', marginTop: '6px', marginBottom: 0 }}>{errors.general}</p>}
                     {errors.cart && <p style={{ color: '#EF4444', fontSize: '0.8125rem', marginTop: '6px', marginBottom: 0 }}>{errors.cart}</p>}
                   </div>
@@ -823,7 +853,18 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                         type="email"
                         name="email"
                         value={formData.email}
-                        onChange={handleChange}
+                        onChange={(e) => {
+                          handleChange(e);
+                          // Real-time email validation (Starlink style)
+                          const emailValue = e.target.value;
+                          if (emailValue && !emailValue.includes('@')) {
+                            setErrors(prev => ({ ...prev, email: `Please include an '@' in the email address. '${emailValue}' is missing an '@'.` }));
+                          } else if (emailValue && emailValue.includes('@') && !emailValue.split('@')[1]) {
+                            setErrors(prev => ({ ...prev, email: `Please enter a part following '@'. '${emailValue}' is incomplete.` }));
+                          } else if (emailValue && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue)) {
+                            setErrors(prev => ({ ...prev, email: 'Invalid email format' }));
+                          }
+                        }}
                         style={{
                           width: '100%',
                           padding: '14px 16px',
@@ -838,15 +879,59 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                         }}
                         onFocus={(e) => {
                           e.currentTarget.style.borderColor = errors.email ? '#EF4444' : '#f97316';
-                          e.currentTarget.style.boxShadow = '0 0 0 3px rgba(249, 115, 22, 0.1)';
+                          e.currentTarget.style.boxShadow = errors.email ? '0 0 0 3px rgba(239, 68, 68, 0.1)' : '0 0 0 3px rgba(249, 115, 22, 0.1)';
                         }}
                         onBlur={(e) => {
                           e.currentTarget.style.borderColor = errors.email ? '#EF4444' : '#E5E7EB';
                           e.currentTarget.style.boxShadow = 'none';
+                          // Validate on blur
+                          const emailValue = e.target.value;
+                          if (emailValue && !emailValue.includes('@')) {
+                            setErrors(prev => ({ ...prev, email: `Please include an '@' in the email address. '${emailValue}' is missing an '@'.` }));
+                          } else if (emailValue && emailValue.includes('@') && !emailValue.split('@')[1]) {
+                            setErrors(prev => ({ ...prev, email: `Please enter a part following '@'. '${emailValue}' is incomplete.` }));
+                          }
                         }}
                         placeholder="ravi.kumar@example.com"
                       />
-                      {errors.email && <p style={{ color: '#EF4444', fontSize: '0.8125rem', marginTop: '6px', marginBottom: 0 }}>{errors.email}</p>}
+                      {errors.email && (
+                        <div style={{
+                          marginTop: '8px',
+                          padding: '12px 16px',
+                          background: '#FEF2F2',
+                          border: '1px solid #FCA5A5',
+                          borderRadius: '8px',
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: '8px'
+                        }}>
+                          <div style={{
+                            width: '20px',
+                            height: '20px',
+                            background: '#DC2626',
+                            borderRadius: '50%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                            color: 'white',
+                            fontSize: '14px',
+                            fontWeight: 700
+                          }}>
+                            !
+                          </div>
+                          <p style={{ 
+                            color: '#991B1B', 
+                            fontSize: '0.8125rem', 
+                            margin: 0,
+                            fontWeight: 600,
+                            lineHeight: '1.5',
+                            fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif'
+                          }}>
+                            {errors.email}
+                          </p>
+                        </div>
+                      )}
                     </div>
                     
                     <div>
@@ -893,7 +978,25 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                         type="tel"
                         name="phone"
                           value={formData.phone.startsWith('+91') ? formData.phone.substring(4).trim() : formData.phone.replace(/[^\d\s]/g, '')}
-                        onChange={handleChange}
+                        onChange={(e) => {
+                          handleChange(e);
+                          // Real-time validation: clear error as soon as phone becomes valid
+                          const phoneValue = formData.phone.startsWith('+91') ? formData.phone : `+91 ${e.target.value.replace(/\D/g, '')}`;
+                          const phoneDigits = phoneValue.replace(/\D/g, '');
+                          
+                          // Clear error if phone is valid (10 digits after country code, starts with 6/7/8/9)
+                          if (phoneDigits.length >= 10) {
+                            const mobileNumber = phoneDigits.length === 12 ? phoneDigits.substring(2) : phoneDigits;
+                            if (mobileNumber.length === 10 && /^[6789]/.test(mobileNumber)) {
+                              // Valid phone - clear error
+                              setErrors(prev => {
+                                const newErrors = { ...prev };
+                                delete newErrors.phone;
+                                return newErrors;
+                              });
+                            }
+                          }
+                        }}
                           onKeyDown={handlePhoneKeyDown}
                           maxLength={13}
                         inputMode="tel"
@@ -917,7 +1020,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                         onFocus={(e) => {
                             handlePhoneFocus(e);
                           e.currentTarget.style.borderColor = errors.phone ? '#EF4444' : '#f97316';
-                          e.currentTarget.style.boxShadow = '0 0 0 3px rgba(249, 115, 22, 0.1)';
+                          e.currentTarget.style.boxShadow = errors.phone ? '0 0 0 3px rgba(239, 68, 68, 0.1)' : '0 0 0 3px rgba(249, 115, 22, 0.1)';
                             // Update border of prefix div
                             const prefixDiv = e.currentTarget.previousElementSibling as HTMLElement;
                             if (prefixDiv) {
@@ -944,11 +1047,27 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                                 setFormData(prev => ({ ...prev, phone: '+91 ' }));
                               }
                             }
+                            // Instant validation on blur
+                            if (!formData.phone.trim() || formData.phone === '+91 ') {
+                              setErrors(prev => ({ ...prev, phone: 'Phone is required' }));
+                            } else {
+                              const phoneDigits = formData.phone.replace(/\D/g, '');
+                              if (phoneDigits.length < 10) {
+                                setErrors(prev => ({ ...prev, phone: 'Phone must be 10 digits' }));
+                              } else if (phoneDigits.length > 12) {
+                                setErrors(prev => ({ ...prev, phone: 'Invalid phone number' }));
+                              } else {
+                                const mobileNumber = phoneDigits.length === 12 ? phoneDigits.substring(2) : phoneDigits;
+                                if (mobileNumber.length === 10 && !/^[6789]/.test(mobileNumber)) {
+                                  setErrors(prev => ({ ...prev, phone: 'Indian mobile numbers start with 6, 7, 8, or 9' }));
+                                }
+                              }
+                            }
                           }}
                           placeholder="90104 60964"
                       />
                       </div>
-                      {errors.phone && <p style={{ color: '#EF4444', fontSize: '0.8125rem', marginTop: '6px', marginBottom: 0 }}>{errors.phone}</p>}
+                      {errors.phone && <p style={{ color: '#EF4444', fontSize: '0.8125rem', marginTop: '6px', marginBottom: 0, fontWeight: 600 }}>{errors.phone}</p>}
                     </div>
                   </div>
                 </div>
@@ -986,7 +1105,17 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                         type="text"
                         name="street"
                         value={formData.street}
-                        onChange={handleChange}
+                        onChange={(e) => {
+                          handleChange(e);
+                          // Real-time validation: clear error when street becomes valid
+                          if (e.target.value.trim()) {
+                            setErrors(prev => {
+                              const newErrors = { ...prev };
+                              delete newErrors.street;
+                              return newErrors;
+                            });
+                          }
+                        }}
                         style={{
                           width: '100%',
                           padding: '14px 16px',
@@ -1001,15 +1130,19 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                         }}
                         onFocus={(e) => {
                           e.currentTarget.style.borderColor = errors.street ? '#EF4444' : '#f97316';
-                          e.currentTarget.style.boxShadow = '0 0 0 3px rgba(249, 115, 22, 0.1)';
+                          e.currentTarget.style.boxShadow = errors.street ? '0 0 0 3px rgba(239, 68, 68, 0.1)' : '0 0 0 3px rgba(249, 115, 22, 0.1)';
                         }}
                         onBlur={(e) => {
                           e.currentTarget.style.borderColor = errors.street ? '#EF4444' : '#E5E7EB';
                           e.currentTarget.style.boxShadow = 'none';
+                          // Instant validation on blur
+                          if (formData.orderType === 'delivery' && !formData.street.trim()) {
+                            setErrors(prev => ({ ...prev, street: 'Street address is required' }));
+                          }
                         }}
                         placeholder="Flat No: 17, Padhmalayanagar Colony"
                       />
-                      {errors.street && <p style={{ color: '#EF4444', fontSize: '0.8125rem', marginTop: '6px', marginBottom: 0 }}>{errors.street}</p>}
+                      {errors.street && <p style={{ color: '#EF4444', fontSize: '0.8125rem', marginTop: '6px', marginBottom: 0, fontWeight: 600 }}>{errors.street}</p>}
                     </div>
                     
                     <div>
@@ -1075,7 +1208,18 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                           type="text"
                           name="city"
                           value={formData.city}
-                          onChange={handleChange}
+                          onChange={(e) => {
+                            handleChange(e);
+                            // Real-time validation: clear error when city becomes valid
+                            const cityValue = e.target.value;
+                            if (cityValue.trim() && !/\d/.test(cityValue) && /^[a-zA-Z\s\-'.]+$/.test(cityValue)) {
+                              setErrors(prev => {
+                                const newErrors = { ...prev };
+                                delete newErrors.city;
+                                return newErrors;
+                              });
+                            }
+                          }}
                           style={{
                             width: '100%',
                             padding: '14px 16px',
@@ -1090,11 +1234,21 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                           }}
                           onFocus={(e) => {
                             e.currentTarget.style.borderColor = errors.city ? '#EF4444' : '#f97316';
-                            e.currentTarget.style.boxShadow = '0 0 0 3px rgba(249, 115, 22, 0.1)';
+                            e.currentTarget.style.boxShadow = errors.city ? '0 0 0 3px rgba(239, 68, 68, 0.1)' : '0 0 0 3px rgba(249, 115, 22, 0.1)';
                           }}
                           onBlur={(e) => {
                             e.currentTarget.style.borderColor = errors.city ? '#EF4444' : '#E5E7EB';
                             e.currentTarget.style.boxShadow = 'none';
+                            // Instant validation on blur
+                            if (formData.orderType === 'delivery') {
+                              if (!formData.city.trim()) {
+                                setErrors(prev => ({ ...prev, city: 'City is required' }));
+                              } else if (/\d/.test(formData.city)) {
+                                setErrors(prev => ({ ...prev, city: 'City name cannot contain numbers' }));
+                              } else if (!/^[a-zA-Z\s\-'.]+$/.test(formData.city)) {
+                                setErrors(prev => ({ ...prev, city: 'City name can only contain letters' }));
+                              }
+                            }
                           }}
                           onKeyPress={(e) => {
                             // PREVENT numbers from being typed in City field
@@ -1105,7 +1259,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                           }}
                           placeholder="Hayathnagar"
                         />
-                        {errors.city && <p style={{ color: '#EF4444', fontSize: '0.8125rem', marginTop: '6px', marginBottom: 0 }}>{errors.city}</p>}
+                        {errors.city && <p style={{ color: '#EF4444', fontSize: '0.8125rem', marginTop: '6px', marginBottom: 0, fontWeight: 600 }}>{errors.city}</p>}
                       </div>
                       
                       <div>
@@ -1123,7 +1277,18 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                           type="text"
                           name="state"
                           value={formData.state}
-                          onChange={handleChange}
+                          onChange={(e) => {
+                            handleChange(e);
+                            // Real-time validation: clear error when state becomes valid
+                            const stateValue = e.target.value;
+                            if (stateValue.trim() && !/\d/.test(stateValue) && /^[a-zA-Z\s\-'.]+$/.test(stateValue)) {
+                              setErrors(prev => {
+                                const newErrors = { ...prev };
+                                delete newErrors.state;
+                                return newErrors;
+                              });
+                            }
+                          }}
                           style={{
                             width: '100%',
                             padding: '14px 16px',
@@ -1138,11 +1303,21 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                           }}
                           onFocus={(e) => {
                             e.currentTarget.style.borderColor = errors.state ? '#EF4444' : '#f97316';
-                            e.currentTarget.style.boxShadow = '0 0 0 3px rgba(249, 115, 22, 0.1)';
+                            e.currentTarget.style.boxShadow = errors.state ? '0 0 0 3px rgba(239, 68, 68, 0.1)' : '0 0 0 3px rgba(249, 115, 22, 0.1)';
                           }}
                           onBlur={(e) => {
                             e.currentTarget.style.borderColor = errors.state ? '#EF4444' : '#E5E7EB';
                             e.currentTarget.style.boxShadow = 'none';
+                            // Instant validation on blur
+                            if (formData.orderType === 'delivery') {
+                              if (!formData.state.trim()) {
+                                setErrors(prev => ({ ...prev, state: 'State is required' }));
+                              } else if (/\d/.test(formData.state)) {
+                                setErrors(prev => ({ ...prev, state: 'State name cannot contain numbers' }));
+                              } else if (!/^[a-zA-Z\s\-'.]+$/.test(formData.state)) {
+                                setErrors(prev => ({ ...prev, state: 'State name can only contain letters' }));
+                              }
+                            }
                           }}
                           onKeyPress={(e) => {
                             // PREVENT numbers from being typed in State field
@@ -1153,7 +1328,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                           }}
                           placeholder="Telangana"
                         />
-                        {errors.state && <p style={{ color: '#EF4444', fontSize: '0.8125rem', marginTop: '6px', marginBottom: 0 }}>{errors.state}</p>}
+                        {errors.state && <p style={{ color: '#EF4444', fontSize: '0.8125rem', marginTop: '6px', marginBottom: 0, fontWeight: 600 }}>{errors.state}</p>}
                       </div>
                       
                       <div>
@@ -1171,7 +1346,17 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                           type="text"
                           name="zipCode"
                           value={formData.zipCode}
-                          onChange={handleChange}
+                          onChange={(e) => {
+                            handleChange(e);
+                            // Real-time validation: clear error when PIN code becomes valid
+                            if (/^\d{6}$/.test(e.target.value)) {
+                              setErrors(prev => {
+                                const newErrors = { ...prev };
+                                delete newErrors.zipCode;
+                                return newErrors;
+                              });
+                            }
+                          }}
                           inputMode="numeric"
                           pattern="[0-9]*"
                           maxLength={6}
@@ -1216,15 +1401,23 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                           }}
                           onFocus={(e) => {
                             e.currentTarget.style.borderColor = errors.zipCode ? '#EF4444' : '#f97316';
-                            e.currentTarget.style.boxShadow = '0 0 0 3px rgba(249, 115, 22, 0.1)';
+                            e.currentTarget.style.boxShadow = errors.zipCode ? '0 0 0 3px rgba(239, 68, 68, 0.1)' : '0 0 0 3px rgba(249, 115, 22, 0.1)';
                           }}
                           onBlur={(e) => {
                             e.currentTarget.style.borderColor = errors.zipCode ? '#EF4444' : '#E5E7EB';
                             e.currentTarget.style.boxShadow = 'none';
+                            // Instant validation on blur
+                            if (formData.orderType === 'delivery') {
+                              if (!formData.zipCode.trim()) {
+                                setErrors(prev => ({ ...prev, zipCode: 'PIN code is required' }));
+                              } else if (!/^\d{6}$/.test(formData.zipCode)) {
+                                setErrors(prev => ({ ...prev, zipCode: 'PIN code must be 6 digits' }));
+                              }
+                            }
                           }}
                           placeholder="501505"
                         />
-                        {errors.zipCode && <p style={{ color: '#EF4444', fontSize: '0.8125rem', marginTop: '6px', marginBottom: 0 }}>{errors.zipCode}</p>}
+                        {errors.zipCode && <p style={{ color: '#EF4444', fontSize: '0.8125rem', marginTop: '6px', marginBottom: 0, fontWeight: 600 }}>{errors.zipCode}</p>}
                       </div>
                     </div>
                     
@@ -1952,24 +2145,32 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                 }}>
                   <Mail size={18} color="white" />
                 </div>
-                <div>
+                <div style={{ flex: 1 }}>
                   <p style={{
                     fontSize: '0.875rem',
-                    color: '#1E3A8A',
+                    color: notificationStatus?.email?.success ? '#1E3A8A' : '#DC2626',
                     fontWeight: 700,
                     marginBottom: '4px',
                     fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif'
                   }}>
-                    Email Confirmation Sent!
+                    {!notificationStatus ? (
+                      'Sending Email...'
+                    ) : notificationStatus.email?.success ? (
+                      '✅ Email Confirmation Sent!'
+                    ) : notificationStatus.email?.skipped ? (
+                      '⚠️ Email Skipped'
+                    ) : (
+                      '❌ Email Failed'
+                    )}
                   </p>
                   <p style={{
                     fontSize: '0.8125rem',
-                    color: '#1E40AF',
+                    color: notificationStatus?.email?.success ? '#1E40AF' : '#991B1B',
                     lineHeight: '1.5',
                     fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, monospace',
                     wordBreak: 'break-all'
                   }}>
-                    {formData.email}
+                    {notificationStatus?.email?.error || formData.email}
                   </p>
                 </div>
               </div>
@@ -1987,23 +2188,31 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                 }}>
                   <Phone size={18} color="white" />
                 </div>
-                <div>
+                <div style={{ flex: 1 }}>
                   <p style={{
                     fontSize: '0.875rem',
-                    color: '#1E3A8A',
+                    color: notificationStatus?.sms?.success ? '#1E3A8A' : '#DC2626',
                     fontWeight: 700,
                     marginBottom: '4px',
                     fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif'
                   }}>
-                    SMS Confirmation Sent!
+                    {!notificationStatus ? (
+                      'Sending SMS...'
+                    ) : notificationStatus.sms?.success ? (
+                      '✅ SMS Confirmation Sent!'
+                    ) : notificationStatus.sms?.skipped ? (
+                      '⚠️ SMS Skipped (Not configured)'
+                    ) : (
+                      '❌ SMS Failed'
+                    )}
                   </p>
                   <p style={{
                     fontSize: '0.8125rem',
-                    color: '#1E40AF',
+                    color: notificationStatus?.sms?.success ? '#1E40AF' : '#991B1B',
                     lineHeight: '1.5',
                     fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, monospace'
                   }}>
-                    {formData.phone}
+                    {notificationStatus?.sms?.error || formData.phone}
                   </p>
                 </div>
               </div>

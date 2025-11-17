@@ -66,11 +66,14 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [isMounted, setIsMounted] = useState(false);
   const lastUserMessageRef = useRef<string>('');
   const router = useRouter();
-  
+
   // Cross-tab sync infrastructure
   const broadcastChannel = useRef<BroadcastChannel | null>(null);
   const CHAT_CHANNEL_NAME = 'bantu_chat_sync';
   const CHAT_SYNC_KEY = 'bantu_chat_sync_event';
+  const lastBroadcastRef = useRef<number>(0); // Prevent infinite loops
+  const sessionIdRef = useRef<string>(''); // Session ID ref for immediate access
+  const instanceIdRef = useRef<string>(`instance_${Date.now()}_${Math.random().toString(36)}`); // Unique per component instance
 
   // Initialize conversationId and load history only on client side
   // Setup cross-tab sync
@@ -79,6 +82,18 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     
     // Generate conversationId only on client
     setConversationId(`conv_${Date.now()}_${Math.random().toString(36).substring(7)}`);
+
+    // Generate or retrieve session ID for cross-tab sync (use ref for immediate access)
+    const generateSessionId = () => {
+      let storedSessionId = localStorage.getItem('bantu_session_id');
+      if (!storedSessionId) {
+        storedSessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+        localStorage.setItem('bantu_session_id', storedSessionId);
+      }
+      sessionIdRef.current = storedSessionId;
+      return storedSessionId;
+    };
+    generateSessionId();
     
     // Setup BroadcastChannel for cross-tab sync (modern browsers)
     if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
@@ -88,13 +103,23 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         
         channel.onmessage = (event) => {
           if (event.data.type === 'MESSAGES_UPDATED') {
+            // Prevent processing our own broadcasts (check instance ID)
+            if (event.data.instanceId === instanceIdRef.current) {
+              return; // Ignore broadcasts from THIS component instance
+            }
             console.log('[Chat Sync] Received messages update from another tab');
+            lastBroadcastRef.current = Date.now();
             setMessages(event.data.messages.map((msg: any) => ({
               ...msg,
               timestamp: new Date(msg.timestamp),
             })));
           } else if (event.data.type === 'CONTEXT_UPDATED') {
+            // Prevent processing our own broadcasts (check instance ID)
+            if (event.data.instanceId === instanceIdRef.current) {
+              return; // Ignore broadcasts from THIS component instance
+            }
             console.log('[Chat Sync] Received context update from another tab');
+            lastBroadcastRef.current = Date.now();
             setUserContextState(event.data.context);
           }
         };
@@ -105,28 +130,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       }
     }
     
-    // Fallback: localStorage event listener for older browsers
-    const handleStorageEvent = (e: StorageEvent) => {
-      if (e.key === CHAT_SYNC_KEY && e.newValue) {
-        try {
-          const data = JSON.parse(e.newValue);
-          if (data.type === 'MESSAGES_UPDATED') {
-            console.log('[Chat Sync] Received messages update via localStorage event');
-            setMessages(data.messages.map((msg: any) => ({
-              ...msg,
-              timestamp: new Date(msg.timestamp),
-            })));
-          } else if (data.type === 'CONTEXT_UPDATED') {
-            console.log('[Chat Sync] Received context update via localStorage event');
-            setUserContextState(data.context);
-          }
-        } catch (error) {
-          console.error('[Chat Sync] Failed to parse storage event:', error);
-        }
-      }
-    };
-    
-    window.addEventListener('storage', handleStorageEvent);
+    // DISABLED: localStorage event listener (was causing duplicate events)
+    // BroadcastChannel is sufficient for modern browsers
+    // const handleStorageEvent = (e: StorageEvent) => { ... };
+    // window.addEventListener('storage', handleStorageEvent);
     
     // Load conversation history from localStorage
     const loadHistory = () => {
@@ -172,46 +179,42 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       if (broadcastChannel.current) {
         broadcastChannel.current.close();
       }
-      window.removeEventListener('storage', handleStorageEvent);
     };
   }, []);
 
   // Save conversation history to localStorage (only after mount)
-  // ALSO broadcast to other tabs
+  // ALSO broadcast to other tabs (BroadcastChannel ONLY - no localStorage fallback)
   useEffect(() => {
-    if (!isMounted) return;
-    
+    if (!isMounted || !sessionIdRef.current) return;
+
     // Don't save if messages array is empty or only contains welcome message
     if (messages.length === 0) return;
-    
+
+    // Throttle broadcasts to prevent micro-bursts (max 1 per second)
+    const now = Date.now();
+    if (now - lastBroadcastRef.current < 1000) {
+      return;
+    }
+
     try {
       // Save all messages (not just last 20) for full persistence
       localStorage.setItem('bantu_chat_history', JSON.stringify(messages));
-      
-      // Broadcast messages update to other tabs
+
+      // Broadcast ONLY via BroadcastChannel (not localStorage)
       if (broadcastChannel.current) {
         try {
-          broadcastChannel.current.postMessage({
+          const payload = {
             type: 'MESSAGES_UPDATED',
             messages,
-            timestamp: Date.now(),
-          });
+            instanceId: instanceIdRef.current, // Instance ID to prevent self-receive
+            sessionId: sessionIdRef.current,
+            timestamp: now,
+          };
+          broadcastChannel.current.postMessage(payload);
+          lastBroadcastRef.current = now;
         } catch (error) {
           console.error('[Chat Sync] BroadcastChannel error:', error);
         }
-      }
-      
-      // Fallback: localStorage event for older browsers
-      try {
-        const payload = {
-          type: 'MESSAGES_UPDATED',
-          messages,
-          timestamp: Date.now(),
-        };
-        localStorage.setItem(CHAT_SYNC_KEY, JSON.stringify(payload));
-        localStorage.removeItem(CHAT_SYNC_KEY); // Trigger storage event
-      } catch (error) {
-        console.error('[Chat Sync] localStorage sync error:', error);
       }
     } catch (error) {
       console.error('Failed to save chat history:', error);
@@ -219,37 +222,34 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   }, [messages, isMounted]);
 
   // Save user context (only after mount)
-  // ALSO broadcast to other tabs
+  // ALSO broadcast to other tabs (BroadcastChannel ONLY - no localStorage fallback)
   useEffect(() => {
-    if (!isMounted) return;
-    
+    if (!isMounted || !sessionIdRef.current) return;
+
+    // Throttle broadcasts to prevent micro-bursts (max 1 per second)
+    const now = Date.now();
+    if (now - lastBroadcastRef.current < 1000) {
+      return;
+    }
+
     try {
       localStorage.setItem('bantu_chat_context', JSON.stringify(userContext));
-      
-      // Broadcast context update to other tabs
+
+      // Broadcast ONLY via BroadcastChannel (not localStorage)
       if (broadcastChannel.current) {
         try {
-          broadcastChannel.current.postMessage({
+          const payload = {
             type: 'CONTEXT_UPDATED',
             context: userContext,
-            timestamp: Date.now(),
-          });
+            instanceId: instanceIdRef.current, // Instance ID to prevent self-receive
+            sessionId: sessionIdRef.current,
+            timestamp: now,
+          };
+          broadcastChannel.current.postMessage(payload);
+          lastBroadcastRef.current = now;
         } catch (error) {
           console.error('[Chat Sync] BroadcastChannel error:', error);
         }
-      }
-      
-      // Fallback: localStorage event for older browsers
-      try {
-        const payload = {
-          type: 'CONTEXT_UPDATED',
-          context: userContext,
-          timestamp: Date.now(),
-        };
-        localStorage.setItem(CHAT_SYNC_KEY, JSON.stringify(payload));
-        localStorage.removeItem(CHAT_SYNC_KEY); // Trigger storage event
-      } catch (error) {
-        console.error('[Chat Sync] localStorage sync error:', error);
       }
     } catch (error) {
       console.error('Failed to save user context:', error);

@@ -24,6 +24,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/utils/logger';
 import { restaurantInfo } from '@/data/menuData';
+import { broadcastOrderUpdate } from '@/lib/websocket-server';
 
 // ===== VALIDATION SCHEMAS =====
 
@@ -38,6 +39,7 @@ const ModifyOrderSchema = z.object({
   orderId: z.string().min(1, 'Order ID is required'),
   items: z.array(ModifyOrderItemSchema).min(1, 'At least one item is required'),
   customerId: z.string().optional(), // For auth validation
+  finalize: z.boolean().optional(), // If true, send order to kitchen (change status to CONFIRMED)
 });
 
 type ModifyOrderData = z.infer<typeof ModifyOrderSchema>;
@@ -247,7 +249,7 @@ export async function POST(request: NextRequest) {
         )
       );
       
-      // Update order
+      // Update order - if finalize=true, change status to CONFIRMED and send to kitchen
       const updated = await tx.order.update({
         where: { id: order.id },
         data: {
@@ -256,8 +258,10 @@ export async function POST(request: NextRequest) {
           deliveryFee: pricing.deliveryFee,
           total: pricing.total,
           modificationCount: order.modificationCount + 1,
-          gracePeriodExpiresAt: newGracePeriodExpiry,
+          gracePeriodExpiresAt: data.finalize ? null : newGracePeriodExpiry, // Clear grace period if finalized
           lastModifiedAt: new Date(),
+          status: data.finalize ? 'CONFIRMED' : order.status, // Change to CONFIRMED if user clicked "Send to Kitchen"
+          confirmedAt: data.finalize ? new Date() : order.confirmedAt, // Set confirmation timestamp
         },
         include: {
           items: {
@@ -271,21 +275,46 @@ export async function POST(request: NextRequest) {
       return updated;
     });
     
-    // Calculate time remaining for client
-    const timeRemaining = Math.max(
+    // Calculate time remaining for client (0 if finalized)
+    const timeRemaining = data.finalize ? 0 : Math.max(
       0,
       newGracePeriodExpiry.getTime() - Date.now()
     );
     
-    logger.info('Order modified successfully', {
+    logger.info(data.finalize ? 'Order finalized and sent to kitchen' : 'Order modified successfully', {
       orderId: order.id,
       orderNumber: order.orderNumber,
       modificationCount: updatedOrder.modificationCount,
       itemCount: validItems.length,
       newTotal: pricing.total,
-      gracePeriodExpiresAt: newGracePeriodExpiry.toISOString(),
+      gracePeriodExpiresAt: data.finalize ? 'cleared' : newGracePeriodExpiry.toISOString(),
       timeRemainingMs: timeRemaining,
+      newStatus: updatedOrder.status,
+      finalized: data.finalize || false,
     });
+
+    // Broadcast real-time update to kitchen and customer
+    (async () => {
+      try {
+        await broadcastOrderUpdate(order.id, updatedOrder.status, {
+          modificationType: data.finalize ? 'finalized' : 'item_update',
+          newItemCount: validItems.length,
+          totalChanged: pricing.total !== order.total,
+          newTotal: pricing.total,
+          finalized: data.finalize || false,
+        });
+        logger.info(data.finalize ? 'Order finalization broadcasted to kitchen' : 'Order modification broadcasted to real-time clients', {
+          orderId: order.id,
+          orderNumber: order.orderNumber,
+          newStatus: updatedOrder.status,
+        });
+      } catch (broadcastError) {
+        logger.error('Failed to broadcast order update', {
+          orderId: order.id,
+          error: broadcastError instanceof Error ? broadcastError.message : String(broadcastError),
+        });
+      }
+    })();
     
     // Transform Prisma order to frontend Order type
     const formattedOrder = {
@@ -353,7 +382,10 @@ export async function POST(request: NextRequest) {
       success: true,
       order: formattedOrder,
       timeRemaining, // in milliseconds
-      message: `Order updated! You have ${Math.ceil(timeRemaining / 1000 / 60)} minutes to make more changes.`,
+      finalized: data.finalize || false,
+      message: data.finalize 
+        ? 'Order confirmed and sent to kitchen! You will receive updates as it\'s prepared.' 
+        : `Order updated! You have ${Math.ceil(timeRemaining / 1000 / 60)} minutes to make more changes.`,
     });
     
   } catch (error) {

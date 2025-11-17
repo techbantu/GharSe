@@ -249,6 +249,17 @@ async function createOrderLogic(body: unknown): Promise<Result<Order, AppError>>
     // CRITICAL FIX: Declare order variable in outer scope
     let order: Order;
     
+    // Declare notification result in outer scope so it's accessible after try-catch
+    let notificationResult: {
+      email?: { success: boolean; error?: string; skipped?: boolean };
+      sms?: { success: boolean; error?: string; skipped?: boolean };
+      overall: boolean;
+    } = {
+      email: { success: false, error: 'Not sent' },
+      sms: { success: false, error: 'Not sent' },
+      overall: false,
+    };
+    
     // CRITICAL FIX: Save to database FIRST, then memory
     // This ensures data consistency - if DB fails, order doesn't exist anywhere
     
@@ -542,28 +553,38 @@ async function createOrderLogic(body: unknown): Promise<Result<Order, AppError>>
       }
       
       // Send order confirmation notifications (email + SMS)
-      // This runs asynchronously - don't block order response
-      (async () => {
-        try {
-          const { notificationManager } = await import('@/lib/notifications/notification-manager');
-          const notificationResult = await notificationManager.sendOrderConfirmation(order);
-          
-          logger.info('Order confirmation notifications sent', {
-            orderId: order.id,
-            orderNumber: order.orderNumber,
-            emailSuccess: notificationResult.email?.success,
-            smsSuccess: notificationResult.sms?.success,
-            smsSkipped: notificationResult.sms?.skipped,
-          });
-        } catch (notificationError) {
-          // Don't fail order creation if notifications fail (graceful degradation)
-          logger.error('Failed to send order confirmation notifications', {
-            orderId: order.id,
-            orderNumber: order.orderNumber,
-            error: notificationError instanceof Error ? notificationError.message : String(notificationError),
-          });
-        }
-      })();
+      // NOW SYNCHRONOUS - wait for results to show real status to customer
+      try {
+        const { notificationManager } = await import('@/lib/notifications/notification-manager');
+        notificationResult = await notificationManager.sendOrderConfirmation(order);
+        
+        logger.info('Order confirmation notifications sent', {
+          orderId: order.id,
+          orderNumber: order.orderNumber,
+          emailSuccess: notificationResult.email?.success,
+          smsSuccess: notificationResult.sms?.success,
+          smsSkipped: notificationResult.sms?.skipped,
+        });
+      } catch (notificationError) {
+        // Don't fail order creation if notifications fail (graceful degradation)
+        logger.error('Failed to send order confirmation notifications', {
+          orderId: order.id,
+          orderNumber: order.orderNumber,
+          error: notificationError instanceof Error ? notificationError.message : String(notificationError),
+        });
+        
+        notificationResult = {
+          email: { 
+            success: false, 
+            error: notificationError instanceof Error ? notificationError.message : 'Unknown error' 
+          },
+          sms: { 
+            success: false, 
+            error: notificationError instanceof Error ? notificationError.message : 'Unknown error' 
+          },
+          overall: false,
+        };
+      }
       
       // Mark first-order discount as used (async, don't block response)
       if (firstOrderDiscountApplied && data.customerId) {
@@ -622,6 +643,8 @@ async function createOrderLogic(body: unknown): Promise<Result<Order, AppError>>
       customerEmail: data.customer.email.substring(0, 3) + '***', // Privacy: don't log full email
       total: data.pricing.total,
       itemCount: data.items.length,
+      emailSent: notificationResult.email?.success,
+      smsSent: notificationResult.sms?.success,
     });
     
     return Ok(order);

@@ -1,192 +1,315 @@
 /**
- * NEW FILE: Menu API Routes - CRUD Operations
+ * NEW FILE: Menu Items API - Fetch real menu data from database
  * 
- * Purpose: Handle all menu item operations (Create, Read, Update, Delete)
- * Database: Prisma + PostgreSQL
+ * Purpose: Replace hardcoded menu data with live database queries
+ * Used by: Frequently Added items, menu search, cart suggestions
+ *
+ * Features:
+ * - Fetch available menu items by category/chef
+ * - Filter by current order items to avoid duplicates
+ * - Smart pairing suggestions based on order content
+ * - Support for multiple chefs
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
+import { logger } from '@/utils/logger';
 
-// GET - Fetch all menu items
+/**
+ * GET /api/menu - Fetch menu items with smart filtering
+ *
+ * Query params:
+ * - excludeIds: comma-separated menu item IDs to exclude
+ * - category: filter by category
+ * - chefId: filter by specific chef (null for restaurant default)
+ * - limit: max items to return (default 20)
+ * - suggestions: if true, returns smart pairing suggestions
+ * - currentOrder: JSON array of current order menuItemIds for smart suggestions
+ */
 export async function GET(request: NextRequest) {
   try {
-    // Test database connection first
-    try {
-      await prisma.$connect();
-    } catch (connectError: any) {
-      console.error('Database connection failed:', connectError);
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Database connection failed. Please check your DATABASE_URL in .env file and ensure the database is running.',
-          details: process.env.NODE_ENV === 'development' ? connectError.message : undefined
-        },
-        { status: 503 }
-      );
-    }
-
-    // Ensure database is initialized first (this will auto-create tables if needed)
-    try {
-      const { initializeDatabase } = await import('@/lib/database-init');
-      const initResult = await initializeDatabase();
-      if (!initResult.success) {
-        console.error('Database initialization failed:', initResult.error);
-        // Return error if initialization fails - tables won't exist
-        return NextResponse.json(
-          { 
-            success: false, 
-            error: `Database setup failed: ${initResult.error}. Please check your DATABASE_URL and ensure the database is accessible.`,
-            details: process.env.NODE_ENV === 'development' ? initResult.error : undefined
-          },
-          { status: 503 }
-        );
-      }
-      console.log('✅ Database initialization check passed');
-    } catch (initError: any) {
-      console.error('Database initialization error:', initError.message);
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: `Database initialization error: ${initError.message}`,
-          details: process.env.NODE_ENV === 'development' ? initError.stack : undefined
-        },
-        { status: 503 }
-      );
-    }
-
     const { searchParams } = new URL(request.url);
+    const excludeIds = searchParams.get('excludeIds')?.split(',').filter(Boolean) || [];
     const category = searchParams.get('category');
-    const available = searchParams.get('available');
+    const chefId = searchParams.get('chefId'); // null for restaurant default
+    const limit = parseInt(searchParams.get('limit') || '20');
+    const suggestions = searchParams.get('suggestions') === 'true';
+    const currentOrder = searchParams.get('currentOrder');
 
-    const where: any = {};
-    
+    let currentOrderIds: string[] = [];
+    if (currentOrder) {
+      try {
+        currentOrderIds = JSON.parse(currentOrder);
+      } catch (error) {
+        console.warn('Invalid currentOrder JSON:', currentOrder);
+      }
+    }
+
+    // Build where clause
+    const where: any = {
+      isAvailable: true,
+    };
+
+    // Exclude specified IDs
+    if (excludeIds.length > 0) {
+      where.id = { notIn: excludeIds };
+    }
+
+    // Filter by category if specified
     if (category && category !== 'All') {
       where.category = category;
     }
     
-    if (available === 'true') {
-      where.isAvailable = true;
+    // Filter by chef (null = restaurant default menu)
+    if (chefId === 'restaurant') {
+      where.chefId = null;
+    } else if (chefId) {
+      where.chefId = chefId;
     }
 
-    const items = await (prisma.menuItem.findMany as any)({
+    let items: any[];
+
+    if (suggestions && currentOrderIds.length > 0) {
+      // Smart suggestions based on current order
+      items = await getSmartSuggestions(currentOrderIds, excludeIds, limit);
+    } else {
+      // Regular menu fetch
+      items = await prisma.menuItem.findMany({
       where,
       orderBy: [
         { isPopular: 'desc' },
-        { createdAt: 'desc' },
-      ],
-    });
+          { category: 'asc' },
+          { name: 'asc' },
+        ],
+        take: limit,
+        include: {
+          chef: {
+            select: {
+              id: true,
+              name: true,
+              bio: true,
+            },
+          },
+        },
+      });
+    }
+
+    // Transform to match frontend MenuItem type
+    const transformedItems = items.map(item => ({
+      id: item.id,
+      name: item.name,
+      description: item.description,
+      price: item.price,
+      originalPrice: item.originalPrice,
+      category: item.category,
+      image: item.image,
+      isVegetarian: item.isVegetarian,
+      isVegan: item.isVegan,
+      isGlutenFree: item.isGlutenFree,
+      spicyLevel: item.spicyLevel,
+      preparationTime: item.preparationTime,
+      isAvailable: item.isAvailable,
+      isPopular: item.isPopular,
+      isNew: item.createdAt > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // New if < 7 days old
+      calories: item.calories,
+      servingSize: item.servingSize,
+      ingredients: item.ingredients ? JSON.parse(item.ingredients) : [],
+      allergens: item.allergens ? JSON.parse(item.allergens) : [],
+      chef: item.chef,
+    }));
 
     return NextResponse.json({
       success: true,
-      data: items,
-      count: items.length,
+      items: transformedItems,
+      count: transformedItems.length,
+      filters: {
+        excludeIds,
+        category: category || null,
+        chefId: chefId || null,
+        suggestions,
+        currentOrderCount: currentOrderIds.length,
+      },
     });
-  } catch (error: any) {
-    console.error('Error fetching menu items:', error);
-    
-    // Provide detailed error messages for debugging
-    let errorMessage = 'Failed to fetch menu items';
-    let statusCode = 500;
-    
-    // Prisma error codes
-    if (error.code === 'P1001') {
-      errorMessage = 'Database connection failed. Please check your DATABASE_URL in .env file and ensure the database is running.';
-      statusCode = 503;
-    } else if (error.code === 'P1003') {
-      errorMessage = 'Database table not found. Please run: npm run db:push or npm run setup';
-      statusCode = 500;
-    } else if (error.code === 'P2025') {
-      errorMessage = 'Database table not found. Please run database initialization.';
-      statusCode = 500;
-    } else if (error.code === 'P2002') {
-      errorMessage = 'Database constraint violation. Please check your data.';
-      statusCode = 400;
-    } else if (error.message?.includes('Can\'t reach database server')) {
-      errorMessage = 'Cannot reach database server. Please check your DATABASE_URL and network connection.';
-      statusCode = 503;
-    } else if (error.message?.includes('does not exist')) {
-      errorMessage = 'Database table does not exist. Please run: npm run db:push';
-      statusCode = 500;
-    } else if (error.message) {
-      errorMessage = `Database error: ${error.message}`;
-    }
-    
+
+  } catch (error) {
+    console.error('Menu API error:', error);
     return NextResponse.json(
       { 
         success: false, 
-        error: errorMessage,
-        details: process.env.NODE_ENV === 'development' ? {
-          message: error.message,
-          code: error.code,
-          stack: error.stack
-        } : undefined
+        error: 'Failed to fetch menu items',
+        details: error instanceof Error ? error.message : String(error),
       },
-      { status: statusCode }
-    );
-  }
-}
-
-// POST - Create new menu item
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-
-    // Validate required fields
-    if (!body.name || !body.description || !body.price || !body.category) {
-      return NextResponse.json(
-        { success: false, error: 'Missing required fields' },
-        { status: 400 }
-      );
-    }
-
-    const item = await (prisma.menuItem.create as any)({
-      data: {
-        name: body.name,
-        description: body.description,
-        price: parseFloat(body.price),
-        originalPrice: body.originalPrice ? parseFloat(body.originalPrice) : null,
-        category: body.category,
-        image: body.image || null,
-        imagePublicId: body.imagePublicId || null,
-        isVegetarian: body.isVegetarian || false,
-        isVegan: body.isVegan || false,
-        isGlutenFree: body.isGlutenFree || false,
-        spicyLevel: body.spicyLevel || 0,
-        preparationTime: body.preparationTime || 30,
-        isAvailable: body.isAvailable !== undefined ? body.isAvailable : true,
-        isPopular: body.isPopular || false,
-        calories: body.calories || null,
-        servingSize: body.servingSize || null,
-        ingredients: body.ingredients ? (typeof body.ingredients === 'string' ? body.ingredients : JSON.stringify(body.ingredients)) : null,
-        allergens: body.allergens ? (typeof body.allergens === 'string' ? body.allergens : JSON.stringify(body.allergens)) : null,
-        // NEW: Inventory fields
-        inventoryEnabled: body.inventoryEnabled || false,
-        inventory: body.inventoryEnabled ? (body.inventory !== undefined ? parseInt(String(body.inventory)) : null) : null,
-        outOfStockMessage: body.inventoryEnabled ? (body.outOfStockMessage || null) : null,
-      },
-    });
-
-    return NextResponse.json({
-      success: true,
-      data: item,
-      message: 'Menu item created successfully',
-    }, { status: 201 });
-  } catch (error: any) {
-    console.error('Error creating menu item:', error);
-    
-    // Provide more detailed error messages
-    let errorMessage = 'Failed to create menu item';
-    if (error.code === 'P2002') {
-      errorMessage = 'A menu item with this name already exists';
-    } else if (error.message) {
-      errorMessage = error.message;
-    }
-    
-    return NextResponse.json(
-      { success: false, error: errorMessage },
       { status: 500 }
     );
   }
 }
 
+/**
+ * Get smart pairing suggestions based on current order
+ * Returns items that complement the current order
+ */
+async function getSmartSuggestions(
+  currentOrderIds: string[],
+  excludeIds: string[],
+  limit: number
+): Promise<any[]> {
+  try {
+    // Get current order items to understand what's being ordered
+    const currentItems = await prisma.menuItem.findMany({
+      where: {
+        id: { in: currentOrderIds },
+        isAvailable: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        category: true,
+        isVegetarian: true,
+        isVegan: true,
+        spicyLevel: true,
+      },
+    });
+
+    // Analyze current order
+    const hasCurry = currentItems.some(item =>
+      item.category.toLowerCase().includes('curry') ||
+      item.name.toLowerCase().includes('curry')
+    );
+
+    const hasButterChicken = currentItems.some(item =>
+      item.name.toLowerCase().includes('butter chicken')
+    );
+
+    const hasBiryani = currentItems.some(item =>
+      item.name.toLowerCase().includes('biryani')
+    );
+
+    const hasRice = currentItems.some(item =>
+      item.category.toLowerCase().includes('rice') ||
+      item.name.toLowerCase().includes('rice') ||
+      item.name.toLowerCase().includes('biryani')
+    );
+
+    const isVegetarianOrder = currentItems.every(item => item.isVegetarian);
+
+    // Build suggestion priority list
+    const suggestionCriteria = [];
+
+    if (hasCurry || hasButterChicken) {
+      // Suggest naan, rice, raita for curries
+      suggestionCriteria.push(
+        { category: 'Rice & Breads', priority: 10 },
+        { nameContains: 'naan', priority: 9 },
+        { nameContains: 'rice', priority: 8 },
+        { nameContains: 'raita', priority: 7 }
+      );
+    }
+
+    if (hasBiryani) {
+      // Suggest raita, beverages for biryani
+      suggestionCriteria.push(
+        { nameContains: 'raita', priority: 9 },
+        { category: 'Beverages', priority: 8 }
+      );
+    }
+
+    if (!hasRice && !hasBiryani) {
+      // Suggest rice-based sides if no rice in order
+      suggestionCriteria.push(
+        { category: 'Rice & Breads', priority: 6 }
+      );
+    }
+
+    // Always suggest beverages and desserts
+    suggestionCriteria.push(
+      { category: 'Beverages', priority: 4 },
+      { category: 'Desserts', priority: 3 }
+    );
+
+    // Get items matching criteria
+    const allSuggestions: any[] = [];
+    const seenIds = new Set([...currentOrderIds, ...excludeIds]);
+
+    for (const criteria of suggestionCriteria) {
+      const where: any = {
+        isAvailable: true,
+        id: { notIn: Array.from(seenIds) },
+      };
+
+      if (criteria.category) {
+        where.category = criteria.category;
+      }
+
+      if (criteria.nameContains) {
+        where.name = { contains: criteria.nameContains, mode: 'insensitive' };
+      }
+
+      const items = await prisma.menuItem.findMany({
+        where,
+        orderBy: [
+          { isPopular: 'desc' },
+          { createdAt: 'desc' },
+        ],
+        take: 5, // Take more than needed, we'll filter below
+        include: {
+          chef: {
+            select: {
+              id: true,
+              name: true,
+              bio: true,
+            },
+          },
+      },
+    });
+
+      // Add priority to items
+      items.forEach(item => {
+        allSuggestions.push({
+          ...item,
+          suggestionPriority: criteria.priority,
+        });
+        seenIds.add(item.id);
+      });
+    }
+
+    // Sort by priority and popularity, take top items
+    const sortedSuggestions = allSuggestions
+      .sort((a, b) => {
+        // Higher priority first
+        if (a.suggestionPriority !== b.suggestionPriority) {
+          return b.suggestionPriority - a.suggestionPriority;
+        }
+        // Then popular items
+        if (a.isPopular !== b.isPopular) {
+          return a.isPopular ? -1 : 1;
+        }
+        // Then newer items
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      })
+      .slice(0, limit);
+
+    return sortedSuggestions;
+
+  } catch (error) {
+    console.error('Smart suggestions error:', error);
+    // Fallback to popular items
+    return await prisma.menuItem.findMany({
+      where: {
+        isAvailable: true,
+        isPopular: true,
+        id: { notIn: excludeIds },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      include: {
+        chef: {
+          select: {
+            id: true,
+            name: true,
+            bio: true,
+          },
+        },
+      },
+    });
+  }
+}

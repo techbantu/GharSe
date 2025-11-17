@@ -488,7 +488,8 @@ const CartSidebar: React.FC<CartSidebarProps> = ({ isOpen, onClose, onCheckout }
                   </span>
                 </div>
                 
-                {cart.discount && cart.discount > 0 && (
+                {/* Only show discount if it exists and is greater than 0 */}
+                {(cart.discount || 0) > 0 && (
                   <div style={{
                     display: 'flex',
                     justifyContent: 'space-between',
@@ -502,7 +503,7 @@ const CartSidebar: React.FC<CartSidebarProps> = ({ isOpen, onClose, onCheckout }
                       fontWeight: 700,
                       fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif'
                     }}>
-                      -₹{Math.round(cart.discount)}
+                      -₹{Math.round(cart.discount || 0)}
                     </span>
                   </div>
                 )}

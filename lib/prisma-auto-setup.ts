@@ -15,15 +15,8 @@ import prisma from '@/lib/prisma';
  */
 async function tableExists(tableName: string): Promise<boolean> {
   try {
-    // Try SQLite first (default for this project)
+    // Try PostgreSQL first (Supabase uses PostgreSQL)
     try {
-      const result = await prisma.$queryRawUnsafe(`
-        SELECT name FROM sqlite_master 
-        WHERE type='table' AND name='${tableName}';
-      `) as any[];
-      return result.length > 0;
-    } catch {
-      // Fallback for PostgreSQL/Supabase
       const result = await prisma.$queryRawUnsafe(`
         SELECT EXISTS (
           SELECT 1 FROM information_schema.tables 
@@ -32,6 +25,13 @@ async function tableExists(tableName: string): Promise<boolean> {
         ) as exists;
       `) as any[];
       return result[0]?.exists === true;
+    } catch {
+      // Fallback for SQLite (local development)
+      const result = await prisma.$queryRawUnsafe(`
+        SELECT name FROM sqlite_master 
+        WHERE type='table' AND name='${tableName}';
+      `) as any[];
+      return result.length > 0;
     }
   } catch (error: any) {
     console.warn('Could not check if table exists:', error.message);

@@ -155,6 +155,17 @@ const FooterSimple: React.FC = () => {
             <Phone size={16} />
             <span style={{ fontWeight: 500 }}>Call Us: {restaurantInfo.contact.phone}</span>
           </a>
+
+          {/* Business Hours */}
+          <div style={{ 
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            color: '#D1D5DB'
+          }}>
+            <Clock size={16} />
+            <span style={{ fontWeight: 500 }}>Mon-Sun: 10:00 AM - 10:00 PM</span>
+          </div>
           </div>
           
         {/* Social Links */}
