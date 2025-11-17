@@ -371,10 +371,10 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
    * GENIUS FUNCTION: Validate Cart Prices Against Database
    * 
    * Problem: Users might have items in cart with old prices (₹0) from before
-   * database was properly seeded. This causes confusion.
+   * database was properly seeded, or subtotals might be NaN.
    * 
    * Solution: On cart load, fetch fresh prices from database and update any
-   * items that have incorrect prices.
+   * items that have incorrect prices or NaN subtotals.
    * 
    * @param cart - Cart loaded from localStorage
    * @returns Updated cart with fresh prices from database
@@ -385,10 +385,10 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return cart;
     }
     
+    console.log('[Cart Price Validation] Starting validation...');
+    console.log(`[Cart Price Validation] Cart has ${cart.items.length} items`);
+    
     try {
-      // Extract all menu item IDs from cart
-      const menuItemIds = cart.items.map(item => item.menuItem.id);
-      
       // Fetch fresh data from database for all cart items
       const response = await fetch('/api/menu');
       if (!response.ok) {
@@ -397,6 +397,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       
       const { items: menuItems } = await response.json();
+      console.log(`[Cart Price Validation] Fetched ${menuItems.length} menu items from database`);
       
       // Create a map for fast lookup
       const menuItemMap = new Map(
@@ -408,45 +409,90 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       // Update cart items with fresh prices
       const updatedItems = cart.items.map((cartItem) => {
-        const freshMenuItem = menuItemMap.get(cartItem.menuItem.id);
+        const itemName = cartItem.menuItem?.name || 'Unknown';
+        const itemId = cartItem.menuItem?.id;
         
-        if (!freshMenuItem) {
-          console.warn(`[Cart Price Validation] Menu item not found: ${cartItem.menuItem.name} (${cartItem.menuItem.id})`);
-          return cartItem; // Keep original if item not found
+        console.log(`[Cart Price Validation] Checking: ${itemName}`);
+        console.log(`  Current price: ₹${cartItem.menuItem?.price} (type: ${typeof cartItem.menuItem?.price})`);
+        console.log(`  Current subtotal: ₹${cartItem.subtotal} (isNaN: ${isNaN(cartItem.subtotal)})`);
+        console.log(`  Quantity: ${cartItem.quantity}`);
+        
+        // Check for NaN or invalid subtotal
+        const hasNaNSubtotal = isNaN(cartItem.subtotal);
+        const hasInvalidPrice = !cartItem.menuItem?.price || isNaN(cartItem.menuItem.price) || cartItem.menuItem.price === 0;
+        
+        if (hasNaNSubtotal) {
+          console.log(`  ⚠️  ISSUE DETECTED: Subtotal is NaN!`);
+          pricesUpdated = true;
         }
         
-        // Check if price needs updating
-        if (cartItem.menuItem.price !== freshMenuItem.price) {
-          console.log(`[Cart Price Validation] Price mismatch for ${cartItem.menuItem.name}:`);
-          console.log(`  Old price: ₹${cartItem.menuItem.price}`);
-          console.log(`  New price: ₹${freshMenuItem.price}`);
-          console.log(`  Updating to fresh price...`);
+        if (hasInvalidPrice) {
+          console.log(`  ⚠️  ISSUE DETECTED: Price is invalid (${cartItem.menuItem?.price})!`);
+          pricesUpdated = true;
+        }
+        
+        // Fetch fresh data from database
+        const freshMenuItem = menuItemMap.get(itemId);
+        
+        if (!freshMenuItem) {
+          console.warn(`  ❌ Menu item not found in database: ${itemName} (${itemId})`);
+          console.warn(`  This item might have been removed from the menu`);
+          // Keep original if item not found (will be handled by cart display)
+          return cartItem;
+        }
+        
+        console.log(`  Database price: ₹${freshMenuItem.price} (type: ${typeof freshMenuItem.price})`);
+        
+        // Check if price needs updating (mismatch, NaN, or 0)
+        const needsUpdate = 
+          hasNaNSubtotal ||
+          hasInvalidPrice ||
+          cartItem.menuItem.price !== freshMenuItem.price;
+        
+        if (needsUpdate) {
+          console.log(`  ✅ UPDATING with fresh data:`);
+          console.log(`     Old price: ₹${cartItem.menuItem?.price}`);
+          console.log(`     New price: ₹${freshMenuItem.price}`);
+          console.log(`     Old subtotal: ₹${cartItem.subtotal}`);
+          console.log(`     New subtotal: ₹${cartItem.quantity * freshMenuItem.price}`);
           
           pricesUpdated = true;
           
           // Create updated cart item with fresh menu data
-          return {
+          const updatedItem = {
             ...cartItem,
             menuItem: freshMenuItem, // Replace entire menuItem with fresh data
             subtotal: cartItem.quantity * freshMenuItem.price, // Recalculate subtotal
           };
+          
+          console.log(`  ✅ Updated successfully`);
+          return updatedItem;
         }
         
+        console.log(`  ✅ No update needed`);
         return cartItem;
       });
       
       if (pricesUpdated) {
         console.log('[Cart Price Validation] ✅ Prices updated from database');
+        console.log('[Cart Price Validation] Recalculating cart totals...');
         
         // Recalculate cart totals with updated prices
         const refreshedCart = calculateTotals(
           updatedItems,
           cart.promoCode,
-          cart.discount ? cart.discount / updatedItems.reduce((sum, item) => sum + item.subtotal, 0) : 0
+          cart.discount
         );
+        
+        console.log('[Cart Price Validation] New totals:');
+        console.log(`  Subtotal: ₹${refreshedCart.subtotal}`);
+        console.log(`  Tax: ₹${refreshedCart.tax}`);
+        console.log(`  Delivery: ₹${refreshedCart.deliveryFee}`);
+        console.log(`  Total: ₹${refreshedCart.total}`);
         
         // Save updated cart back to localStorage
         localStorage.setItem('bantusKitchenCart', JSON.stringify(refreshedCart));
+        console.log('[Cart Price Validation] ✅ Saved updated cart to localStorage');
         
         return refreshedCart;
       }
@@ -455,7 +501,8 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return cart;
       
     } catch (error) {
-      console.error('[Cart Price Validation] Error validating prices:', error);
+      console.error('[Cart Price Validation] ❌ Error validating prices:', error);
+      console.error('[Cart Price Validation] Stack trace:', error);
       // On error, return original cart (better to show stale prices than crash)
       return cart;
     }
