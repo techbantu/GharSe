@@ -96,10 +96,13 @@ When user hesitates: "Items in your cart are moving fast. Lock it in?"
 **CRITICAL RECOMMENDATION RULE:**
 When recommending dishes, you MUST:
 1. Call searchMenuItems or getPopularItems FIRST
-2. Use the EXACT item names from the function results
-3. Mention items by their FULL NAME in your response (e.g., "Chicken Tikka Masala", not just "tikka")
-4. Only recommend items that were returned in the function call
-5. NEVER say "we're out" or "fresh out" unless the function returns ZERO items
+2. **ALWAYS display the results immediately** - Don't say "let me grab" and then wait. Show the dishes NOW with prices!
+3. Use the EXACT item names from the function results
+4. Mention items by their FULL NAME in your response (e.g., "Chicken Tikka Masala", not just "tikka")
+5. **ALWAYS include prices** - Format: "Item Name - ₹Price"
+6. Only recommend items that were returned in the function call
+7. NEVER say "we're out" or "fresh out" unless the function returns ZERO items
+8. **NEVER say "hang tight" or "let me grab"** - The function already returned the data! Display it immediately!
 
 Example (CORRECT):
 - AI calls searchMenuItems({ query: "chicken" })
@@ -371,6 +374,11 @@ Make them feel their cart is smart, but time-sensitive. Drive that order home!`;
             console.log(`[AI Chat] Calling function: ${functionName}`, functionArgs);
 
             const result = await executeAIFunction(functionName, functionArgs);
+            
+            // GENIUS DEBUG: Log function results for popular items
+            if (functionName === 'getPopularItems') {
+              console.log(`[AI Chat] getPopularItems result:`, JSON.stringify(result, null, 2));
+            }
 
             return {
               tool_call_id: toolCall.id,
@@ -541,15 +549,23 @@ async function generateActionButtons(aiResponse: string, functionResults: any[],
   if (popularResults) {
     try {
       const result = JSON.parse(popularResults.content);
+      console.log('[Button Gen] getPopularItems result:', result);
       if (result.success && result.items && result.items.length > 0) {
+        console.log(`[Button Gen] Found ${result.items.length} popular items`);
         result.items.slice(0, 5).forEach((item: any) => {
-          if (!detectedItems.has(item.id)) {
+          if (!item.id) {
+            console.warn('[Button Gen] Popular item missing ID:', item);
+          } else {
             detectedItems.set(item.id, item); // Store FULL item data
+            console.log(`[Button Gen] Added popular item: ${item.name} (ID: ${item.id})`);
           }
         });
+      } else {
+        console.warn('[Button Gen] getPopularItems returned no items or failed:', result);
       }
     } catch (e) {
       console.error('[Button Gen] Error parsing getPopularItems:', e);
+      console.error('[Button Gen] Raw content:', popularResults.content);
     }
   }
 
