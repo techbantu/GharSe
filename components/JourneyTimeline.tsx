@@ -172,8 +172,17 @@ const JourneyTimeline: React.FC<JourneyTimelineProps> = ({ orders, onReorder, on
   const orderCards = cardsWithMilestones.filter(card => card.type === 'order');
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      {/* Milestone Banner - Show above the grid */}
+    <>
+      <style jsx>{`
+        @media (max-width: 640px) {
+          .grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
+      
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        {/* Milestone Banner - Show above the grid */}
       {milestones.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           {milestones.map((card, index) => (
@@ -193,7 +202,8 @@ const JourneyTimeline: React.FC<JourneyTimelineProps> = ({ orders, onReorder, on
         className="grid"
         style={{
           gap: '1rem',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 320px))',
+          justifyContent: 'start',
         }}
       >
         {orderCards.map((card, index) => {
@@ -570,6 +580,7 @@ const JourneyTimeline: React.FC<JourneyTimelineProps> = ({ orders, onReorder, on
         })}
       </div>
     </div>
+    </>
   );
 };
 
