@@ -101,28 +101,62 @@ const LiveChat: React.FC<LiveChatProps> = ({ minimized = false, onMinimize, onRe
     setAddingToCart(prev => ({ ...prev, [itemId]: true }));
     
     try {
-      // Convert AI item to MenuItem format
-      const menuItem = {
-        id: item.id,
-        name: item.name,
-        description: item.description || '',
-        price: item.price,
-        originalPrice: item.originalPrice || undefined,
-        category: item.category || 'Main Course',
-        image: item.image || '/images/placeholder.jpg',
-        isVegetarian: item.isVegetarian || false,
-        isVegan: item.isVegan || false,
-        isGlutenFree: item.isGlutenFree || false,
-        spicyLevel: item.spicyLevel || 0,
-        preparationTime: item.preparationTime || 20,
-        isAvailable: true,
-        isPopular: item.isPopular || false,
-      };
+      // GENIUS FIX: Always fetch fresh data from database instead of trusting AI data
+      // This prevents NaN prices and ensures data integrity
+      console.log('[LiveChat] Fetching fresh menu data for:', item.name);
+      
+      const response = await fetch('/api/menu');
+      if (!response.ok) {
+        throw new Error('Failed to fetch menu');
+      }
+      
+      const data = await response.json();
+      
+      // Find menu item by ID (most reliable)
+      let menuItem = data.items?.find((dbItem: any) => dbItem.id === item.id);
+      
+      // Fallback: Try matching by name (case-insensitive)
+      if (!menuItem) {
+        console.warn('[LiveChat] Item not found by ID, trying name match:', item.name);
+        menuItem = data.items?.find((dbItem: any) => 
+          dbItem.name.toLowerCase() === item.name.toLowerCase()
+        );
+      }
+      
+      // Fallback 2: Fuzzy match
+      if (!menuItem) {
+        console.warn('[LiveChat] Trying fuzzy match for:', item.name);
+        menuItem = data.items?.find((dbItem: any) => 
+          dbItem.name.toLowerCase().includes(item.name.toLowerCase()) ||
+          item.name.toLowerCase().includes(dbItem.name.toLowerCase())
+        );
+      }
+      
+      if (!menuItem) {
+        console.error('[LiveChat] Item not found in database:', {
+          itemId: item.id,
+          itemName: item.name,
+          availableItems: data.items?.slice(0, 5).map((i: any) => ({ id: i.id, name: i.name }))
+        });
+        throw new Error(`Item "${item.name}" not found in menu. It may have been removed.`);
+      }
+      
+      // Validate price is a number
+      if (typeof menuItem.price !== 'number' || isNaN(menuItem.price)) {
+        console.error('[LiveChat] Invalid price from database:', menuItem.price);
+        throw new Error('Invalid price data. Please contact support.');
+      }
+      
+      console.log('[LiveChat] Fresh data fetched:', {
+        name: menuItem.name,
+        price: menuItem.price,
+        type: typeof menuItem.price
+      });
       
       // GENIUS FIX: Use quantity from local state, or default to 1 if adding for first time
       const quantityToAdd = quantity > 0 ? quantity : 1;
       
-      // Add to cart
+      // Add to cart with fresh database data
       addItem(menuItem, quantityToAdd);
       
       // Success animation delay
