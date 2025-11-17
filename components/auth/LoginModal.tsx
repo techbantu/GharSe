@@ -16,6 +16,7 @@
 import React, { useState } from 'react';
 import { X, Mail, Lock, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -26,6 +27,7 @@ interface LoginModalProps {
 
 export function LoginModal({ isOpen, onClose, onSwitchToRegister, onSwitchToForgotPassword }: LoginModalProps) {
   const { login } = useAuth();
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -44,6 +46,8 @@ export function LoginModal({ isOpen, onClose, onSwitchToRegister, onSwitchToForg
       // Reset form
       setEmail('');
       setPassword('');
+      // Redirect to profile dashboard
+      router.push('/profile');
     } else {
       setError(result.error || 'Login failed. Please try again.');
     }
