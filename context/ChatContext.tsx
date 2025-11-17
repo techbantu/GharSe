@@ -141,14 +141,38 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         const stored = localStorage.getItem('bantu_chat_history');
         if (stored) {
           const parsed = JSON.parse(stored);
-          const loadedMessages = parsed.map((msg: any) => ({
-            ...msg,
-            timestamp: new Date(msg.timestamp),
-          }));
+          const loadedMessages = parsed.map((msg: any) => {
+            // Migrate old welcome messages to new Ghar branding with mom's warmth
+            if (msg.content && (msg.content.includes("Bantu's Kitchen") || msg.content.includes("GharSe"))) {
+              let newContent = msg.content
+                .replace("Bantu's Kitchen", "Ghar")
+                .replace("GharSe", "Ghar");
+              
+              // Replace the generic question with mom's warmth
+              if (newContent.includes("How can I help you today?") || newContent.includes("What can I cook for you today?")) {
+                newContent = newContent
+                  .replace("How can I help you today?", "Beta, eat GharKha food, not outside ka junk! Tell me what you want? 🏠")
+                  .replace("What can I cook for you today? 🍛", "Beta, eat GharKha food, not outside ka junk! Tell me what you want? 🏠");
+              }
+              
+              return {
+                ...msg,
+                content: newContent,
+                timestamp: new Date(msg.timestamp),
+              };
+            }
+            return {
+              ...msg,
+              timestamp: new Date(msg.timestamp),
+            };
+          });
           
           // Only load if there are actual conversation messages (not just welcome)
           if (loadedMessages.length > 0) {
             setMessages(loadedMessages);
+            
+            // Save migrated messages back to localStorage
+            localStorage.setItem('bantu_chat_history', JSON.stringify(loadedMessages));
             
             // Load user context if exists
             const storedContext = localStorage.getItem('bantu_chat_context');
@@ -166,7 +190,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       const welcomeMessage: ChatMessage = {
         id: 'welcome',
         role: 'assistant',
-        content: 'Hey! Welcome to Bantu\'s Kitchen.\n\nHow can I help you today?',
+        content: 'Hey! Welcome to Ghar.\n\nBeta, eat GharKha food, not outside ka junk! Tell me what you want? 🏠',
         timestamp: new Date(),
       };
       setMessages([welcomeMessage]);
@@ -386,7 +410,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     const welcomeMessage: ChatMessage = {
       id: `welcome_${Date.now()}`,
       role: 'assistant',
-      content: 'Hey! Welcome to Bantu\'s Kitchen.\n\nHow can I help you today?',
+      content: 'Hey! Welcome to Ghar.\n\nBeta, eat GharKha food, not outside ka junk! Tell me what you want? 🏠',
       timestamp: new Date(),
     };
     setMessages([welcomeMessage]);
