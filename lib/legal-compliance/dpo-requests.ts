@@ -197,7 +197,7 @@ async function sendAcknowledgmentEmail(request: any): Promise<boolean> {
     <div class="footer">
       <p>This is an automated acknowledgment as required by DPDPA 2023.</p>
       <p>Bantu's Kitchen (Doing business as GharSe)<br>
-      Hayatnagar, Hyderabad, Telangana, India</p>
+      Hayathnagar, Hyderabad, Telangana, India</p>
     </div>
   </div>
 </body>
@@ -417,7 +417,7 @@ async function sendResponseEmail(request: any, response: string): Promise<boolea
 
     <div class="footer">
       <p>Bantu's Kitchen (Doing business as GharSe)<br>
-      Hayatnagar, Hyderabad, Telangana, India</p>
+      Hayathnagar, Hyderabad, Telangana, India</p>
     </div>
   </div>
 </body>

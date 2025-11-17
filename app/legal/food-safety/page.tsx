@@ -49,7 +49,7 @@ export default function FoodSafetyPage() {
           
           <Bold>I. FOOD BUSINESS OPERATOR (SOLE AND EXCLUSIVE FOOD SAFETY LIABILITY)</Bold><br /><br />
           
-          ALL food preparation, food safety compliance, FSSAI licensing, hygiene standards, allergen management, contamination prevention, and food-related health liabilities are the <Bold>ABSOLUTE AND EXCLUSIVE RESPONSIBILITY</Bold> of <Bold>Bantu'S kitchen</Bold>, a petty food retailer (snacks/tea shop) registered as an individual sole proprietorship operated by Sailaja from a registered home kitchen located at Plot no 17, Road no 3, Padmalaya Nagar, Hayatnagar, Pedda Amberpet (Kalan), Hayathnagar, Rangareddy, Telangana - 501505, India.<br /><br />
+          ALL food preparation, food safety compliance, FSSAI licensing, hygiene standards, allergen management, contamination prevention, and food-related health liabilities are the <Bold>ABSOLUTE AND EXCLUSIVE RESPONSIBILITY</Bold> of <Bold>Bantu'S kitchen</Bold>, a petty food retailer (snacks/tea shop) registered as an individual sole proprietorship operated by Sailaja from a registered home kitchen located at Plot no 17, Road no 3, Padmalaya Nagar, Hayathnagar, Pedda Amberpet (Kalan), Hayathnagar, Rangareddy, Telangana - 501505, India.<br /><br />
           
           The Food Business Operator (Bantu'S kitchen):<br /><br />
           

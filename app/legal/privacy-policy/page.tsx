@@ -370,7 +370,7 @@ export default function PrivacyPolicyPage() {
           Name: [To be designated]<br />
           Email: <a href="mailto:dpo@gharse.app" style={{ color: '#FF6B35' }}>dpo@gharse.app</a><br />
           Phone: +91 90104 60964<br />
-          Address: GharSe, Hayatnagar, Hyderabad, Telangana - 501505<br />
+          Address: GharSe, Hayathnagar, Hyderabad, Telangana - 501505<br />
           Response Time: Within 15 business days
         </ContactBox>
 

@@ -134,7 +134,7 @@ Example (WRONG - DON'T DO THIS):
   * NEVER try to look up foreign numbers in database
 
 **Location:**
-Hayatnagar, Hyderabad 501505 (India only - 5km delivery)
+Hayathnagar, Hyderabad 501505 (India only - 5km delivery)
 
 **RESTAURANT HOURS (CRITICAL - CHECK THIS FIRST):**
 Operating Hours: 10:00 AM to 10:00 PM (Daily)

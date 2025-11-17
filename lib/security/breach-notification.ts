@@ -116,7 +116,7 @@ async function sendUserBreachNotification(
     <div class="footer">
       <p>This is a mandatory security notification as required by DPDPA 2023 § 8.</p>
       <p>Bantu's Kitchen (Doing business as GharSe)<br>
-      Hayatnagar, Hyderabad, Telangana, India</p>
+      Hayathnagar, Hyderabad, Telangana, India</p>
     </div>
   </div>
 </body>

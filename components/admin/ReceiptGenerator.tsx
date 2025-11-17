@@ -105,7 +105,7 @@ const ReceiptGenerator: React.FC<ReceiptGeneratorProps> = ({ order, onClose }) =
             <p className="text-xs text-gray-600 mb-1">FSSAI Reg: 23625028002731 (Valid until: 23 June 2027)</p>
             <p className="text-gray-600 text-sm">Authentic Indian Home Cooking, Made with Love</p>
             <div className="mt-4 text-xs text-gray-500">
-              <p>Plot no 17, Road no 3, Padmalaya Nagar, Hayatnagar</p>
+              <p>Plot no 17, Road no 3, Padmalaya Nagar, Hayathnagar</p>
               <p>Pedda Amberpet (Kalan), Hayathnagar, Rangareddy, Telangana - 501505</p>
               <p className="mt-2">Phone: +91 90104 60964 | Email: orders@gharse.app</p>
             </div>

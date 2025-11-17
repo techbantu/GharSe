@@ -31,22 +31,22 @@ const inter = Inter({
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://gharse.app'),
   title: {
-    default: "GharSe - Home-Cooked Indian Food Delivery in Hayatnagar, Hyderabad | Order Online",
+    default: "GharSe - Home-Cooked Indian Food Delivery in Hayathnagar, Hyderabad | Order Online",
     template: "%s | GharSe - From Real Homes To Your Hungry Heart"
   },
-  description: "GharSe connects you with trusted home chefs in Hayatnagar, Hyderabad. Fresh, authentic Indian home-cooked meals delivered from real home kitchens to your door. Free delivery over ₹499. Open 10 AM - 10 PM. Call +91 90104 60964",
+  description: "GharSe connects you with trusted home chefs in Hayathnagar, Hyderabad. Fresh, authentic Indian home-cooked meals delivered from real home kitchens to your door. Free delivery over ₹499. Open 10 AM - 10 PM. Call +91 90104 60964",
   keywords: [
     // Primary keywords
     "home-cooked Indian food Hyderabad",
-    "home chef Hayatnagar",
+    "home chef Hayathnagar",
     "authentic home kitchen food delivery",
     "homemade Indian food Hyderabad",
     "home-cooked meals near me",
     // Location-specific
-    "home food delivery Hayatnagar",
+    "home food delivery Hayathnagar",
     "home kitchen Padhmalayanagar",
     "tiffin service Hyderabad 501505",
-    "home chef in Hayatnagar Hyderabad",
+    "home chef in Hayathnagar Hyderabad",
     // Cuisine-specific
     "home-cooked biryani Hyderabad",
     "home-style curry delivery",
@@ -83,7 +83,7 @@ export const metadata: Metadata = {
     locale: "en_IN",
     url: "https://gharse.app",
     siteName: "GharSe",
-    title: "GharSe - Best Indian Restaurant in Hayatnagar, Hyderabad",
+    title: "GharSe - Best Indian Restaurant in Hayathnagar, Hyderabad",
     description: "Order authentic Indian home cooking delivered fresh to your door in Hyderabad. Biryani, curry, tandoori dishes and more. Free delivery over ₹499.",
     images: [
       {
@@ -97,7 +97,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "GharSe - Authentic Indian Food Delivery in Hyderabad",
-    description: "Order fresh Indian home cooking delivered to Hayatnagar, Hyderabad. Free delivery over ₹499.",
+    description: "Order fresh Indian home cooking delivered to Hayathnagar, Hyderabad. Free delivery over ₹499.",
     images: ["/images/hero-food.jpg"],
     creator: "@bantuskitchen",
   },

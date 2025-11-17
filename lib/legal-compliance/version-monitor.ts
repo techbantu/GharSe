@@ -206,7 +206,7 @@ export async function sendVersionChangeEmail(
   
   <div class="footer">
     <p>This is a mandatory notification required by data protection laws.</p>
-    <p>Bantu's Kitchen | Hayatnagar, Hyderabad | <a href="https://gharse.app">gharse.app</a></p>
+    <p>Bantu's Kitchen | Hayathnagar, Hyderabad | <a href="https://gharse.app">gharse.app</a></p>
   </div>
 </body>
 </html>
@@ -241,7 +241,7 @@ The Bantu's Kitchen Team
 
 ---
 This is a mandatory notification required by data protection laws.
-Bantu's Kitchen | Hayatnagar, Hyderabad | gharse.app
+Bantu's Kitchen | Hayathnagar, Hyderabad | gharse.app
   `;
 
   try {

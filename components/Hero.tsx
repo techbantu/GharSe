@@ -410,7 +410,7 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
                         <div className="relative rounded-3xl overflow-hidden shadow-2xl transform group-hover:scale-105 transition-all duration-500 aspect-square">
                           <img
                             src="https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=800&h=800&fit=crop&q=80"
-                            alt="Authentic Hyderabadi Biryani - Traditional Indian rice dish with spices and meat, delivered fresh in Hayatnagar, Hyderabad"
+                            alt="Authentic Hyderabadi Biryani - Traditional Indian rice dish with spices and meat, delivered fresh in Hayathnagar, Hyderabad"
                             className="w-full h-full object-cover"
                             onError={(e) => {
                               e.currentTarget.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cdefs%3E%3ClinearGradient id='grad1' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23FF6B35;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%23F77F00;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='400' height='400' fill='url(%23grad1)'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='32' fill='white' font-family='system-ui' font-weight='700'%3E🍛 Biryani%3C/text%3E%3C/svg%3E`;
@@ -472,7 +472,7 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
                         <div className="relative rounded-3xl overflow-hidden shadow-2xl transform group-hover:scale-105 transition-all duration-500 aspect-square">
                           <img
                             src="https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?w=800&h=800&fit=crop&q=80"
-                            alt="Indian Appetizers - Paneer tikka, samosa, and chicken 65 starters from Bantu's Kitchen in Hayatnagar"
+                            alt="Indian Appetizers - Paneer tikka, samosa, and chicken 65 starters from Bantu's Kitchen in Hayathnagar"
                             className="w-full h-full object-cover"
                             onError={(e) => {
                               e.currentTarget.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cdefs%3E%3ClinearGradient id='grad3' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23FFB800;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%23FF6B35;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='400' height='400' fill='url(%23grad3)'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='32' fill='white' font-family='system-ui' font-weight='700'%3E🍢 Starters%3C/text%3E%3C/svg%3E`;

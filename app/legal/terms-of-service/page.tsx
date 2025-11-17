@@ -49,7 +49,7 @@ export default function TermsOfServicePage() {
           
           <Bold>I. FOOD BUSINESS OPERATOR (INDEPENDENT CONTRACTOR)</Bold><br /><br />
           
-          The food business accessible through the GharSe brand and platform is <Bold>operated exclusively and independently by Bantu'S kitchen</Bold> ("Food Operator"), an individual sole proprietorship registered as a petty food retailer under FSSAI Registration Number 23625028002731, operated by Sailaja from Plot no 17, Road no 3, Padmalaya Nagar, Hayatnagar, Pedda Amberpet (Kalan), Hayathnagar, Rangareddy, Telangana - 501505, India. The Food Operator:<br /><br />
+          The food business accessible through the GharSe brand and platform is <Bold>operated exclusively and independently by Bantu'S kitchen</Bold> ("Food Operator"), an individual sole proprietorship registered as a petty food retailer under FSSAI Registration Number 23625028002731, operated by Sailaja from Plot no 17, Road no 3, Padmalaya Nagar, Hayathnagar, Pedda Amberpet (Kalan), Hayathnagar, Rangareddy, Telangana - 501505, India. The Food Operator:<br /><br />
           
           <List>
             <Li><Bold>FSSAI Registration:</Bold> 23625028002731 (Petty Retailer - Prepared Foods category, valid until 23 June 2027, annual turnover limit ₹12 Lakhs)</Li>
@@ -677,7 +677,7 @@ export default function TermsOfServicePage() {
             Business Type: Petty Retailer of snacks/tea shops (Prepared Foods)<br />
             Annual Turnover Limit: Up to ₹12 Lakhs<br /><br />
             
-            Address: Plot no 17, Road no 3, Padmalaya Nagar, Hayatnagar<br />
+            Address: Plot no 17, Road no 3, Padmalaya Nagar, Hayathnagar<br />
             Pedda Amberpet (Kalan), Hayathnagar, Rangareddy, Telangana - 501505, India<br /><br />
             
             Email: <a href="mailto:orders@gharse.app" style={{ color: '#FF6B35' }}>orders@gharse.app</a> (orders, delivery, food inquiries)<br />

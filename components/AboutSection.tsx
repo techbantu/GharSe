@@ -113,7 +113,7 @@ const AboutSection: React.FC = () => {
             }}>
               <img
                 src="https://images.unsplash.com/photo-1556910096-6f5e72db6803?w=1200&h=1000&fit=crop&q=80"
-                alt="Authentic Indian home cooking at GharSe in Hayatnagar, Hyderabad - Traditional family recipes prepared with fresh ingredients"
+                alt="Authentic Indian home cooking at GharSe in Hayathnagar, Hyderabad - Traditional family recipes prepared with fresh ingredients"
                 style={{
                   width: '100%',
                   height: '280px',

@@ -49,7 +49,7 @@ export default function RefundPolicyPage() {
           
           <Bold>I. FOOD BUSINESS OPERATOR (SOLE REFUND LIABILITY)</Bold><br /><br />
           
-          ALL food orders, refunds, cancellations, and food-related disputes are the <Bold>EXCLUSIVE RESPONSIBILITY</Bold> of <Bold>Bantu'S kitchen</Bold> (FSSAI Registration: 23625028002731), an individual sole proprietorship operated by Sailaja from Plot no 17, Road no 3, Padmalaya Nagar, Hayatnagar, Pedda Amberpet (Kalan), Hayathnagar, Rangareddy, Telangana - 501505, India. Bantu'S kitchen:<br /><br />
+          ALL food orders, refunds, cancellations, and food-related disputes are the <Bold>EXCLUSIVE RESPONSIBILITY</Bold> of <Bold>Bantu'S kitchen</Bold> (FSSAI Registration: 23625028002731), an individual sole proprietorship operated by Sailaja from Plot no 17, Road no 3, Padmalaya Nagar, Hayathnagar, Pedda Amberpet (Kalan), Hayathnagar, Rangareddy, Telangana - 501505, India. Bantu'S kitchen:<br /><br />
           
           <List>
             <Li><Bold>Issues ALL refunds:</Bold> Sole discretion and financial responsibility for determining refund eligibility and processing refunds</Li>
@@ -463,7 +463,7 @@ export default function RefundPolicyPage() {
           Name: [To be designated]<br />
           Email: <a href="mailto:refunds@gharse.app" style={{ color: '#FF6B35' }}>refunds@gharse.app</a><br />
           Phone: +91 90104 60964<br />
-          Address: GharSe, Hayatnagar, Hyderabad, Telangana - 501505<br />
+          Address: GharSe, Hayathnagar, Hyderabad, Telangana - 501505<br />
           Response Time: Within 24-48 hours for standard claims, up to 7 days for medical/legal verification
         </ContactBox>
       </Section>

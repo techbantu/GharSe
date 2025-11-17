@@ -30,7 +30,7 @@ export const restaurantInfo: Restaurant = {
     whatsapp: "+91 90104 60964",
   },
   address: {
-    street: "Plot no 17, Road no 3, Padmalaya Nagar, Hayatnagar",
+    street: "Plot no 17, Road no 3, Padmalaya Nagar, Hayathnagar",
     city: "Hayathnagar",
     district: "Rangareddy",
     state: "Telangana",
