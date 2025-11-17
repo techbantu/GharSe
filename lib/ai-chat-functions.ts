@@ -525,6 +525,7 @@ export async function checkItemAvailability(params: z.infer<typeof aiChatFunctio
 
 /**
  * Get Popular Items
+ * GENIUS FIX: Return ALL fields needed for action buttons (id, image, etc.)
  */
 export async function getPopularItems(params: z.infer<typeof aiChatFunctions.getPopularItems.parameters>) {
   try {
@@ -539,15 +540,25 @@ export async function getPopularItems(params: z.infer<typeof aiChatFunctions.get
     const items = await prisma.menuItem.findMany({
       where,
       take: params.limit || 5,
-      orderBy: { name: 'asc' },
+      orderBy: [
+        { isPopular: 'desc' },
+        { name: 'asc' },
+      ],
       select: {
+        id: true, // GENIUS FIX: Include ID for action buttons
         name: true,
         description: true,
         price: true,
+        originalPrice: true,
         category: true,
+        image: true, // GENIUS FIX: Include image for display
         isVegetarian: true,
         isVegan: true,
+        isGlutenFree: true,
         spicyLevel: true,
+        preparationTime: true,
+        isPopular: true,
+        calories: true,
       },
     });
 
@@ -556,10 +567,14 @@ export async function getPopularItems(params: z.infer<typeof aiChatFunctions.get
       count: items.length,
       items: items.map(item => ({
         ...item,
-        price: `₹${item.price}`,
+        // GENIUS FIX: Keep price as number (not string) for action buttons
+        // priceFormatted is added for AI display, but price stays as number
+        priceFormatted: `₹${item.price}`,
+        originalPriceFormatted: item.originalPrice ? `₹${item.originalPrice}` : null,
       })),
     };
   } catch (error) {
+    console.error('Error fetching popular items:', error);
     return {
       success: false,
       error: 'Unable to fetch popular items.',
