@@ -41,6 +41,9 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
   const [orderStatus, setOrderStatus] = useState<string>('PENDING_CONFIRMATION');
   const [orderTotal, setOrderTotal] = useState<number>(0);
   
+  // Coming Soon modal state for payment methods
+  const [showComingSoonModal, setShowComingSoonModal] = useState(false);
+  
   // Notification status state
   const [notificationStatus, setNotificationStatus] = useState<{
     email?: { success: boolean; error?: string; skipped?: boolean };
@@ -1530,53 +1533,60 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                         Cash on Delivery
                       </span>
                     </label>
-                    <label 
+                    <div 
+                      onClick={() => setShowComingSoonModal(true)}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
+                        justifyContent: 'space-between',
                         padding: '16px 20px',
                         borderRadius: '14px',
-                        border: `2px solid ${formData.paymentMethod === 'card' ? '#f97316' : '#E5E7EB'}`,
-                        background: formData.paymentMethod === 'card' ? 'rgba(249, 115, 22, 0.05)' : 'white',
+                        border: '2px solid #E5E7EB',
+                        background: 'white',
                         cursor: 'pointer',
-                        transition: 'all 0.2s'
+                        transition: 'all 0.2s',
+                        position: 'relative'
                       }}
                       onMouseEnter={(e) => {
-                        if (formData.paymentMethod !== 'card') {
-                          e.currentTarget.style.borderColor = '#D1D5DB';
-                          e.currentTarget.style.background = '#F9FAFB';
-                        }
+                        e.currentTarget.style.borderColor = '#D1D5DB';
+                        e.currentTarget.style.background = '#F9FAFB';
                       }}
                       onMouseLeave={(e) => {
-                        if (formData.paymentMethod !== 'card') {
-                          e.currentTarget.style.borderColor = '#E5E7EB';
-                          e.currentTarget.style.background = 'white';
-                        }
+                        e.currentTarget.style.borderColor = '#E5E7EB';
+                        e.currentTarget.style.background = 'white';
                       }}
                     >
-                      <input
-                        type="radio"
-                        name="paymentMethod"
-                        value="card"
-                        checked={formData.paymentMethod === 'card'}
-                        onChange={handleChange}
-                        style={{
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{
                           width: '20px',
                           height: '20px',
-                          marginRight: '12px',
-                          cursor: 'pointer',
-                          accentColor: '#f97316'
-                        }}
-                      />
+                          borderRadius: '50%',
+                          border: '2px solid #D1D5DB',
+                          background: 'white',
+                          opacity: 0.5
+                        }} />
+                        <span style={{
+                          fontWeight: 600,
+                          fontSize: '0.9375rem',
+                          color: '#6B7280',
+                          fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif'
+                        }}>
+                          Credit/Debit Card
+                        </span>
+                      </div>
                       <span style={{
+                        fontSize: '0.75rem',
                         fontWeight: 600,
-                        fontSize: '0.9375rem',
-                        color: '#1F2937',
-                        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif'
+                        color: '#F97316',
+                        backgroundColor: '#FFF7ED',
+                        padding: '4px 12px',
+                        borderRadius: '12px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px'
                       }}>
-                        Credit/Debit Card
+                        Coming Soon
                       </span>
-                    </label>
+                    </div>
                   </div>
                   
                   {/* Payment Method Details - Show when card is selected */}
@@ -2482,6 +2492,224 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
             router.push('/profile');
           }}
         />
+      )}
+      
+      {/* Coming Soon Modal for Payment Methods */}
+      {showComingSoonModal && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 10000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+            background: 'rgba(0, 0, 0, 0.6)',
+            backdropFilter: 'blur(8px)',
+            animation: 'fadeIn 0.2s ease-out'
+          }}
+          onClick={() => setShowComingSoonModal(false)}
+        >
+          <div
+            style={{
+              background: 'white',
+              borderRadius: '20px',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              maxWidth: '480px',
+              width: '100%',
+              overflow: 'hidden',
+              animation: 'slideUp 0.3s ease-out'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div style={{
+              background: 'linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)',
+              padding: '32px 24px',
+              textAlign: 'center',
+              position: 'relative'
+            }}>
+              {/* Close button */}
+              <button
+                onClick={() => setShowComingSoonModal(false)}
+                style={{
+                  position: 'absolute',
+                  top: '16px',
+                  right: '16px',
+                  padding: '8px',
+                  background: 'white',
+                  border: 'none',
+                  borderRadius: '50%',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '36px',
+                  height: '36px',
+                  transition: 'all 0.2s',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'scale(1.1)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'scale(1)';
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
+                }}
+              >
+                <X size={20} color="#6B7280" />
+              </button>
+              
+              {/* Icon */}
+              <div style={{
+                width: '80px',
+                height: '80px',
+                margin: '0 auto 16px',
+                background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 8px 24px rgba(249, 115, 22, 0.3)'
+              }}>
+                <CreditCard size={40} color="white" strokeWidth={2} />
+              </div>
+              
+              <h2 style={{
+                fontSize: '1.75rem',
+                fontWeight: 800,
+                color: '#1F2937',
+                margin: '0 0 8px 0',
+                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif',
+                letterSpacing: '-0.02em'
+              }}>
+                Coming Soon!
+              </h2>
+              
+              <p style={{
+                fontSize: '1rem',
+                color: '#6B7280',
+                margin: 0,
+                fontWeight: 500
+              }}>
+                Online Payments
+              </p>
+            </div>
+            
+            {/* Content */}
+            <div style={{ padding: '24px' }}>
+              <p style={{
+                fontSize: '1rem',
+                color: '#374151',
+                lineHeight: '1.6',
+                marginBottom: '24px',
+                textAlign: 'center'
+              }}>
+                We're working hard to bring you secure online payment options including <strong>Credit/Debit Cards</strong>, <strong>UPI</strong>, <strong>Net Banking</strong>, and popular payment apps!
+              </p>
+              
+              {/* Payment methods preview */}
+              <div style={{
+                background: '#F9FAFB',
+                borderRadius: '12px',
+                padding: '20px',
+                marginBottom: '24px'
+              }}>
+                <p style={{
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  color: '#6B7280',
+                  marginBottom: '12px',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  Payment Methods Coming Soon:
+                </p>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(2, 1fr)',
+                  gap: '8px'
+                }}>
+                  {['Paytm', 'Google Pay', 'PhonePe', 'Razorpay', 'Stripe', 'UPI', 'Net Banking', 'Debit Card'].map((method) => (
+                    <div
+                      key={method}
+                      style={{
+                        background: 'white',
+                        padding: '8px 12px',
+                        borderRadius: '8px',
+                        fontSize: '0.8125rem',
+                        color: '#374151',
+                        textAlign: 'center',
+                        fontWeight: 500,
+                        border: '1px solid #E5E7EB'
+                      }}
+                    >
+                      {method}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Info box */}
+              <div style={{
+                background: '#DBEAFE',
+                borderRadius: '12px',
+                padding: '16px',
+                marginBottom: '24px',
+                border: '1px solid #BFDBFE'
+              }}>
+                <p style={{
+                  fontSize: '0.875rem',
+                  color: '#1E40AF',
+                  margin: 0,
+                  lineHeight: '1.5',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '8px'
+                }}>
+                  <AlertCircle size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <span>
+                    <strong>Meanwhile:</strong> You can continue placing orders with <strong>Cash on Delivery</strong>. We'll notify you as soon as online payments are available!
+                  </span>
+                </p>
+              </div>
+              
+              {/* Action button */}
+              <button
+                onClick={() => setShowComingSoonModal(false)}
+                style={{
+                  width: '100%',
+                  padding: '14px',
+                  background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '12px',
+                  fontSize: '1rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(249, 115, 22, 0.4)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(249, 115, 22, 0.3)';
+                }}
+              >
+                Got It! Continue with Cash on Delivery
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
