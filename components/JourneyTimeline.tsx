@@ -58,7 +58,7 @@ interface Order {
 interface JourneyTimelineProps {
   orders: Order[];
   onReorder: (orderId: string) => void;
-  // onCancel?: (order: Order) => void; // Future implementation
+  onCancel?: (order: Order) => void;
 }
 
 // Status configurations
