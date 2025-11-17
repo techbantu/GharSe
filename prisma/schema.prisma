@@ -242,6 +242,9 @@ model Order {
   // Coupon Tracking (NEW!)
   couponUsage CouponUsage?
 
+  // Delivery Tracking (NEW!)
+  delivery Delivery?
+
   @@index([orderNumber])
   @@index([customerId]) // NEW! Fast customer order lookup
   @@index([customerPhone])
@@ -1301,4 +1304,425 @@ model RecommendationMetric {
   @@index([algorithm])
   @@index([variant])
   @@index([shownAt])
+}
+
+// ===== ADVANCED DRIVER & DELIVERY SYSTEM =====
+
+// Driver/Delivery Agent Management
+model Driver {
+  id              String   @id @default(cuid())
+  userId          String?  @unique // Link to Customer model if driver has customer account
+
+  // Personal Information
+  name            String
+  phone           String   @unique
+  email           String   @unique
+  profilePhoto    String?
+  dateOfBirth     DateTime?
+
+  // Verification & Documents
+  verificationStatus String @default("pending") // pending, verified, rejected
+  licenseNumber      String? @unique
+  licenseFrontPhoto  String?
+  licenseBackPhoto   String?
+  licenseExpiry      DateTime?
+  vehicleType        String? // bike, scooter, car
+  vehicleNumber      String? @unique
+  vehiclePhoto       String?
+  insuranceNumber    String?
+  insuranceExpiry    DateTime?
+  backgroundCheck    Boolean @default(false)
+
+  // Location & Availability
+  currentLat         Float?
+  currentLng         Float?
+  lastLocationUpdate DateTime?
+  isOnline           Boolean  @default(false)
+  isAvailable        Boolean  @default(false)
+  currentZone        String?  // Zone/area name
+  homeZone           String?  // Preferred operating zone
+
+  // Performance Metrics
+  rating             Float    @default(5.0)
+  ratingCount        Int      @default(0)
+  totalDeliveries    Int      @default(0)
+  completedToday     Int      @default(0)
+  completedThisWeek  Int      @default(0)
+  acceptanceRate     Float    @default(100.0) // % of orders accepted
+  completionRate     Float    @default(100.0) // % of accepted orders completed
+  onTimeRate         Float    @default(100.0) // % delivered on time
+  averageDeliveryTime Float   @default(0)     // Minutes
+
+  // Earnings
+  totalEarnings      Float    @default(0)
+  todayEarnings      Float    @default(0)
+  weekEarnings       Float    @default(0)
+  monthEarnings      Float    @default(0)
+  pendingBalance     Float    @default(0)
+
+  // Gamification
+  level              Int      @default(1)
+  experiencePoints   Int      @default(0)
+  currentStreak      Int      @default(0)  // Consecutive days worked
+  longestStreak      Int      @default(0)
+  badges             String?  // JSON array of badge IDs
+
+  // Banking & Payouts
+  bankName           String?
+  accountNumber      String?
+  ifscCode           String?
+  upiId              String?
+  panNumber          String?
+
+  // Status & Compliance
+  status             String   @default("active") // active, inactive, suspended, blocked
+  suspensionReason   String?
+  lastActiveAt       DateTime?
+  joinedAt           DateTime @default(now())
+
+  // Relations
+  deliveries         Delivery[]
+  earnings           DriverEarning[]
+  shifts             DriverShift[]
+  ratings            DriverRating[]
+  badges_earned      DriverBadge[]
+  notifications      DriverNotification[]
+
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([phone])
+  @@index([email])
+  @@index([isOnline])
+  @@index([isAvailable])
+  @@index([currentZone])
+  @@index([status])
+  @@index([rating])
+}
+
+// Individual Delivery/Trip
+model Delivery {
+  id                  String   @id @default(cuid())
+  orderId             String   @unique
+  order               Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  driverId            String
+  driver              Driver   @relation(fields: [driverId], references: [id])
+
+  // Delivery Details
+  status              String   @default("assigned") // assigned, picked_up, in_transit, arrived, delivered, failed
+  pickupLat           Float
+  pickupLng           Float
+  pickupAddress       String
+  dropoffLat          Float
+  dropoffLng          Float
+  dropoffAddress      String
+  distance            Float?   // km
+  estimatedDuration   Int?     // minutes
+
+  // Timestamps
+  assignedAt          DateTime @default(now())
+  acceptedAt          DateTime?
+  pickedUpAt          DateTime?
+  arrivedAt           DateTime?
+  deliveredAt         DateTime?
+
+  // Proof of Delivery
+  deliveryPhoto       String?
+  deliveryNotes       String?
+  signatureUrl        String?
+  customerName        String?
+
+  // Route Optimization
+  routePolyline       String?  @db.Text // Encoded polyline for map display
+  routeSteps          String?  @db.Text // JSON array of turn-by-turn directions
+  actualRoute         String?  @db.Text // Actual GPS breadcrumbs (JSON)
+
+  // Financials
+  baseFare            Float    @default(0)
+  distanceFare        Float    @default(0)
+  timeFare            Float    @default(0)
+  surgeFare           Float    @default(0)
+  tip                 Float    @default(0)
+  totalEarning        Float    @default(0)
+
+  // Performance
+  onTime              Boolean  @default(true)
+  delayMinutes        Int      @default(0)
+  customerRating      Int?     // 1-5 stars
+  customerFeedback    String?
+
+  // Failure Tracking
+  failureReason       String?
+  failurePhoto        String?
+  reattemptCount      Int      @default(0)
+
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([driverId])
+  @@index([orderId])
+  @@index([status])
+  @@index([assignedAt])
+  @@index([deliveredAt])
+}
+
+// Real-time GPS Location Tracking
+model DriverLocation {
+  id          String   @id @default(cuid())
+  driverId    String
+  lat         Float
+  lng         Float
+  speed       Float?   // km/h
+  heading     Float?   // degrees (0-360)
+  accuracy    Float?   // meters
+  altitude    Float?   // meters
+  timestamp   DateTime @default(now())
+
+  @@index([driverId])
+  @@index([timestamp])
+}
+
+// Driver Shift Management
+model DriverShift {
+  id            String    @id @default(cuid())
+  driverId      String
+  driver        Driver    @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  shiftStart    DateTime
+  shiftEnd      DateTime?
+  duration      Int?      // minutes
+
+  // Location tracking
+  startLat      Float?
+  startLng      Float?
+  endLat        Float?
+  endLng        Float?
+
+  // Performance during shift
+  deliveries    Int       @default(0)
+  earnings      Float     @default(0)
+  distance      Float     @default(0) // km
+  activeTime    Int       @default(0) // minutes actually on delivery
+  idleTime      Int       @default(0) // minutes waiting for orders
+
+  status        String    @default("active") // active, ended
+
+  createdAt     DateTime  @default(now())
+
+  @@index([driverId])
+  @@index([shiftStart])
+  @@index([status])
+}
+
+// Driver Earnings Breakdown
+model DriverEarning {
+  id              String   @id @default(cuid())
+  driverId        String
+  driver          Driver   @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  deliveryId      String?
+
+  // Earning Components
+  type            String   // delivery, bonus, incentive, tip, referral
+  amount          Float
+  description     String?
+
+  // Payout Status
+  status          String   @default("pending") // pending, paid, cancelled
+  paidAt          DateTime?
+  payoutMethod    String?  // bank_transfer, upi, wallet
+  transactionId   String?
+
+  // Metadata
+  date            DateTime @default(now())
+  weekNumber      Int?     // Week of year
+  monthNumber     Int?     // 1-12
+
+  createdAt       DateTime @default(now())
+
+  @@index([driverId])
+  @@index([type])
+  @@index([status])
+  @@index([date])
+}
+
+// Driver Ratings from Customers
+model DriverRating {
+  id          String   @id @default(cuid())
+  driverId    String
+  driver      Driver   @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  orderId     String
+  customerId  String
+
+  rating      Int      // 1-5 stars
+  feedback    String?
+  tags        String?  // JSON array: ["friendly", "fast", "professional"]
+
+  createdAt   DateTime @default(now())
+
+  @@unique([orderId])
+  @@index([driverId])
+  @@index([rating])
+  @@index([createdAt])
+}
+
+// Gamification Badges
+model DriverBadge {
+  id          String   @id @default(cuid())
+  driverId    String
+  driver      Driver   @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  badgeId     String   // Badge identifier (e.g., "speedster", "reliable", "top_earner")
+  badgeName   String
+  badgeIcon   String?
+  badgeColor  String?
+  level       String?  // bronze, silver, gold, platinum
+
+  progress    Int      @default(0)  // Progress towards next level
+  maxProgress Int      @default(100)
+
+  earnedAt    DateTime @default(now())
+
+  @@unique([driverId, badgeId, level])
+  @@index([driverId])
+  @@index([badgeId])
+}
+
+// Smart Notifications for Drivers
+model DriverNotification {
+  id          String    @id @default(cuid())
+  driverId    String
+  driver      Driver    @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  type        String    // new_order, surge_alert, bonus_available, shift_reminder, rating_received
+  title       String
+  message     String
+  priority    String    @default("normal") // low, normal, high, urgent
+
+  actionUrl   String?
+  actionLabel String?
+
+  isRead      Boolean   @default(false)
+  readAt      DateTime?
+
+  // Rich notification data
+  data        Json?     // Additional metadata
+
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([driverId])
+  @@index([isRead])
+  @@index([priority])
+  @@index([createdAt])
+}
+
+// Heat Map Data - Demand Zones
+model DemandZone {
+  id                String   @id @default(cuid())
+  name              String
+  centerLat         Float
+  centerLng         Float
+  radius            Float    // meters
+
+  // Demand Metrics
+  currentDemand     Int      @default(0)  // Active orders
+  availableDrivers  Int      @default(0)
+  demandScore       Float    @default(0)  // 0-1 score
+  surgeMultiplier   Float    @default(1.0)
+
+  // Time-based patterns
+  hourlyPattern     String?  @db.Text // JSON array of hourly demand
+  weeklyPattern     String?  @db.Text // JSON array of daily demand
+
+  // Configuration
+  isActive          Boolean  @default(true)
+  color             String   @default("#FF6B35") // Hex color for heat map
+
+  updatedAt         DateTime @updatedAt
+  createdAt         DateTime @default(now())
+
+  @@index([demandScore])
+  @@index([surgeMultiplier])
+  @@index([isActive])
+}
+
+// Batch Delivery Optimization
+model DeliveryBatch {
+  id              String   @id @default(cuid())
+  driverId        String
+
+  status          String   @default("active") // active, completed, cancelled
+  orderIds        String   // JSON array of order IDs
+
+  // Route Optimization
+  optimizedRoute  String   @db.Text // JSON array of waypoints in optimal order
+  totalDistance   Float?   // km
+  totalDuration   Int?     // minutes
+
+  // Earnings
+  batchBonus      Float    @default(0)
+  totalEarnings   Float    @default(0)
+
+  startedAt       DateTime @default(now())
+  completedAt     DateTime?
+
+  @@index([driverId])
+  @@index([status])
+  @@index([startedAt])
+}
+
+// Order Assignment Algorithm Tracking
+model OrderAssignment {
+  id                  String   @id @default(cuid())
+  orderId             String   @unique
+
+  // Assignment Algorithm
+  algorithm           String   // nearest, smart_routing, load_balancing, ml_based
+  assignedDriverId    String?
+  rejectedDriverIds   String?  // JSON array of drivers who declined
+
+  // Metrics
+  searchRadius        Float?   // km
+  driversNotified     Int      @default(0)
+  responseTime        Int?     // seconds until accepted
+
+  // Optimization scores
+  distanceScore       Float?
+  timeScore           Float?
+  driverScore         Float?   // Based on ratings, completion rate
+  finalScore          Float?
+
+  assignedAt          DateTime @default(now())
+
+  @@index([orderId])
+  @@index([assignedDriverId])
+  @@index([algorithm])
+}
+
+// Revenue Optimization Insights
+model RevenueInsight {
+  id          String   @id @default(cuid())
+  driverId    String
+
+  // Time-based insights
+  date        DateTime
+  hour        Int      // 0-23
+  dayOfWeek   Int      // 0-6
+
+  // Performance metrics
+  orders      Int      @default(0)
+  earnings    Float    @default(0)
+  distance    Float    @default(0)
+  activeTime  Int      @default(0)
+
+  // Zone performance
+  zone        String?
+  demandLevel String?  // low, medium, high
+
+  createdAt   DateTime @default(now())
+
+  @@unique([driverId, date, hour])
+  @@index([driverId])
+  @@index([date])
+  @@index([earnings])
 }
