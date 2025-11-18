@@ -293,16 +293,31 @@ async function sendEmailWithRetry(
   html: string,
   retries: number = 3
 ): Promise<{ success: boolean; error?: string; messageId?: string }> {
+  // Check if email is configured before attempting to send
+  try {
+    await getTransporter();
+  } catch (initError) {
+    const errorMsg = initError instanceof Error ? initError.message : String(initError);
+    // Return user-friendly error for missing API keys
+    if (errorMsg.includes('Missing SMTP credentials') || errorMsg.includes('NOT CONFIGURED')) {
+      return { success: false, error: 'Email failed — missing API key' };
+    }
+    if (errorMsg.includes('SENDGRID_API_KEY') || errorMsg.includes('RESEND_API_KEY')) {
+      return { success: false, error: 'Email failed — invalid configuration' };
+    }
+    return { success: false, error: errorMsg };
+  }
+
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       // Build from address with display name
       const fromName = process.env.FROM_NAME || 'GharSe';
       const fromEmail = process.env.SMTP_USER || 'bantusailaja@gmail.com';
       const fromAddress = `"${fromName}" <${fromEmail}>`;
-      
+
       // Reply-To should be the business email
       const replyToEmail = process.env.FROM_EMAIL || 'orders@gharse.app';
-      
+
       const result = await getTransporter().sendMail({
         from: fromAddress,
         to,

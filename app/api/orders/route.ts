@@ -85,7 +85,7 @@ const CreateOrderSchema = z.object({
 /**
  * Validate and create order (pure business logic)
  */
-async function createOrderLogic(body: unknown): Promise<Result<Order, AppError>> {
+async function createOrderLogic(body: unknown): Promise<Result<{order: Order, notifications: any}, AppError>> {
   try {
     // Validate input with Zod
     const validationResult = CreateOrderSchema.safeParse(body);
@@ -646,8 +646,8 @@ async function createOrderLogic(body: unknown): Promise<Result<Order, AppError>>
       emailSent: notificationResult.email?.success,
       smsSent: notificationResult.sms?.success,
     });
-    
-    return Ok(order);
+
+    return Ok({ order, notifications: notificationResult });
     
   } catch (error) {
     logger.error('Unexpected error in createOrderLogic', {
@@ -766,15 +766,16 @@ export async function POST(request: NextRequest) {
       
       // Step 4: Success response
       logger.info('Order created', {
-        orderId: result.value.id,
-        orderNumber: result.value.orderNumber,
+        orderId: result.value.order.id,
+        orderNumber: result.value.order.orderNumber,
         duration,
       });
-      
+
       return NextResponse.json(
         {
           success: true,
-          order: result.value,
+          order: result.value.order,
+          notifications: result.value.notifications,
           message: 'Order created successfully',
         },
         { status: 201 }
