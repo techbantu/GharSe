@@ -334,9 +334,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
       // Scroll to first error field (native app behavior)
       if (validation.firstErrorField) {
         scrollToErrorField(validation.firstErrorField);
-        
-        // Show toast with error message
-        toast.error('Validation Error', `Please fix: ${errors[validation.firstErrorField]}`);
       }
       
       // Play alert sound for validation error
@@ -347,7 +344,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
     
     if (cart.items.length === 0) {
       setErrors({ general: 'Your cart is empty!' });
-      toast.error('Empty Cart', 'Your cart is empty! Please add items before checkout.');
       return;
     }
     
