@@ -80,6 +80,8 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
   
   // Notification timeout ref
   const notificationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Ref to track if we've received notification status (to avoid race condition)
+  const notificationReceivedRef = useRef<boolean>(false);
   
   // Cleanup timers on unmount or modal close
   useEffect(() => {
@@ -425,10 +427,28 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
             
             // Store notification status with fallback
             if (data.notifications) {
+              // Mark that we've received notification status
+              notificationReceivedRef.current = true;
+              
+              // Clear timeout since we got the status
+              if (notificationTimeoutRef.current) {
+                clearTimeout(notificationTimeoutRef.current);
+                notificationTimeoutRef.current = null;
+              }
+              
               setNotificationStatus(data.notifications);
+              console.log('✅ Notification status received from backend:', data.notifications);
             } else {
               // Fallback if backend doesn't return notifications (shouldn't happen)
               console.warn('No notification status returned from backend');
+              notificationReceivedRef.current = true; // Still mark as received
+              
+              // Clear timeout
+              if (notificationTimeoutRef.current) {
+                clearTimeout(notificationTimeoutRef.current);
+                notificationTimeoutRef.current = null;
+              }
+              
               setNotificationStatus({
                 email: { success: false, error: 'Status not available' },
                 sms: { success: false, error: 'Status not available' },
@@ -509,14 +529,18 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
       setStep('pending');
       
       // Safety timeout for notification status (7 seconds)
-      // If backend hasn't returned notification status yet, set fallback
+      // Only set timeout if we haven't received notification status yet
+      // Reset the received flag for new order
+      notificationReceivedRef.current = false;
+      
       if (notificationTimeoutRef.current) {
         clearTimeout(notificationTimeoutRef.current);
       }
       
       notificationTimeoutRef.current = setTimeout(() => {
-        if (!notificationStatus) {
-          console.warn('Notification status timeout - setting fallback');
+        // Only set timeout fallback if we haven't received status yet
+        if (!notificationReceivedRef.current) {
+          console.warn('Notification status timeout - setting fallback (backend did not return status)');
           setNotificationStatus({
             email: { 
               success: false, 
@@ -528,6 +552,8 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
             },
             overall: false,
           });
+        } else {
+          console.log('✅ Notification status already received, skipping timeout fallback');
         }
       }, 7000); // 7 second timeout
       
@@ -562,6 +588,8 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
       clearTimeout(notificationTimeoutRef.current);
       notificationTimeoutRef.current = null;
     }
+    // Reset notification received flag when closing
+    notificationReceivedRef.current = false;
     setTimeRemaining(null);
     
     if (step === 'confirmation') {
