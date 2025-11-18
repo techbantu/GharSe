@@ -110,6 +110,21 @@ class TwilioClient {
       return { success: false, error: 'Invalid phone number format' };
     }
 
+    // Check if Twilio is configured before attempting to send
+    try {
+      await this.initClient();
+    } catch (initError) {
+      const errorMsg = initError instanceof Error ? initError.message : String(initError);
+      // Return user-friendly error for missing API keys
+      if (errorMsg.includes('Missing Twilio credentials') || errorMsg.includes('NOT CONFIGURED')) {
+        return { success: false, error: 'SMS not sent — missing API key' };
+      }
+      if (errorMsg.includes('initialization failed')) {
+        return { success: false, error: 'SMS failed — invalid configuration' };
+      }
+      return { success: false, error: errorMsg };
+    }
+
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
         const client = await this.initClient();
