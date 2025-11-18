@@ -21,6 +21,7 @@ let audioUnlocked = false;
 /**
  * Unlock audio context (required for autoplay policies)
  * Must be called after user interaction
+ * CRITICAL for iOS Safari - requires actual user gesture
  */
 export function unlockAudio(): void {
   if (audioUnlocked) {
@@ -53,18 +54,25 @@ export function unlockAudio(): void {
       audioUnlocked = true;
     }
 
-    // Also try HTML5 Audio as backup
+    // iOS Safari FIX: Play a silent sound to unlock audio
+    // This MUST happen during a user gesture
     const testAudio = new Audio();
     testAudio.volume = 0.01;
-    testAudio.play()
-      .then(() => {
-        testAudio.pause();
-        testAudio.currentTime = 0;
-        console.log('[Notification Sound] ✅ HTML5 Audio unlocked');
-      })
-      .catch((err) => {
-        console.warn('[Notification Sound] HTML5 Audio unlock failed (expected):', err.message);
-      });
+    // Use a data URI for a very short silent audio file
+    testAudio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+    const playPromise = testAudio.play();
+
+    if (playPromise !== undefined) {
+      playPromise
+        .then(() => {
+          testAudio.pause();
+          testAudio.currentTime = 0;
+          console.log('[Notification Sound] ✅ HTML5 Audio unlocked (iOS Safari compatible)');
+        })
+        .catch((err) => {
+          console.warn('[Notification Sound] HTML5 Audio unlock failed (expected on first load):', err.message);
+        });
+    }
   } catch (error) {
     console.error('[Notification Sound] ❌ Could not unlock audio:', error);
   }
@@ -164,44 +172,97 @@ function playHTML5Sound(): void {
  * Play notification sound for new order
  * Automatically handles audio unlock and fallback
  * OPTIMIZED FOR INSTANT PLAYBACK - No delays
+ * iOS Safari compatible with graceful fallback
  */
 export function playNotificationSound(): void {
-  // Play sound IMMEDIATELY (don't wait for unlock check)
-  // Web Audio API can handle suspended state gracefully
+  console.log('[Notification Sound] 🔊 Attempting to play notification...');
+
   try {
     // Ensure audio context exists
     if (!audioContext) {
       audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      console.log('[Notification Sound] Created new audio context, state:', audioContext.state);
     }
-    
-    // Resume if suspended (non-blocking)
+
+    // iOS Safari FIX: Always try to resume context before playing
     if (audioContext.state === 'suspended') {
-      audioContext.resume().catch(() => {
-        // Ignore errors - will retry on next play
-      });
-    }
-    
-    // Play sound IMMEDIATELY (don't wait)
-    playWebAudioSound();
-    console.log('[Notification Sound] 🔊 Sound played INSTANTLY');
-    
-    // Mark as unlocked after successful play
-    audioUnlocked = true;
-  } catch (error) {
-    console.error('[Notification Sound] ❌ Failed to play sound:', error);
-    
-    // Try to unlock and retry once
-    if (!audioUnlocked) {
-      unlockAudio();
-      // Retry after a tiny delay (non-blocking)
-      setTimeout(() => {
-        try {
+      console.log('[Notification Sound] Audio context suspended, attempting resume...');
+      audioContext.resume()
+        .then(() => {
+          console.log('[Notification Sound] ✅ Audio context resumed, playing sound');
           playWebAudioSound();
           audioUnlocked = true;
+        })
+        .catch((err) => {
+          console.error('[Notification Sound] ❌ Failed to resume audio context:', err);
+          // Try fallback: Use Notification API or Vibration
+          tryFallbackNotification();
+        });
+    } else {
+      // Context is running, play immediately
+      console.log('[Notification Sound] Audio context running, playing sound');
+      playWebAudioSound();
+      audioUnlocked = true;
+    }
+
+  } catch (error) {
+    console.error('[Notification Sound] ❌ Failed to play sound:', error);
+
+    // Try to unlock and retry once
+    if (!audioUnlocked) {
+      console.log('[Notification Sound] Attempting to unlock audio...');
+      unlockAudio();
+      // Retry after a tiny delay
+      setTimeout(() => {
+        try {
+          if (audioContext && audioContext.state === 'running') {
+            playWebAudioSound();
+            audioUnlocked = true;
+          } else {
+            tryFallbackNotification();
+          }
         } catch (retryError) {
           console.error('[Notification Sound] ❌ Retry failed:', retryError);
+          tryFallbackNotification();
         }
-      }, 50);
+      }, 100);
+    } else {
+      tryFallbackNotification();
+    }
+  }
+}
+
+/**
+ * Fallback notification for mobile devices when sound fails
+ * Uses Vibration API on mobile devices
+ */
+function tryFallbackNotification(): void {
+  console.log('[Notification Sound] Trying fallback notification methods...');
+
+  // Try vibration on mobile devices
+  if ('vibrate' in navigator) {
+    try {
+      // Pattern: vibrate for 200ms, pause 100ms, vibrate 200ms
+      navigator.vibrate([200, 100, 200]);
+      console.log('[Notification Sound] ✅ Vibration fallback triggered');
+    } catch (err) {
+      console.warn('[Notification Sound] Vibration failed:', err);
+    }
+  }
+
+  // Try visual notification if browser supports it
+  if ('Notification' in window && Notification.permission === 'granted') {
+    try {
+      new Notification('New Order Received!', {
+        body: 'You have a new order. Please check your dashboard.',
+        icon: '/logo.png',
+        badge: '/logo.png',
+        tag: 'new-order',
+        requireInteraction: true,
+      });
+      console.log('[Notification Sound] ✅ Browser notification shown');
+    } catch (err) {
+      console.warn('[Notification Sound] Browser notification failed:', err);
     }
   }
 }
