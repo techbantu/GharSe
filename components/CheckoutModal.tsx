@@ -15,6 +15,7 @@ import { X, User, Mail, Phone, MapPin, CreditCard, CheckCircle, Clock, TruckIcon
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/context/ToastContext';
 import { useRouter } from 'next/navigation';
+import { useActiveOrder } from '@/context/ActiveOrderContext';
 import CancelOrderModal from '@/components/admin/CancelOrderModal';
 import PendingOrderModification from '@/components/PendingOrderModification';
 import { Order, CustomerInfo, Address } from '@/types';
@@ -32,6 +33,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
   const { cart, clearCart } = useCart();
   const toast = useToast();
   const router = useRouter();
+  const { setActiveOrder, clearActiveOrder } = useActiveOrder();
   const [step, setStep] = useState<'form' | 'pending' | 'confirmation'>('form');
   const [orderNumber, setOrderNumber] = useState('');
   const [orderId, setOrderId] = useState('');
@@ -352,6 +354,9 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
     console.log('✅ Validation passed, submitting order...');
     setIsSubmitting(true);
     
+    // Reset notification received flag for new order submission
+    notificationReceivedRef.current = false;
+    
     try {
       // Create order payload
       const orderPayload = {
@@ -522,6 +527,14 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
       setOrderTotal(order.pricing.total);
       setOrderStatus('PENDING_CONFIRMATION');
       
+      // GENIUS FIX: Set active order in global context so menu additions route to this order
+      setActiveOrder(order);
+      console.log('[CheckoutModal] Set active order in context:', {
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        gracePeriodExpiresAt: order.gracePeriodExpiresAt,
+      });
+      
       // DON'T clear cart yet - allow modifications during grace period
       // clearCart(); // Move this to after finalization
       
@@ -529,33 +542,34 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
       setStep('pending');
       
       // Safety timeout for notification status (7 seconds)
-      // Only set timeout if we haven't received notification status yet
-      // Reset the received flag for new order
-      notificationReceivedRef.current = false;
-      
-      if (notificationTimeoutRef.current) {
-        clearTimeout(notificationTimeoutRef.current);
-      }
-      
-      notificationTimeoutRef.current = setTimeout(() => {
-        // Only set timeout fallback if we haven't received status yet
-        if (!notificationReceivedRef.current) {
-          console.warn('Notification status timeout - setting fallback (backend did not return status)');
-          setNotificationStatus({
-            email: { 
-              success: false, 
-              error: 'Email service timeout. Your order was created successfully, but confirmation email may be delayed.' 
-            },
-            sms: { 
-              success: false, 
-              error: 'SMS service timeout. Your order was created successfully, but confirmation SMS may be delayed.' 
-            },
-            overall: false,
-          });
-        } else {
-          console.log('✅ Notification status already received, skipping timeout fallback');
+      // ONLY set timeout if we haven't received notification status yet
+      // DON'T reset the flag here - it was already set when we received the response above
+      if (!notificationReceivedRef.current) {
+        // Only set timeout if we haven't received status yet
+        if (notificationTimeoutRef.current) {
+          clearTimeout(notificationTimeoutRef.current);
         }
-      }, 7000); // 7 second timeout
+        
+        notificationTimeoutRef.current = setTimeout(() => {
+          // Double-check we still haven't received it
+          if (!notificationReceivedRef.current) {
+            console.warn('⚠️ Notification status timeout - backend did not return status within 7 seconds');
+            setNotificationStatus({
+              email: { 
+                success: false, 
+                error: 'Email service timeout. Your order was created successfully, but confirmation email may be delayed.' 
+              },
+              sms: { 
+                success: false, 
+                error: 'SMS service timeout. Your order was created successfully, but confirmation SMS may be delayed.' 
+              },
+              overall: false,
+            });
+          }
+        }, 7000); // 7 second timeout
+      } else {
+        console.log('✅ Notification status already received, no timeout needed');
+      }
       
       // Play success sound for order confirmation
       try {
@@ -2110,6 +2124,11 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                     onFinalized={() => {
                       // Order finalized, move to confirmation
                       clearCart();
+                      
+                      // GENIUS FIX: Clear active order from context
+                      clearActiveOrder();
+                      console.log('[CheckoutModal] Cleared active order from context (finalized)');
+                      
                       setStep('confirmation');
                     }}
                     onBrowseMenu={() => {
