@@ -75,12 +75,22 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Cleanup timer on unmount or modal close
+  // Field refs for auto-scroll on validation error
+  const fieldRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  
+  // Notification timeout ref
+  const notificationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Cleanup timers on unmount or modal close
   useEffect(() => {
     return () => {
       if (timerIntervalRef.current) {
         clearInterval(timerIntervalRef.current);
         timerIntervalRef.current = null;
+      }
+      if (notificationTimeoutRef.current) {
+        clearTimeout(notificationTimeoutRef.current);
+        notificationTimeoutRef.current = null;
       }
     };
   }, []);
@@ -179,18 +189,60 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
     }
   };
   
-  // Validate form
-  const validateForm = (): boolean => {
+  // Scroll to first error field (native app behavior)
+  const scrollToErrorField = (fieldName: string) => {
+    const field = fieldRefs.current[fieldName];
+    if (field) {
+      // Scroll field into view with smooth animation
+      field.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'center',
+        inline: 'nearest'
+      });
+      
+      // Focus the field after scroll
+      setTimeout(() => {
+        field.focus();
+        
+        // Flash the field to draw attention
+        const originalBorder = field.style.border;
+        field.style.border = '3px solid #EF4444';
+        field.style.animation = 'pulse 0.5s ease-in-out 2';
+        
+        setTimeout(() => {
+          field.style.border = originalBorder;
+        }, 1000);
+      }, 300);
+    }
+  };
+  
+  // Validate form and return first error field name
+  const validateForm = (): { isValid: boolean; firstErrorField?: string } => {
     const newErrors: Record<string, string> = {};
+    let firstErrorField: string | undefined = undefined;
     
-    if (!formData.name.trim()) newErrors.name = 'Name is required';
+    // Define validation order (top to bottom of form)
+    const validationOrder = ['name', 'email', 'phone', 'street', 'city', 'state', 'zipCode', 'paymentMethod'];
+    
+    if (!formData.name.trim()) {
+      newErrors.name = 'Name is required';
+      if (!firstErrorField) firstErrorField = 'name';
+    } else if (/\d/.test(formData.name)) {
+      newErrors.name = 'Name cannot contain numbers';
+      if (!firstErrorField) firstErrorField = 'name';
+    }
+    
     if (!formData.email.trim()) {
       newErrors.email = 'Email is required';
+      if (!firstErrorField) firstErrorField = 'email';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = 'Invalid email format';
+      if (!firstErrorField) firstErrorField = 'email';
     }
+    
     if (!formData.phone.trim()) {
       newErrors.phone = 'Phone is required';
+      if (!firstErrorField) firstErrorField = 'phone';
     } else {
       // Extract only digits from phone
       const phoneDigits = formData.phone.replace(/\D/g, '');
@@ -198,61 +250,73 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
       // Check if it's a valid Indian number (should be exactly 10 digits after +91)
       if (phoneDigits.length < 10) {
         newErrors.phone = 'Phone must be 10 digits';
+        if (!firstErrorField) firstErrorField = 'phone';
       } else if (phoneDigits.length > 12) {
         // More than 12 total (91 + 10 digits)
         newErrors.phone = 'Invalid phone number';
+        if (!firstErrorField) firstErrorField = 'phone';
       } else {
         // Check if starts with valid Indian mobile prefix (6, 7, 8, 9)
         const mobileNumber = phoneDigits.length === 12 ? phoneDigits.substring(2) : phoneDigits;
         if (mobileNumber.length === 10 && !/^[6789]/.test(mobileNumber)) {
           newErrors.phone = 'Indian mobile numbers start with 6, 7, 8, or 9';
+          if (!firstErrorField) firstErrorField = 'phone';
         }
       }
-    }
-    
-    // Validate name: should not contain numbers
-    if (formData.name.trim() && /\d/.test(formData.name)) {
-      newErrors.name = 'Name cannot contain numbers';
     }
     
     // Payment method validation (always allow COD!)
     if (!formData.paymentMethod) {
       newErrors.paymentMethod = 'Please select a payment method';
+      if (!firstErrorField) firstErrorField = 'paymentMethod';
     }
     
     if (formData.orderType === 'delivery') {
-      if (!formData.street.trim()) newErrors.street = 'Street address is required';
+      if (!formData.street.trim()) {
+        newErrors.street = 'Street address is required';
+        if (!firstErrorField) firstErrorField = 'street';
+      }
       
       if (!formData.city.trim()) {
         newErrors.city = 'City is required';
+        if (!firstErrorField) firstErrorField = 'city';
       } else if (/\d/.test(formData.city)) {
         // City cannot contain numbers
         newErrors.city = 'City name cannot contain numbers';
+        if (!firstErrorField) firstErrorField = 'city';
       } else if (!/^[a-zA-Z\s\-'.]+$/.test(formData.city)) {
         // City should only contain letters, spaces, hyphens, apostrophes, and periods
         newErrors.city = 'City name can only contain letters';
+        if (!firstErrorField) firstErrorField = 'city';
       }
       
       if (!formData.state.trim()) {
         newErrors.state = 'State is required';
+        if (!firstErrorField) firstErrorField = 'state';
       } else if (/\d/.test(formData.state)) {
         // State cannot contain numbers
         newErrors.state = 'State name cannot contain numbers';
+        if (!firstErrorField) firstErrorField = 'state';
       } else if (!/^[a-zA-Z\s\-'.]+$/.test(formData.state)) {
         // State should only contain letters, spaces, hyphens, apostrophes, and periods
         newErrors.state = 'State name can only contain letters';
+        if (!firstErrorField) firstErrorField = 'state';
       }
       
       if (!formData.zipCode.trim()) {
         newErrors.zipCode = 'PIN code is required';
+        if (!firstErrorField) firstErrorField = 'zipCode';
       } else if (!/^\d{6}$/.test(formData.zipCode)) {
         // GENIUS FIX: PIN code must be exactly 6 digits
         newErrors.zipCode = 'PIN code must be 6 digits';
+        if (!firstErrorField) firstErrorField = 'zipCode';
       }
     }
     
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    const isValid = Object.keys(newErrors).length === 0;
+    
+    return { isValid, firstErrorField };
   };
   
   // Submit order with retry logic and proper error handling
@@ -261,13 +325,29 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
     
     console.log('🔄 Form submitted, validating...', formData);
     
-    if (!validateForm()) {
+    // Validate and get first error field
+    const validation = validateForm();
+    
+    if (!validation.isValid) {
       console.log('❌ Validation failed:', errors);
+      
+      // Scroll to first error field (native app behavior)
+      if (validation.firstErrorField) {
+        scrollToErrorField(validation.firstErrorField);
+        
+        // Show toast with error message
+        toast.error('Validation Error', `Please fix: ${errors[validation.firstErrorField]}`);
+      }
+      
+      // Play alert sound for validation error
+      playAlertSound();
+      
       return;
     }
     
     if (cart.items.length === 0) {
       setErrors({ general: 'Your cart is empty!' });
+      toast.error('Empty Cart', 'Your cart is empty! Please add items before checkout.');
       return;
     }
     
@@ -347,9 +427,17 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
               return Err(new ValidationError(data.error || 'Order creation failed'));
             }
             
-            // Store notification status
+            // Store notification status with fallback
             if (data.notifications) {
               setNotificationStatus(data.notifications);
+            } else {
+              // Fallback if backend doesn't return notifications (shouldn't happen)
+              console.warn('No notification status returned from backend');
+              setNotificationStatus({
+                email: { success: false, error: 'Status not available' },
+                sms: { success: false, error: 'Status not available' },
+                overall: false,
+              });
             }
             
             return Ok(data.order) as Result<Order, AppError>;
@@ -424,6 +512,29 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
       // Go to pending modification step
       setStep('pending');
       
+      // Safety timeout for notification status (7 seconds)
+      // If backend hasn't returned notification status yet, set fallback
+      if (notificationTimeoutRef.current) {
+        clearTimeout(notificationTimeoutRef.current);
+      }
+      
+      notificationTimeoutRef.current = setTimeout(() => {
+        if (!notificationStatus) {
+          console.warn('Notification status timeout - setting fallback');
+          setNotificationStatus({
+            email: { 
+              success: false, 
+              error: 'Email service timeout. Your order was created successfully, but confirmation email may be delayed.' 
+            },
+            sms: { 
+              success: false, 
+              error: 'SMS service timeout. Your order was created successfully, but confirmation SMS may be delayed.' 
+            },
+            overall: false,
+          });
+        }
+      }, 7000); // 7 second timeout
+      
       // Play success sound for order confirmation
       try {
         playSuccessSound();
@@ -446,10 +557,14 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
   
   // Reset and close
   const handleClose = () => {
-    // Clean up timer
+    // Clean up timers
     if (timerIntervalRef.current) {
       clearInterval(timerIntervalRef.current);
       timerIntervalRef.current = null;
+    }
+    if (notificationTimeoutRef.current) {
+      clearTimeout(notificationTimeoutRef.current);
+      notificationTimeoutRef.current = null;
     }
     setTimeRemaining(null);
     
@@ -486,6 +601,16 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
       <style>{`
         @keyframes spin {
           to { transform: rotate(360deg); }
+        }
+        @keyframes pulse {
+          0%, 100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 0.8;
+            transform: scale(1.02);
+          }
         }
         @media (max-width: 768px) {
           [data-checkout-modal] {
@@ -776,6 +901,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                       Full Name *
                     </label>
                     <input
+                      ref={(el) => { fieldRefs.current.name = el; }}
                       type="text"
                       name="name"
                       value={formData.name}
@@ -853,6 +979,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                         Email *
                       </label>
                       <input
+                        ref={(el) => { fieldRefs.current.email = el; }}
                         type="email"
                         name="email"
                         value={formData.email}
@@ -978,6 +1105,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                         </div>
                         {/* Phone Number Input (Editable) */}
                       <input
+                        ref={(el) => { fieldRefs.current.phone = el; }}
                         type="tel"
                         name="phone"
                           value={formData.phone.startsWith('+91') ? formData.phone.substring(4).trim() : formData.phone.replace(/[^\d\s]/g, '')}
@@ -1105,6 +1233,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                         Street Address *
                       </label>
                       <input
+                        ref={(el) => { fieldRefs.current.street = el; }}
                         type="text"
                         name="street"
                         value={formData.street}
@@ -1208,6 +1337,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                           City *
                         </label>
                         <input
+                          ref={(el) => { fieldRefs.current.city = el; }}
                           type="text"
                           name="city"
                           value={formData.city}
@@ -1277,6 +1407,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                           State *
                         </label>
                         <input
+                          ref={(el) => { fieldRefs.current.state = el; }}
                           type="text"
                           name="state"
                           value={formData.state}
@@ -1346,6 +1477,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                           PIN Code *
                         </label>
                         <input
+                          ref={(el) => { fieldRefs.current.zipCode = el; }}
                           type="text"
                           name="zipCode"
                           value={formData.zipCode}
