@@ -313,3 +313,65 @@ async function getSmartSuggestions(
     });
   }
 }
+
+/**
+ * POST /api/menu - Create a new menu item
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    console.log('[Menu API] Creating new menu item:', body.name);
+    
+    // Create the menu item
+    const newItem = await prisma.menuItem.create({
+      data: {
+        name: body.name,
+        description: body.description || '',
+        price: parseFloat(body.price) || 0,
+        originalPrice: body.originalPrice ? parseFloat(body.originalPrice) : null,
+        category: body.category || 'Main Course',
+        image: body.image || null,
+        isVegetarian: body.isVegetarian || false,
+        isVegan: body.isVegan || false,
+        isGlutenFree: body.isGlutenFree || false,
+        spicyLevel: parseInt(body.spicyLevel) || 0,
+        preparationTime: parseInt(body.preparationTime) || 30,
+        isAvailable: body.isAvailable !== undefined ? body.isAvailable : true,
+        isPopular: body.isPopular || false,
+        calories: body.calories ? parseInt(body.calories) : null,
+        servingSize: body.servingSize || null,
+        ingredients: body.ingredients ? JSON.stringify(body.ingredients) : null,
+        allergens: body.allergens ? JSON.stringify(body.allergens) : null,
+        chefId: body.chefId || null,
+      },
+    });
+
+    logger.info('Menu item created', {
+      itemId: newItem.id,
+      name: newItem.name,
+      price: newItem.price,
+      category: newItem.category,
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: '🎉 Menu item created successfully!',
+      item: newItem,
+    });
+
+  } catch (error) {
+    console.error('[Menu API] Error creating menu item:', error);
+    logger.error('Failed to create menu item', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    
+    return NextResponse.json(
+      { 
+        success: false, 
+        error: 'Failed to create menu item',
+        details: error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 }
+    );
+  }
+}
