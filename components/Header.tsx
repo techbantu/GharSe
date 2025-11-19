@@ -14,6 +14,7 @@ import { ShoppingCart, Phone, Mail, Menu, X, Clock, User, LogOut } from 'lucide-
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
+import { useActiveOrder } from '@/context/ActiveOrderContext';
 import { restaurantInfo } from '@/data/menuData';
 import { LoginModal } from './auth/LoginModal';
 import { RegisterModal } from './auth/RegisterModal';
@@ -25,8 +26,9 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
-  const { itemCount, cart } = useCart();
+  const { itemCount: cartItemCount, cart } = useCart();
   const { user, isAuthenticated, logout, isLoading } = useAuth();
+  const { isInGracePeriod, activeOrder } = useActiveOrder();
   const router = useRouter();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -34,6 +36,11 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  
+  // GENIUS FIX: Show active order item count when in grace period
+  const itemCount = isInGracePeriod && activeOrder 
+    ? activeOrder.items.reduce((sum, item) => sum + item.quantity, 0)
+    : cartItemCount;
   
   // Track client-side hydration to prevent SSR/CSR mismatch
   const [isMounted, setIsMounted] = useState(false);
@@ -101,6 +108,66 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
   
   return (
     <>
+      {/* Grace Period Banner - Shows when user can modify active order */}
+      {isMounted && isInGracePeriod && activeOrder && activeOrder.status !== 'cancelled' && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            zIndex: 100,
+            background: 'linear-gradient(135deg, #f97316, #fb923c)',
+            color: 'white',
+            padding: '0.75rem 1rem',
+            boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
+            borderBottom: '2px solid rgba(255, 255, 255, 0.2)',
+          }}
+        >
+          <div
+            style={{
+              maxWidth: '1200px',
+              margin: '0 auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '1rem',
+              flexWrap: 'wrap',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <Clock className="animate-pulse" size={20} />
+              <span style={{ fontWeight: 600, fontSize: '0.9375rem' }}>
+                Items will be added to Order #{activeOrder.orderNumber}
+              </span>
+            </div>
+            <button
+              onClick={onCartClick}
+              style={{
+                background: 'rgba(255, 255, 255, 0.2)',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                color: 'white',
+                padding: '0.5rem 1rem',
+                borderRadius: '0.5rem',
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                whiteSpace: 'nowrap',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+              }}
+            >
+              View Order →
+            </button>
+          </div>
+        </div>
+      )}
+      
       {/* Top Info Bar - Contact Information */}
       <div style={{
         background: 'linear-gradient(to right, #f97316, #ea580c)',

@@ -15,6 +15,7 @@ import { Cart, CartItem, MenuItem } from '@/types';
 import { restaurantInfo } from '@/data/menuData';
 import { useAuth } from '@/context/AuthContext';
 import { getFirstOrderDiscountStatus } from '@/lib/first-order-discount-client';
+import { useActiveOrder } from '@/context/ActiveOrderContext';
 
 /**
  * Cart Actions - All possible cart mutations
@@ -252,6 +253,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [firstOrderDiscount, setFirstOrderDiscount] = useState<number>(0);
   const [firstOrderEligible, setFirstOrderEligible] = useState(false);
   const { user } = useAuth();
+  const { activeOrderId, activeOrder, isInGracePeriod, refreshActiveOrder } = useActiveOrder();
 
   // Cross-tab sync infrastructure
   const broadcastChannel = useRef<BroadcastChannel | null>(null);
@@ -480,11 +482,8 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     if (!isMounted || !sessionIdRef.current) return;
 
-    // Throttle broadcasts to prevent micro-bursts (max 1 per second)
-    const now = Date.now();
-    if (now - lastBroadcastRef.current < 1000) {
-      return;
-    }
+    // GENIUS FIX: Removed throttle check that was causing timing issues
+    // instanceIdRef already prevents self-receive via BroadcastChannel (line 329)
 
     // Save to localStorage for persistence
     localStorage.setItem('bantusKitchenCart', JSON.stringify(cart));
@@ -492,6 +491,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Broadcast ONLY via BroadcastChannel (not localStorage)
     if (broadcastChannel.current) {
       try {
+        const now = Date.now();
         const payload = {
           type: 'CART_UPDATED',
           cart,
@@ -500,7 +500,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           timestamp: now,
         };
         broadcastChannel.current.postMessage(payload);
-        lastBroadcastRef.current = now;
+        lastBroadcastRef.current = now; // Track for debugging only
         console.log('[Cart Sync] Broadcasted cart update to other tabs');
       } catch (error) {
         console.error('[Cart Sync] BroadcastChannel error:', error);
@@ -552,7 +552,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [cart.items, isMounted]);
   
   // Cart API methods
-  const addItem = (
+  const addItem = async (
     menuItem: MenuItem,
     quantity: number,
     customizations?: Record<string, string>,
@@ -565,10 +565,81 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       price: menuItem.price,
       customizations,
       specialInstructions,
-      currentCartSize: cart.items.length
+      currentCartSize: cart.items.length,
+      hasActiveOrder: !!activeOrderId,
+      isInGracePeriod,
     });
+    
+    // GENIUS FIX: If user has an active order in grace period, add to that order instead of cart
+    if (isInGracePeriod && activeOrderId && activeOrder) {
+      console.log('[CartContext] Routing to active order modification:', {
+        orderId: activeOrderId,
+        orderNumber: activeOrder.orderNumber,
+      });
+      
+      try {
+        // Get current order items
+        const currentItems = activeOrder.items.map(item => ({
+          menuItemId: item.menuItem.id,
+          quantity: item.quantity,
+          price: item.menuItem.price,
+          specialInstructions: item.specialInstructions || '',
+        }));
+        
+        // Check if item already exists in order
+        const existingItemIndex = currentItems.findIndex(
+          item => item.menuItemId === menuItem.id
+        );
+        
+        if (existingItemIndex >= 0) {
+          // Item exists, increase quantity
+          currentItems[existingItemIndex].quantity += quantity;
+        } else {
+          // Add new item
+          currentItems.push({
+            menuItemId: menuItem.id,
+            quantity,
+            price: menuItem.price,
+            specialInstructions: specialInstructions || '',
+          });
+        }
+        
+        // Send to modify API
+        const response = await fetch('/api/orders/modify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            orderId: activeOrderId,
+            customerId: activeOrder.customer?.id,
+            items: currentItems,
+          }),
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+          console.log('[CartContext] Successfully added to active order:', data.order);
+          
+          // Refresh active order in context
+          await refreshActiveOrder();
+          
+          // Success logged to console (toast would require useToast hook)
+          
+          return;
+        } else {
+          console.error('[CartContext] Failed to add to active order:', data.error);
+          // Fall through to regular cart addition
+        }
+      } catch (error) {
+        console.error('[CartContext] Error adding to active order:', error);
+        // Fall through to regular cart addition
+      }
+    }
+    
+    // Regular cart addition (when no active order)
     dispatch({ type: 'ADD_ITEM', payload: { menuItem, quantity, customizations, specialInstructions } });
-    console.log('[CartContext] ADD_ITEM dispatched');
+    console.log('[CartContext] ADD_ITEM dispatched to regular cart');
   };
   
   const removeItem = (id: string) => {

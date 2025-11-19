@@ -53,8 +53,43 @@ export default function CustomerCancelOrderModal({
   const [success, setSuccess] = useState(false);
   const [canCancel, setCanCancel] = useState(true);
   const [cancelMessage, setCancelMessage] = useState('');
+  const [countdown, setCountdown] = useState(3);
 
   const isCustomReason = selectedReason === 'Other';
+  
+  // Auto-close modal when order is already cancelled
+  useEffect(() => {
+    if (!canCancel && isOpen && cancelMessage) {
+      console.log('[CustomerCancel] Order already cancelled, auto-closing in 3 seconds...');
+      
+      // Countdown timer (update every second)
+      setCountdown(3);
+      const countdownInterval = setInterval(() => {
+        setCountdown(prev => {
+          if (prev <= 1) {
+            clearInterval(countdownInterval);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      
+      // Close modal after 3 seconds
+      const closeTimer = setTimeout(() => {
+        onClose();
+        
+        // Call onSuccess to trigger redirect to profile page
+        if (onSuccess) {
+          onSuccess();
+        }
+      }, 3000);
+      
+      return () => {
+        clearInterval(countdownInterval);
+        clearTimeout(closeTimer);
+      };
+    }
+  }, [canCancel, isOpen, cancelMessage, onClose, onSuccess]);
   
   // CRITICAL FIX: Only show refund for online payments (not cash-on-delivery)
   // Debug: Log payment info to identify issues
@@ -90,7 +125,7 @@ export default function CustomerCancelOrderModal({
     const checkCancellation = async () => {
       try {
         // Check order status and timing
-        const orderStatus = order.status?.toUpperCase();
+        const orderStatus = order.status; // Keep original format (kebab-case)
         const preparingAt = order.preparingAt ? new Date(order.preparingAt) : null;
         const createdAt = new Date(order.createdAt);
         const now = new Date();
@@ -116,54 +151,53 @@ export default function CustomerCancelOrderModal({
           return;
         }
 
-        // Block if status is OUT_FOR_DELIVERY or DELIVERED
-        if (orderStatus === 'OUT_FOR_DELIVERY' || orderStatus === 'DELIVERED') {
+        // Block if status is out-for-delivery or delivered
+        if (orderStatus === 'out-for-delivery' || orderStatus === 'delivered') {
           setCanCancel(false);
           setCancelMessage('Order is already out for delivery or delivered. Cannot cancel.');
           return;
         }
 
-        // Block if status is CANCELLED
-        if (orderStatus === 'CANCELLED') {
+        // Block if status is cancelled
+        if (orderStatus === 'cancelled') {
           setCanCancel(false);
           setCancelMessage('Order is already cancelled.');
           return;
         }
 
-        // CRITICAL FIX: More lenient status check
-        // Allow cancellation for all pre-delivery statuses (before OUT_FOR_DELIVERY)
+        // CRITICAL FIX: Use kebab-case to match OrderStatus type definition
+        // The backend returns 'pending-confirmation', NOT 'PENDING_CONFIRMATION'
         const allowedStatuses = [
-          'PENDING_CONFIRMATION',
-          'PENDING',
-          'PENDING_PAYMENT', // ADDED: Allow cancellation during payment
-          'CONFIRMED',
-          'PREPARING', // Only if preparingAt is null (checked above)
+          'pending-confirmation',  // Grace period - most common
+          'pending',               // Awaiting admin confirmation
+          'pending-payment',       // During payment
+          'confirmed',             // Order accepted
+          'preparing',             // Only if preparingAt is null (checked above)
         ];
 
-        if (!allowedStatuses.includes(orderStatus || '')) {
+        // Convert status to lowercase kebab-case for comparison
+        const normalizedStatus = orderStatus?.toLowerCase().replace(/_/g, '-');
+
+        if (!allowedStatuses.includes(normalizedStatus || '')) {
           setCanCancel(false);
-          setCancelMessage(`This order cannot be cancelled at this stage (${orderStatus}).`);
+          setCancelMessage(`This order cannot be cancelled at this stage (${order.status}).`);
           return;
         }
 
-        // Check time window for PENDING and CONFIRMED statuses
-        // CRITICAL FIX: Remove strict time window check - let backend decide
-        // This ensures frontend doesn't block valid cancellations
-        if (orderStatus === 'PENDING' || orderStatus === 'CONFIRMED') {
-          if (timeSinceCreation > CANCELLATION_WINDOW_MS) {
-            setCanCancel(false);
-            setCancelMessage(`Cancellation window expired. Orders can only be cancelled within ${CANCELLATION_WINDOW_MINUTES} minutes of placement.`);
-            return;
-          }
+        // CRITICAL FIX: Check cancellation window
+        // If beyond window, block cancellation
+        if (timeSinceCreation > CANCELLATION_WINDOW_MS) {
+          setCanCancel(false);
+          setCancelMessage(`Cancellation window has expired (${CANCELLATION_WINDOW_MINUTES} minutes).`);
+          return;
         }
 
-        // Allow cancellation
+        // All checks passed - allow cancellation
         setCanCancel(true);
         setCancelMessage('');
-        
-        console.log('[Cancel Check] ✅ Cancellation allowed');
-      } catch (err) {
-        console.error('[Cancel Check] Error:', err);
+      } catch (error: any) {
+        console.error('[Cancel Check] Error:', error);
+        // On error, be cautious and block cancellation
         setCanCancel(false);
         setCancelMessage('Unable to check cancellation status. Please try again.');
       }
@@ -370,8 +404,19 @@ export default function CustomerCancelOrderModal({
                 <p style={{ color: '#6B7280', marginBottom: '16px' }}>
                   {cancelMessage || 'This order cannot be cancelled at this stage.'}
                 </p>
+                <p style={{ 
+                  color: '#9CA3AF', 
+                  fontSize: '0.875rem',
+                  marginBottom: '16px',
+                  fontStyle: 'italic'
+                }}>
+                  Redirecting in {countdown} second{countdown !== 1 ? 's' : ''}...
+                </p>
                 <button
-                  onClick={onClose}
+                  onClick={() => {
+                    onClose();
+                    if (onSuccess) onSuccess();
+                  }}
                   style={{
                     marginTop: '16px',
                     padding: '12px 24px',
@@ -383,7 +428,7 @@ export default function CustomerCancelOrderModal({
                     cursor: 'pointer',
                   }}
                 >
-                  Close
+                  Close Now
                 </button>
               </div>
             ) : (
