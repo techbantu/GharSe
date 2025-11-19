@@ -176,21 +176,43 @@ export async function PUT(
     // Send status update notifications (async, don't block response)
     (async () => {
       try {
+        console.log(`📧 [STATUS UPDATE] Attempting to send notifications for order ${dbOrder.orderNumber} - Status: ${oldStatus} → ${status}`);
+        
         const { notificationManager } = await import('@/lib/notifications/notification-manager');
         const notificationResult = await notificationManager.sendStatusUpdate(
           frontendOrder as Order,
           status
         );
         
+        // CRITICAL DEBUG: Log notification result
+        console.log('🔍 [STATUS UPDATE] Notification result:', JSON.stringify({
+          orderId,
+          oldStatus,
+          newStatus: status,
+          email: {
+            success: notificationResult.email?.success,
+            error: notificationResult.email?.error,
+            skipped: notificationResult.email?.skipped
+          },
+          sms: {
+            success: notificationResult.sms?.success,
+            error: notificationResult.sms?.error,
+            skipped: notificationResult.sms?.skipped
+          }
+        }, null, 2));
+        
         logger.info('Status update notifications sent', {
           orderId,
           orderNumber: dbOrder.orderNumber,
           newStatus: status,
           emailSuccess: notificationResult.email?.success,
+          emailError: notificationResult.email?.error,
           smsSuccess: notificationResult.sms?.success,
           smsSkipped: notificationResult.sms?.skipped,
         });
       } catch (notificationError) {
+        console.error('❌ [STATUS UPDATE] Notification error:', notificationError);
+        
         logger.error('Failed to send status update notifications', {
           orderId,
           orderNumber: dbOrder.orderNumber,
