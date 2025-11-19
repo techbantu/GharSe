@@ -151,8 +151,16 @@ export async function PUT(
   } catch (error) {
     const duration = Date.now() - startTime;
 
+    // CRITICAL DEBUG: Log full error details
+    console.error('❌ [PAYMENT STATUS] Error updating payment status:', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      duration,
+    });
+
     logger.error('Error updating payment status', {
       error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
       duration,
     }, error instanceof Error ? error : undefined);
 
@@ -160,6 +168,7 @@ export async function PUT(
       {
         success: false,
         error: 'Internal server error',
+        details: error instanceof Error ? error.message : String(error),
       },
       { status: 500 }
     );
