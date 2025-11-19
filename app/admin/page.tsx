@@ -4261,7 +4261,7 @@ STRIPE_WEBHOOK_SECRET=whsec_...`}
         )}
       </div>
       
-      {/* Menu Add/Edit Modal */}
+      {/* Menu Add/Edit Modal - Redesigned */}
       {isAddingNew && (
         <div style={{
           position: 'fixed',
@@ -4277,14 +4277,15 @@ STRIPE_WEBHOOK_SECRET=whsec_...`}
           <div style={{
             backgroundColor: '#ffffff',
             borderRadius: '1rem',
-            maxWidth: '800px',
+            maxWidth: '900px', // Wider for 2-column layout
             width: '100%',
             maxHeight: '90vh',
             overflowY: 'auto',
             boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
           }}>
             <div style={{ padding: '1.5rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+              {/* Header */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', borderBottom: '1px solid #F3F4F6', paddingBottom: '1rem' }}>
                 <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#111827', margin: 0 }}>
                   {editingItem ? 'Edit Menu Item' : 'Add New Menu Item'}
                 </h2>
@@ -4295,15 +4296,18 @@ STRIPE_WEBHOOK_SECRET=whsec_...`}
                     backgroundColor: '#F3F4F6',
                     borderRadius: '0.5rem',
                     border: 'none',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s'
                   }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#E5E7EB'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#F3F4F6'}
                 >
                   <X size={20} />
                 </button>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {/* Image Upload */}
+              <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '2rem' }}>
+                {/* Left Column - Image Upload */}
                 <div>
                   <label style={{
                     display: 'block',
@@ -4312,43 +4316,55 @@ STRIPE_WEBHOOK_SECRET=whsec_...`}
                     color: '#374151',
                     marginBottom: '0.5rem'
                   }}>
-                    Dish Image *
+                    Dish Image
                   </label>
-                  {imagePreview ? (
-                    <>
-                      <div style={{ position: 'relative', marginBottom: '0.5rem' }}>
+                  
+                  <div style={{ 
+                    width: '100%', 
+                    aspectRatio: '1/1', 
+                    backgroundColor: '#F9FAFB', 
+                    borderRadius: '0.75rem', 
+                    border: '2px dashed #D1D5DB',
+                    overflow: 'hidden',
+                    position: 'relative',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    {imagePreview ? (
+                      <>
                         <img
                           src={imagePreview}
                           alt="Preview"
                           style={{
                             width: '100%',
-                            maxHeight: '200px',
-                            objectFit: 'cover',
-                            borderRadius: '0.5rem'
+                            height: '100%',
+                            objectFit: 'cover'
                           }}
                         />
                         <div style={{
                           position: 'absolute',
-                          top: '0.5rem',
-                          right: '0.5rem',
+                          inset: 0,
+                          backgroundColor: 'rgba(0,0,0,0.4)',
+                          opacity: 0,
+                          transition: 'opacity 0.2s',
                           display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
                           gap: '0.5rem'
-                        }}>
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                        onMouseLeave={(e) => e.currentTarget.style.opacity = '0'}
+                        >
                           <label style={{
                             padding: '0.5rem',
-                            backgroundColor: '#3B82F6',
-                            color: '#ffffff',
+                            backgroundColor: '#ffffff',
                             borderRadius: '0.5rem',
-                            border: 'none',
                             cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
-                          }}
-                          title="Change Image"
-                          >
-                            <Upload size={14} />
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                          }}>
+                            <Upload size={16} color="#374151" />
                             <input
                               type="file"
                               accept="image/*"
@@ -4364,277 +4380,279 @@ STRIPE_WEBHOOK_SECRET=whsec_...`}
                             style={{
                               padding: '0.5rem',
                               backgroundColor: '#EF4444',
-                              color: '#ffffff',
                               borderRadius: '0.5rem',
                               border: 'none',
                               cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
+                              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
                             }}
-                            title="Remove Image"
                           >
-                            <X size={14} />
+                            <X size={16} color="#ffffff" />
                           </button>
                         </div>
-                      </div>
-                      <div style={{ marginTop: '0.5rem' }}>
-                        <label style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.5rem',
-                          paddingLeft: '0.75rem',
-                          paddingRight: '0.75rem',
-                          paddingTop: '0.5rem',
-                          paddingBottom: '0.5rem',
-                          backgroundColor: '#F3F4F6',
-                          border: '2px solid #D1D5DB',
-                          borderRadius: '0.5rem',
-                          cursor: 'pointer',
-                          fontSize: '0.875rem',
-                          fontWeight: 600,
-                          color: '#374151'
-                        }}>
-                          <Upload size={16} />
-                          <span>Change Image</span>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleImageUpload}
-                            style={{ display: 'none' }}
-                          />
-                        </label>
-                      </div>
-                    </>
-                  ) : (
-                    <label style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      padding: '2rem',
-                      border: '2px dashed #D1D5DB',
-                      borderRadius: '0.5rem',
-                      cursor: 'pointer',
-                      backgroundColor: '#F9FAFB'
-                    }}>
-                      <Upload size={32} style={{ color: '#9CA3AF', marginBottom: '0.5rem' }} />
-                      <span style={{ fontSize: '0.875rem', color: '#6B7280' }}>Click to upload image</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        style={{ display: 'none' }}
-                      />
-                    </label>
-                  )}
+                      </>
+                    ) : (
+                      <label style={{
+                        cursor: 'pointer',
+                        textAlign: 'center',
+                        padding: '1rem',
+                        width: '100%',
+                        height: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        <Upload size={32} style={{ color: '#9CA3AF', marginBottom: '0.5rem' }} />
+                        <span style={{ fontSize: '0.875rem', color: '#6B7280', fontWeight: 500 }}>Click to upload</span>
+                        <span style={{ fontSize: '0.75rem', color: '#9CA3AF' }}>PNG, JPG up to 5MB</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          style={{ display: 'none' }}
+                        />
+                      </label>
+                    )}
+                  </div>
                 </div>
 
-                {/* Name */}
-                <div>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '0.875rem',
-                    fontWeight: 700,
-                    color: '#374151',
-                    marginBottom: '0.5rem'
-                  }}>
-                    Dish Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => handleInputChange('name', e.target.value)}
-                    placeholder="e.g., Butter Chicken"
-                    style={{
-                      width: '100%',
-                      padding: '0.5rem',
-                      border: '2px solid #E5E7EB',
-                      borderRadius: '0.5rem',
-                      fontSize: '0.875rem'
-                    }}
-                  />
-                </div>
-
-                {/* Description */}
-                <div>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '0.875rem',
-                    fontWeight: 700,
-                    color: '#374151',
-                    marginBottom: '0.5rem'
-                  }}>
-                    Description *
-                  </label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) => handleInputChange('description', e.target.value)}
-                    placeholder="Describe the dish..."
-                    rows={3}
-                    style={{
-                      width: '100%',
-                      padding: '0.5rem',
-                      border: '2px solid #E5E7EB',
-                      borderRadius: '0.5rem',
-                      fontSize: '0.875rem',
-                      resize: 'vertical'
-                    }}
-                  />
-                </div>
-
-                {/* Price and Category */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                {/* Right Column - Form Fields */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {/* Name */}
                   <div>
-                    <label style={{
-                      display: 'block',
-                      fontSize: '0.875rem',
-                      fontWeight: 700,
-                      color: '#374151',
-                      marginBottom: '0.5rem'
-                    }}>
-                      Price (₹) *
+                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, color: '#374151', marginBottom: '0.25rem' }}>
+                      Dish Name *
                     </label>
                     <input
-                      type="number"
-                      value={formData.price || ''}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        handleInputChange('price', value === '' ? '' : parseFloat(value));
-                      }}
-                      min="0"
-                      step="1"
+                      type="text"
+                      value={formData.name}
+                      onChange={(e) => handleInputChange('name', e.target.value)}
+                      placeholder="e.g., Butter Chicken"
                       style={{
                         width: '100%',
-                        padding: '0.5rem',
-                        border: '2px solid #E5E7EB',
+                        padding: '0.625rem',
+                        border: '1px solid #D1D5DB',
                         borderRadius: '0.5rem',
                         fontSize: '0.875rem'
                       }}
                     />
                   </div>
+
+                  {/* Price & Category Row */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, color: '#374151', marginBottom: '0.25rem' }}>
+                        Price (₹) *
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.price || ''}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          handleInputChange('price', value === '' ? '' : parseFloat(value));
+                        }}
+                        min="0"
+                        style={{
+                          width: '100%',
+                          padding: '0.625rem',
+                          border: '1px solid #D1D5DB',
+                          borderRadius: '0.5rem',
+                          fontSize: '0.875rem'
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, color: '#374151', marginBottom: '0.25rem' }}>
+                        Category *
+                      </label>
+                      <select
+                        value={formData.category}
+                        onChange={(e) => handleInputChange('category', e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '0.625rem',
+                          border: '1px solid #D1D5DB',
+                          borderRadius: '0.5rem',
+                          fontSize: '0.875rem',
+                          backgroundColor: '#ffffff'
+                        }}
+                      >
+                        {CATEGORIES.map(cat => (
+                          <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Description */}
                   <div>
-                    <label style={{
-                      display: 'block',
-                      fontSize: '0.875rem',
-                      fontWeight: 700,
-                      color: '#374151',
-                      marginBottom: '0.5rem'
-                    }}>
-                      Category *
+                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, color: '#374151', marginBottom: '0.25rem' }}>
+                      Description *
                     </label>
-                    <select
-                      value={formData.category}
-                      onChange={(e) => handleInputChange('category', e.target.value)}
+                    <textarea
+                      value={formData.description}
+                      onChange={(e) => handleInputChange('description', e.target.value)}
+                      placeholder="Describe the dish..."
+                      rows={4}
                       style={{
                         width: '100%',
-                        padding: '0.5rem',
-                        border: '2px solid #E5E7EB',
+                        padding: '0.625rem',
+                        border: '1px solid #D1D5DB',
                         borderRadius: '0.5rem',
                         fontSize: '0.875rem',
-                        backgroundColor: '#ffffff'
+                        resize: 'vertical'
                       }}
-                    >
-                      {CATEGORIES.map(cat => (
-                        <option key={cat} value={cat}>{cat}</option>
-                      ))}
-                    </select>
+                    />
                   </div>
                 </div>
+              </div>
 
-                {/* Options */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.75rem' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                    <input
-                      type="checkbox"
-                      checked={formData.isVegetarian}
-                      onChange={(e) => handleInputChange('isVegetarian', e.target.checked)}
-                    />
-                    <Leaf size={16} style={{ color: '#10B981' }} />
-                    <span style={{ fontSize: '0.875rem' }}>Vegetarian</span>
+              {/* Additional Details Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginTop: '1.5rem', padding: '1.5rem', backgroundColor: '#F9FAFB', borderRadius: '0.75rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#6B7280', marginBottom: '0.25rem' }}>
+                    PREP TIME (MINS)
                   </label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                    <input
-                      type="checkbox"
-                      checked={formData.isPopular}
-                      onChange={(e) => handleInputChange('isPopular', e.target.checked)}
-                    />
-                    <TrendingUp size={16} style={{ color: '#F97316' }} />
-                    <span style={{ fontSize: '0.875rem' }}>Popular</span>
-                  </label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                    <input
-                      type="checkbox"
-                      checked={formData.isAvailable}
-                      onChange={(e) => handleInputChange('isAvailable', e.target.checked)}
-                    />
-                    <CheckCircle size={16} style={{ color: '#10B981' }} />
-                    <span style={{ fontSize: '0.875rem' }}>Available</span>
-                  </label>
+                  <input
+                    type="number"
+                    value={formData.preparationTime || ''}
+                    onChange={(e) => handleInputChange('preparationTime', parseInt(e.target.value) || 0)}
+                    placeholder="e.g. 20"
+                    style={{ width: '100%', padding: '0.5rem', border: '1px solid #D1D5DB', borderRadius: '0.375rem', fontSize: '0.875rem' }}
+                  />
                 </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#6B7280', marginBottom: '0.25rem' }}>
+                    CALORIES (KCAL)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.calories || ''}
+                    onChange={(e) => handleInputChange('calories', parseInt(e.target.value) || 0)}
+                    placeholder="e.g. 350"
+                    style={{ width: '100%', padding: '0.5rem', border: '1px solid #D1D5DB', borderRadius: '0.375rem', fontSize: '0.875rem' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#6B7280', marginBottom: '0.25rem' }}>
+                    SERVING SIZE
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.servingSize || ''}
+                    onChange={(e) => handleInputChange('servingSize', e.target.value)}
+                    placeholder="e.g. 2 people"
+                    style={{ width: '100%', padding: '0.5rem', border: '1px solid #D1D5DB', borderRadius: '0.375rem', fontSize: '0.875rem' }}
+                  />
+                </div>
+              </div>
 
-                {/* Save Button */}
-                <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
-                  <button
-                    onClick={handleSave}
-                    disabled={saving || uploadingImage}
-                    style={{
-                      flex: 1,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.5rem',
-                      paddingTop: '0.75rem',
-                      paddingBottom: '0.75rem',
-                      background: 'linear-gradient(to right, #10B981, #059669)',
-                      color: '#ffffff',
-                      borderRadius: '0.5rem',
-                      fontWeight: 700,
-                      fontSize: '0.875rem',
-                      border: 'none',
-                      cursor: (saving || uploadingImage) ? 'not-allowed' : 'pointer',
-                      opacity: (saving || uploadingImage) ? 0.5 : 1
-                    }}
-                  >
-                    {saving ? (
-                      <>
-                        <div style={{
-                          width: '1rem',
-                          height: '1rem',
-                          border: '2px solid #ffffff',
-                          borderTopColor: 'transparent',
-                          borderRadius: '50%',
-                          animation: 'spin 1s linear infinite'
-                        }} />
-                        <span>Saving...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Save size={16} />
-                        <span>{editingItem ? 'Update' : 'Create'} Menu Item</span>
-                      </>
-                    )}
-                  </button>
-                  <button
-                    onClick={cancelEdit}
-                    style={{
-                      paddingLeft: '1.5rem',
-                      paddingRight: '1.5rem',
-                      paddingTop: '0.75rem',
-                      paddingBottom: '0.75rem',
-                      backgroundColor: '#F3F4F6',
-                      color: '#374151',
-                      borderRadius: '0.5rem',
-                      fontWeight: 600,
-                      fontSize: '0.875rem',
-                      border: 'none',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Cancel
-                  </button>
+              {/* Attributes Section */}
+              <div style={{ marginTop: '1.5rem' }}>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 700, color: '#374151', marginBottom: '0.75rem' }}>
+                  Attributes & Dietary
+                </label>
+                
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
+                  {/* Spicy Level */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', backgroundColor: '#FEF2F2', borderRadius: '9999px', border: '1px solid #FECACA' }}>
+                    <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#991B1B' }}>Spicy:</span>
+                    <select
+                      value={formData.spicyLevel || 0}
+                      onChange={(e) => handleInputChange('spicyLevel', parseInt(e.target.value))}
+                      style={{ background: 'transparent', border: 'none', fontSize: '0.875rem', color: '#991B1B', fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      <option value={0}>None 🚫</option>
+                      <option value={1}>Mild 🌶️</option>
+                      <option value={2}>Medium 🌶️🌶️</option>
+                      <option value={3}>Hot 🌶️🌶️🌶️</option>
+                    </select>
+                  </div>
+
+                  {/* Checkboxes */}
+                  {[
+                    { key: 'isVegetarian', label: 'Vegetarian', color: '#10B981', bg: '#D1FAE5' },
+                    { key: 'isVegan', label: 'Vegan', color: '#059669', bg: '#ECFDF5' },
+                    { key: 'isGlutenFree', label: 'Gluten Free', color: '#D97706', bg: '#FEF3C7' },
+                    { key: 'isPopular', label: 'Popular', color: '#F59E0B', bg: '#FFFBEB' },
+                    { key: 'isAvailable', label: 'Available', color: '#2563EB', bg: '#DBEAFE' },
+                  ].map((item) => (
+                    <label 
+                      key={item.key}
+                      style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '0.5rem', 
+                        padding: '0.5rem 1rem', 
+                        backgroundColor: (formData as any)[item.key] ? item.bg : '#F3F4F6',
+                        borderRadius: '9999px', 
+                        cursor: 'pointer',
+                        border: `1px solid ${(formData as any)[item.key] ? item.color : '#E5E7EB'}`,
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={(formData as any)[item.key] || false}
+                        onChange={(e) => handleInputChange(item.key as keyof MenuItem, e.target.checked)}
+                        style={{ accentColor: item.color }}
+                      />
+                      <span style={{ fontSize: '0.875rem', fontWeight: 600, color: (formData as any)[item.key] ? item.color : '#6B7280' }}>
+                        {item.label}
+                      </span>
+                    </label>
+                  ))}
                 </div>
+              </div>
+
+              {/* Footer Actions */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2rem', paddingTop: '1rem', borderTop: '1px solid #F3F4F6' }}>
+                <button
+                  onClick={cancelEdit}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    backgroundColor: '#ffffff',
+                    color: '#374151',
+                    border: '1px solid #D1D5DB',
+                    borderRadius: '0.5rem',
+                    fontWeight: 600,
+                    fontSize: '0.875rem',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={saving || uploadingImage}
+                  style={{
+                    padding: '0.75rem 2rem',
+                    background: 'linear-gradient(to right, #10B981, #059669)',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '0.5rem',
+                    fontWeight: 600,
+                    fontSize: '0.875rem',
+                    cursor: (saving || uploadingImage) ? 'not-allowed' : 'pointer',
+                    opacity: (saving || uploadingImage) ? 0.7 : 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.2)'
+                  }}
+                >
+                  {saving ? (
+                    <>
+                      <div style={{ width: '1rem', height: '1rem', border: '2px solid #ffffff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save size={18} />
+                      <span>{editingItem ? 'Update Item' : 'Create Item'}</span>
+                    </>
+                  )}
+                </button>
               </div>
             </div>
           </div>
