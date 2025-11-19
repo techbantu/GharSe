@@ -74,10 +74,8 @@ export async function PUT(
       updatedAt: new Date(),
     };
 
-    // If marking as PAID, record the payment received timestamp
-    if (paymentStatus === 'PAID' && !dbOrder.paidAt) {
-      updateData.paidAt = paymentReceivedAt ? new Date(paymentReceivedAt) : new Date();
-    }
+    // Note: We track payment timestamp in the Payment table, not on Order
+    // The Order.paymentStatus field is sufficient for order tracking
 
     const updatedDbOrder = await (prisma.order.update as any)({
       where: { id: orderId },
@@ -115,7 +113,7 @@ export async function PUT(
               status: 'PAID',
               paymentMethod: 'cash', // Normalize to 'cash'
               paymentGateway: 'cash', // Mark as cash payment
-              paidAt: updateData.paidAt,
+              paidAt: paymentReceivedAt ? new Date(paymentReceivedAt) : new Date(),
               createdAt: new Date(),
               updatedAt: new Date(),
             },
@@ -143,7 +141,6 @@ export async function PUT(
         id: updatedDbOrder.id,
         orderNumber: updatedDbOrder.orderNumber,
         paymentStatus: updatedDbOrder.paymentStatus,
-        paidAt: updatedDbOrder.paidAt,
       },
       message: `Payment status updated to ${paymentStatus}`,
     });
