@@ -16,6 +16,7 @@ import { ChatProvider } from "@/context/ChatContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { ToastProvider } from "@/context/ToastContext";
 import { CartProvider } from "@/context/CartContext";
+import { ActiveOrderProvider } from "@/context/ActiveOrderContext";
 import CacheBuster from "@/components/CacheBuster";
 import LegalAcceptanceModal from "@/components/legal/LegalAcceptanceModal";
 import CookieConsentBanner from "@/components/legal/CookieConsentBanner";
@@ -292,13 +293,15 @@ export default function RootLayout({
         <CacheBuster />
         <ToastProvider>
           <AuthProvider>
-            <CartProvider>
-            <ChatProvider>
-              <LegalAcceptanceModal />
-              <CookieConsentBanner />
-              {children}
-            </ChatProvider>
-            </CartProvider>
+            <ActiveOrderProvider>
+              <CartProvider>
+                <ChatProvider>
+                  <LegalAcceptanceModal />
+                  <CookieConsentBanner />
+                  {children}
+                </ChatProvider>
+              </CartProvider>
+            </ActiveOrderProvider>
           </AuthProvider>
         </ToastProvider>
       </body>

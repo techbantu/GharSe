@@ -114,6 +114,34 @@ global.ResizeObserver = class ResizeObserver {
   unobserve() {}
 } as any;
 
+// Mock fetch globally for all tests
+global.fetch = jest.fn((url) => {
+  // Default mock response for auth check
+  if (url.includes('/api/auth/me')) {
+    return Promise.resolve({
+      ok: false,
+      status: 401,
+      json: () => Promise.resolve({ success: false }),
+    } as Response);
+  }
+  
+  // Default mock response for menu items
+  if (url.includes('/api/menu')) {
+    return Promise.resolve({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ success: true, items: [] }),
+    } as Response);
+  }
+  
+  // Default fallback
+  return Promise.resolve({
+    ok: true,
+    status: 200,
+    json: () => Promise.resolve({ success: true }),
+  } as Response);
+}) as jest.Mock;
+
 // Suppress console errors in tests (optional)
 // Uncomment if you want to suppress console errors during tests
 // global.console = {

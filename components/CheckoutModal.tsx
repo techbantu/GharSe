@@ -42,6 +42,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [orderStatus, setOrderStatus] = useState<string>('PENDING_CONFIRMATION');
   const [orderTotal, setOrderTotal] = useState<number>(0);
+  const [isClosing, setIsClosing] = useState(false); // Internal closing state
   
   // Coming Soon modal state for payment methods
   const [showComingSoonModal, setShowComingSoonModal] = useState(false);
@@ -593,6 +594,11 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
   
   // Reset and close
   const handleClose = () => {
+    console.log('[CheckoutModal] handleClose called from step:', step);
+    
+    // CRITICAL: Set internal closing state immediately (prevents rendering)
+    setIsClosing(true);
+    
     // Clean up timers
     if (timerIntervalRef.current) {
       clearInterval(timerIntervalRef.current);
@@ -606,33 +612,58 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
     notificationReceivedRef.current = false;
     setTimeRemaining(null);
     
-    if (step === 'confirmation') {
+    // CRITICAL: Always clear active order context on close (not just on confirmation)
+    clearActiveOrder();
+    console.log('[CheckoutModal] Cleared active order from context');
+    
+    // Reset all order state variables
+    setOrderId('');
+    setOrderNumber('');
+    setCurrentOrder(null);
+    setOrderCreatedAt(null);
+    setOrderStatus('PENDING_CONFIRMATION');
+    setOrderTotal(0);
+    setNotificationStatus(null);
+    
+    // Clear cart and reset to form step
+    if (step === 'confirmation' || step === 'pending') {
       clearCart();
-      setStep('form');
-      setOrderNumber('');
-      setOrderId('');
-      setFormData({
-        name: '',
-        email: '',
-        phone: '',
-        street: '',
-        apartment: '',
-        city: '',
-        state: '',
-        zipCode: '',
-        deliveryInstructions: '',
-        specialInstructions: '',
-        orderType: 'delivery',
-        paymentMethod: 'cash-on-delivery',
-        paymentMethodDetails: '',
-        tip: 0,
-        scheduledTime: '',
-      });
+      console.log('[CheckoutModal] Cleared cart');
     }
+    
+    // Always reset to form step
+    setStep('form');
+    
+    // Reset form data
+    setFormData({
+      name: '',
+      email: '',
+      phone: '',
+      street: '',
+      apartment: '',
+      city: '',
+      state: '',
+      zipCode: '',
+      deliveryInstructions: '',
+      specialInstructions: '',
+      orderType: 'delivery',
+      paymentMethod: 'cash-on-delivery',
+      paymentMethodDetails: '',
+      tip: 0,
+      scheduledTime: '',
+    });
+    
+    console.log('[CheckoutModal] Full reset complete');
     onClose();
+    
+    // Reset closing state after modal is fully closed
+    setTimeout(() => {
+      setIsClosing(false);
+    }, 300);
   };
   
-  if (!isOpen) return null;
+  // Don't render if modal is closed OR if we're in closing state
+  if (!isOpen || isClosing) return null;
   
   return (
     <>
@@ -2079,7 +2110,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
               </div>
             </form>
           </>
-        ) : step === 'pending' && currentOrder ? (
+        ) : step === 'pending' && currentOrder && currentOrder.status !== 'cancelled' ? (
           /* Pending Modification Screen - Grace Period */
           <div style={{
             flex: 1,
@@ -2133,6 +2164,22 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                     }}
                     onBrowseMenu={() => {
                       // Close modal to browse menu (cart is still available)
+                      onClose();
+                    }}
+                    onCancelled={() => {
+                      // GENIUS FIX: Order was cancelled, clean up and close modal
+                      console.log('[CheckoutModal] Order cancelled callback triggered');
+                      
+                      // Clear cart
+                      clearCart();
+                      
+                      // Clear active order from context
+                      clearActiveOrder();
+                      
+                      // Reset step to form
+                      setStep('form');
+                      
+                      // Close the modal
                       onClose();
                     }}
                   />
@@ -2642,12 +2689,41 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
           }}
           cancelledBy="customer"
           onSuccess={() => {
+            console.log('[CheckoutModal] Order cancelled - starting IMMEDIATE cleanup...');
+            
+            // 🎯 CRITICAL: Set internal closing state FIRST (hides modal immediately)
+            setIsClosing(true);
+            console.log('[CheckoutModal] Set isClosing=true (modal hidden)');
+            
             // Clean up timer
             if (timerIntervalRef.current) {
               clearInterval(timerIntervalRef.current);
               timerIntervalRef.current = null;
             }
+            if (notificationTimeoutRef.current) {
+              clearTimeout(notificationTimeoutRef.current);
+              notificationTimeoutRef.current = null;
+            }
             setTimeRemaining(null);
+            
+            // CRITICAL: Clear active order from context
+            clearActiveOrder();
+            console.log('[CheckoutModal] Cleared active order from context');
+            
+            // CRITICAL: Clear cart (fresh start)
+            clearCart();
+            console.log('[CheckoutModal] Cleared cart');
+            
+            // Reset all order state
+            setOrderId('');
+            setOrderNumber('');
+            setCurrentOrder(null);
+            setOrderCreatedAt(null);
+            setOrderStatus('PENDING_CONFIRMATION');
+            setOrderTotal(0);
+            setNotificationStatus(null);
+            setStep('form');
+            console.log('[CheckoutModal] Reset all order state');
             
             // Play alert sound for cancellation (red alert)
             try {
@@ -2659,12 +2735,25 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
             // Show error toast notification (red) for cancellation
             toast.error('Order Cancelled', 'Your order has been cancelled successfully. Refund will be processed within 5-7 business days if payment was made.');
             
-            // Close modal and reset
+            // Close cancel modal first
             setShowCancelModal(false);
-            handleClose();
+            console.log('[CheckoutModal] Closed cancel modal');
             
-            // Redirect to profile to see updated orders
-            router.push('/profile');
+            // Force close the checkout modal by calling parent's onClose
+            // This ensures the modal closes immediately
+            onClose();
+            console.log('[CheckoutModal] Closed checkout modal');
+            
+            // Reset closing state after parent closes modal
+            setTimeout(() => {
+              setIsClosing(false);
+            }, 300);
+            
+            // Redirect after a brief delay to ensure modal closes
+            setTimeout(() => {
+              router.push('/profile');
+              console.log('[CheckoutModal] Redirected to profile');
+            }, 200);
           }}
         />
       )}
