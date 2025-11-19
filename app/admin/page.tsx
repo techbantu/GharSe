@@ -3757,7 +3757,7 @@ STRIPE_WEBHOOK_SECRET=whsec_...`}
               </div>
             )}
 
-            {/* Menu Items Grid - 3 columns, responsive */}
+            {/* Menu Items Grid - 4 columns, responsive */}
             {!menuLoading && (
               <>
                 <style>{`
@@ -3771,12 +3771,17 @@ STRIPE_WEBHOOK_SECRET=whsec_...`}
                       grid-template-columns: repeat(2, 1fr) !important;
                     }
                   }
+                  @media (min-width: 1025px) and (max-width: 1400px) {
+                    .menu-items-grid-admin {
+                      grid-template-columns: repeat(3, 1fr) !important;
+                    }
+                  }
                 `}</style>
                 <div 
                   className="menu-items-grid-admin"
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(3, 1fr)',
+                    gridTemplateColumns: 'repeat(4, 1fr)',
                     gap: '0.75rem',
                     width: '100%'
                   }}
@@ -3801,8 +3806,8 @@ STRIPE_WEBHOOK_SECRET=whsec_...`}
                       e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)';
                     }}
                   >
-                    {/* Image - Compact Size for 3-column layout */}
-                    <div style={{ position: 'relative', height: '140px', backgroundColor: '#F3F4F6' }}>
+                    {/* Image - Smaller for 4-column layout */}
+                    <div style={{ position: 'relative', height: '120px', backgroundColor: '#F3F4F6' }}>
                       {item.image ? (
                         <img
                           src={item.image}
