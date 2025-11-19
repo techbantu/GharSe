@@ -3771,11 +3771,6 @@ STRIPE_WEBHOOK_SECRET=whsec_...`}
                       grid-template-columns: repeat(2, 1fr) !important;
                     }
                   }
-                  @media (min-width: 1025px) and (max-width: 1400px) {
-                    .menu-items-grid-admin {
-                      grid-template-columns: repeat(3, 1fr) !important;
-                    }
-                  }
                 `}</style>
                 <div 
                   className="menu-items-grid-admin"
