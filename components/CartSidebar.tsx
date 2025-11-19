@@ -175,7 +175,7 @@ const CartSidebar: React.FC<CartSidebarProps> = ({ isOpen, onClose, onCheckout }
                   flexShrink: 0
                 }}>
                   <img
-                    src="/logo.png"
+                    src="/images/GharSe.png"
                     alt="Bantu's Kitchen"
                     style={{
                       width: '40px',
@@ -188,7 +188,7 @@ const CartSidebar: React.FC<CartSidebarProps> = ({ isOpen, onClose, onCheckout }
                       target.style.display = 'none';
                       const parent = target.parentElement;
                       if (parent) {
-                        parent.style.background = 'rgba(255, 255, 255, 0.2)';
+                        parent.style.background = 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)';
                         parent.style.backdropFilter = 'blur(10px)';
                         parent.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>`;
                       }
@@ -355,10 +355,14 @@ const CartSidebar: React.FC<CartSidebarProps> = ({ isOpen, onClose, onCheckout }
             )}
           </div>
           
-          {/* Cart Items - Scrollable */}
-          <div className="flex-1 overflow-y-auto custom-scrollbar" style={{ padding: '24px' }}>
+          {/* Cart Items - Auto-height with smart scrolling */}
+          <div className="overflow-y-auto custom-scrollbar" style={{ 
+            padding: '24px',
+            flex: '0 1 auto',
+            maxHeight: 'calc(100vh - 400px)' // Auto-height up to available space minus header + footer
+          }}>
             {cart.items.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-center" style={{ padding: '48px 24px' }}>
+              <div className="flex flex-col items-center justify-center text-center" style={{ padding: '48px 24px', minHeight: '200px' }}>
                 <div style={{
                   width: '120px',
                   height: '120px',
@@ -653,10 +657,7 @@ const CartSidebar: React.FC<CartSidebarProps> = ({ isOpen, onClose, onCheckout }
                           color: '#f97316',
                           fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif'
                         }}>
-                          {/* GENIUS FIX: Handle NaN and ensure valid number */}
-                          ₹{isNaN(item.subtotal) || !isFinite(item.subtotal) 
-                            ? (item.quantity * (item.menuItem?.price || 0)) 
-                            : Math.round(item.subtotal)}
+                          ₹{Math.round(item.subtotal)}
                         </span>
                       </div>
                     </div>

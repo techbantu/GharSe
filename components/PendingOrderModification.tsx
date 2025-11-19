@@ -26,6 +26,7 @@ import { Clock, Plus, Minus, Trash2, ShoppingBag, Sparkles, TrendingUp, X, XCirc
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/context/ToastContext';
 import { Order, MenuItem } from '@/types';
+import { useOrderStatusPoller } from '@/hooks/useOrderStatusPoller';
 // Removed hardcoded menu data import - now using API
 import OrderModificationConfirmModal from '@/components/OrderModificationConfirmModal';
 import CustomerCancelOrderModal from '@/components/CustomerCancelOrderModal';
@@ -55,7 +56,7 @@ const PendingOrderModification: React.FC<PendingOrderModificationProps> = ({
   onBrowseMenu,
   onCancelled,
 }) => {
-  const { addItem } = useCart();
+  const { addItem, clearCart } = useCart();
   const toast = useToast();
   
   // State
@@ -135,6 +136,52 @@ const PendingOrderModification: React.FC<PendingOrderModificationProps> = ({
     }
   }, [order, toast]);
   
+  // GENIUS FIX: Poll order status to detect backend changes (cancellation, finalization)
+  // This makes the modal reactive to status changes from any source
+  const handleOrderStatusChange = useCallback((updatedOrder: Order) => {
+    console.log('[PendingOrderModification] Order status changed:', {
+      from: order.status,
+      to: updatedOrder.status,
+    });
+    
+    // If order was cancelled, clean up and close modal
+    if (updatedOrder.status === 'cancelled') {
+      console.log('[PendingOrderModification] Order cancelled, cleaning up...');
+      
+      // Stop timer
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+      }
+      
+      // Clear cart
+      clearCart();
+      
+      // Show cancellation toast
+      toast?.info?.('Order Cancelled', `Order #${order.orderNumber} has been cancelled.`);
+      
+      // Close modal via onCancelled callback
+      if (onCancelled) {
+        onCancelled();
+      }
+      
+      return;
+    }
+    
+    // If order was confirmed/finalized externally, update parent
+    if (updatedOrder.status === 'confirmed' || updatedOrder.status === 'preparing') {
+      onOrderUpdated(updatedOrder);
+    }
+  }, [order.status, order.orderNumber, onCancelled, onOrderUpdated, clearCart, toast]);
+  
+  // Start polling for order status changes
+  useOrderStatusPoller({
+    orderId: order.id,
+    enabled: true, // Always poll while modal is open
+    onStatusChange: handleOrderStatusChange,
+    interval: 3000, // Poll every 3 seconds
+  });
+  
   // Timer countdown
   useEffect(() => {
     console.log('[PendingOrderModification] Starting timer interval');
@@ -156,11 +203,34 @@ const PendingOrderModification: React.FC<PendingOrderModificationProps> = ({
           });
         }
         
-        // Auto-finalize when timer hits 0
+        // Auto-finalize when timer hits 0 (but check status first)
         if (newTime === 0 && !finalizationInProgressRef.current) {
-          console.log('[PendingOrderModification] Timer expired, auto-finalizing order');
+          console.log('[PendingOrderModification] Timer expired, checking status before finalizing...');
           finalizationInProgressRef.current = true;
-          finalizeOrder();
+          
+          // Double-check order wasn't cancelled while timer was running
+          fetch(`/api/orders/${order.id}`, { credentials: 'include' })
+            .then(res => res.json())
+            .then(data => {
+              if (data.success && data.order) {
+                if (data.order.status === 'cancelled') {
+                  console.log('[PendingOrderModification] Order was cancelled, aborting finalization');
+                  // Trigger cancellation cleanup
+                  handleOrderStatusChange(data.order);
+                } else {
+                  console.log('[PendingOrderModification] Status OK, proceeding with finalization');
+                  finalizeOrder();
+                }
+              } else {
+                console.error('[PendingOrderModification] Failed to check status, finalizing anyway');
+                finalizeOrder();
+              }
+            })
+            .catch(err => {
+              console.error('[PendingOrderModification] Error checking status:', err);
+              // Finalize anyway on network error
+              finalizeOrder();
+            });
         }
         
         return newTime;

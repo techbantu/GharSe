@@ -214,13 +214,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     // Don't save if messages array is empty or only contains welcome message
     if (messages.length === 0) return;
 
-    // Throttle broadcasts to prevent micro-bursts (max 1 per second)
-    const now = Date.now();
-    if (now - lastBroadcastRef.current < 1000) {
-      return;
-    }
+    // GENIUS FIX: Removed throttle check that was causing timing issues
+    // instance IdRef already prevents self-receive via BroadcastChannel (line 107)
 
     try {
+      const now = Date.now();
       // Save all messages (not just last 20) for full persistence
       localStorage.setItem('bantu_chat_history', JSON.stringify(messages));
 
@@ -235,7 +233,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             timestamp: now,
           };
           broadcastChannel.current.postMessage(payload);
-          lastBroadcastRef.current = now;
+          lastBroadcastRef.current = now; // Track for debugging only
         } catch (error) {
           console.error('[Chat Sync] BroadcastChannel error:', error);
         }
