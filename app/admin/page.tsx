@@ -1091,21 +1091,33 @@ const AdminDashboard: React.FC = () => {
   
   // Fetch menu items from database
   const fetchMenuItems = async () => {
+    console.log('[Menu] Fetching menu items...');
     try {
       setMenuLoading(true);
       setMenuError('');
       
       await fetch('/api/database/init');
       const response = await fetch('/api/menu');
+      console.log('[Menu] API response status:', response.status, response.ok);
+      
       const data = await response.json();
+      console.log('[Menu] API response data:', {
+        success: data.success,
+        itemsCount: data.items?.length || 0,
+        hasItems: !!data.items,
+        fullResponse: data
+      });
       
       if (data.success) {
+        console.log('[Menu] Setting menu items:', data.items?.length || 0, 'items');
         setMenuItems(data.items || []); // Changed from data.data to data.items
       } else {
-        setMenuError('Failed to load menu items: ' + (data.error || 'Unknown error'));
+        const errorMsg = 'Failed to load menu items: ' + (data.error || 'Unknown error');
+        console.error('[Menu] Error:', errorMsg);
+        setMenuError(errorMsg);
       }
     } catch (err: any) {
-      console.error('Error fetching menu items:', err);
+      console.error('[Menu] Exception fetching menu items:', err);
       setMenuError('Failed to connect to database.');
     } finally {
       setMenuLoading(false);
