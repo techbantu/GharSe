@@ -1264,6 +1264,9 @@ const AdminDashboard: React.FC = () => {
         await fetchMenuItems();
         cancelEdit();
         setMenuError('');
+        
+        // Show success alert
+        alert(data.message || '🎉 Menu item created successfully!');
       } else {
         setMenuError(data.error || 'Failed to save menu item');
       }
