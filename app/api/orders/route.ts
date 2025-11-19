@@ -565,10 +565,26 @@ async function createOrderLogic(body: unknown): Promise<Result<{
         const { notificationManager } = await import('@/lib/notifications/notification-manager');
         notificationResult = await notificationManager.sendOrderConfirmation(order);
         
+        // CRITICAL DEBUG: Log exactly what we're about to return to frontend
+        console.log('🔍 [BACKEND] Notification result that will be sent to frontend:', JSON.stringify({
+          email: {
+            success: notificationResult.email?.success,
+            error: notificationResult.email?.error,
+            skipped: notificationResult.email?.skipped
+          },
+          sms: {
+            success: notificationResult.sms?.success,
+            error: notificationResult.sms?.error,
+            skipped: notificationResult.sms?.skipped
+          },
+          overall: notificationResult.overall
+        }, null, 2));
+        
         logger.info('Order confirmation notifications sent', {
           orderId: order.id,
           orderNumber: order.orderNumber,
           emailSuccess: notificationResult.email?.success,
+          emailError: notificationResult.email?.error,
           smsSuccess: notificationResult.sms?.success,
           smsSkipped: notificationResult.sms?.skipped,
         });
