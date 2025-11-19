@@ -1100,7 +1100,7 @@ const AdminDashboard: React.FC = () => {
       const data = await response.json();
       
       if (data.success) {
-        setMenuItems(data.data || []);
+        setMenuItems(data.items || []); // Changed from data.data to data.items
       } else {
         setMenuError('Failed to load menu items: ' + (data.error || 'Unknown error'));
       }
