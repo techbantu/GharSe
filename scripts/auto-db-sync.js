@@ -52,7 +52,7 @@ function execCommand(command, description) {
 
 async function main() {
   log('\n' + '='.repeat(60), colors.bright);
-  log('🚀 AUTO DATABASE SYNC - STEVE JOBS MODE', colors.bright);
+  log('🚀 AUTO DATABASE SYNC', colors.bright);
   log('='.repeat(60) + '\n', colors.bright);
 
   // 1. Load environment variables

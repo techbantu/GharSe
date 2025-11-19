@@ -55,11 +55,12 @@ import { Order, OrderStatus } from '@/types';
 import { format } from 'date-fns';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import CancelOrderModal from '@/components/admin/CancelOrderModal';
-import { 
-  playNotificationSound, 
-  unlockAudio, 
-  startRepeatingNotification, 
-  stopRepeatingNotification 
+import CODPaymentConfirmModal from '@/components/admin/CODPaymentConfirmModal';
+import {
+  playNotificationSound,
+  unlockAudio,
+  startRepeatingNotification,
+  stopRepeatingNotification
 } from '@/utils/notification-sound';
 import { useOrderFilters, useExpandedSections, useViewMode } from '@/hooks/useOrderFilters';
 import { formatOrderTime, formatDateHeader, calculateOrdersTotal } from '@/lib/order-utils';
@@ -190,6 +191,10 @@ const AdminDashboard: React.FC = () => {
     timestamp: Date;
   }>>([]);
   const [showBankSetupGuide, setShowBankSetupGuide] = useState(false);
+
+  // COD Payment Confirmation Modal state
+  const [showCODConfirmModal, setShowCODConfirmModal] = useState(false);
+  const [orderForCODConfirm, setOrderForCODConfirm] = useState<Order | null>(null);
   
   // Incoming Queue state (orders in grace period)
   const [pendingQueueCount, setPendingQueueCount] = useState(0);
@@ -1354,9 +1359,71 @@ const AdminDashboard: React.FC = () => {
 
   const availableCount = menuItems.filter(item => item.isAvailable).length;
   const popularCount = menuItems.filter(item => item.isPopular).length;
-  
+
+  // Helper: Check if order is Cash on Delivery
+  const isCODOrder = (order: Order): boolean => {
+    const codMethods = ['cash-on-delivery', 'cash', 'cod', 'CASH_ON_DELIVERY', 'Cash On-Delivery'];
+    return codMethods.includes(order.paymentMethod?.toLowerCase() || '');
+  };
+
+  // Helper: Update payment status
+  const updatePaymentStatus = async (orderId: string, paymentStatus: 'PAID' | 'PENDING', paymentReceived: boolean) => {
+    try {
+      const response = await fetch(`/api/orders/${orderId}/payment-status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          paymentStatus,
+          paymentReceivedAt: paymentReceived ? new Date().toISOString() : undefined,
+          notes: paymentReceived ? 'Cash received from customer' : 'Payment pending',
+        }),
+      });
+
+      if (!response.ok) {
+        console.error('Failed to update payment status:', await response.text());
+      } else {
+        console.log('Payment status updated successfully');
+        // Refresh financial data
+        fetchFinancialData();
+      }
+    } catch (error) {
+      console.error('Error updating payment status:', error);
+    }
+  };
+
+  // Handle COD payment confirmation from modal
+  const handleCODPaymentConfirm = async (paymentReceived: boolean) => {
+    if (!orderForCODConfirm) return;
+
+    // Update payment status
+    await updatePaymentStatus(
+      orderForCODConfirm.id,
+      paymentReceived ? 'PAID' : 'PENDING',
+      paymentReceived
+    );
+
+    // Close modal
+    setShowCODConfirmModal(false);
+    setOrderForCODConfirm(null);
+
+    // Refresh orders to show updated payment status
+    await fetchOrders();
+  };
+
   // Update order status - Save to database
   const updateOrderStatus = async (orderId: string, newStatus: OrderStatus) => {
+    // INTERCEPT: If marking as "delivered" and order is COD, show payment confirmation modal
+    if (newStatus === 'delivered') {
+      const order = orders.find(o => o.id === orderId);
+      if (order && isCODOrder(order)) {
+        // Show COD payment confirmation modal
+        setOrderForCODConfirm(order);
+        setShowCODConfirmModal(true);
+        // Note: The actual status update will happen after modal confirmation
+        // For now, update status to delivered, but payment confirmation happens in modal
+      }
+    }
+
     // Remove from blinking set if order is completed (delivered, cancelled, refunded, or picked-up)
     const isCompletedStatus = ['delivered', 'cancelled', 'refunded', 'picked-up'].includes(newStatus);
     if (isCompletedStatus && newOrderIds.has(orderId)) {
@@ -1366,7 +1433,7 @@ const AdminDashboard: React.FC = () => {
         return next;
       });
     }
-    
+
     // If confirming a new order, remove it from new orders and mark as confirmed
     if (newStatus === 'confirmed' && newOrderIds.has(orderId)) {
       setNewOrderIds(prev => {
@@ -1375,7 +1442,7 @@ const AdminDashboard: React.FC = () => {
         return next;
       });
       setConfirmedOrderIds(prev => new Set([...prev, orderId]));
-      
+
       // STOP REPEATING NOTIFICATION SOUND (Postmates style)
       safeStopNotification();
     }
@@ -5190,6 +5257,20 @@ STRIPE_WEBHOOK_SECRET=whsec_...`}
         />
       )}
 
+      {/* COD Payment Confirmation Modal */}
+      <CODPaymentConfirmModal
+        isOpen={showCODConfirmModal}
+        onClose={() => {
+          setShowCODConfirmModal(false);
+          setOrderForCODConfirm(null);
+        }}
+        onConfirm={handleCODPaymentConfirm}
+        orderNumber={orderForCODConfirm?.orderNumber || ''}
+        orderTotal={orderForCODConfirm?.pricing.total || 0}
+        customerName={orderForCODConfirm?.customer.name || ''}
+        paymentMethod={orderForCODConfirm?.paymentMethod || ''}
+      />
+
       {/* Refund Receipt Modal */}
       {showRefundReceiptModal && selectedRefundReceipt && (
         <div 
@@ -5445,11 +5526,15 @@ STRIPE_WEBHOOK_SECRET=whsec_...`}
               availableNow: financialData?.availableNow || 0,
               inTransit: financialData?.inTransit || 0,
               todayOrders: stats.todayOrders,
-              averageOrderValue: stats.todayOrders > 0 
+              averageOrderValue: stats.todayOrders > 0
                 ? stats.todayRevenue / stats.todayOrders
                 : 0,
             }}
             onSetupPayments={() => setShowBankSetupGuide(true)}
+            onRefresh={() => {
+              fetchFinancialData();
+              fetchOrders();
+            }}
           />
         )}
     </div>

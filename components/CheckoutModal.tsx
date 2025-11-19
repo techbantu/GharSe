@@ -15,6 +15,7 @@ import { X, User, Mail, Phone, MapPin, CreditCard, CheckCircle, Clock, TruckIcon
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/context/ToastContext';
 import { useRouter } from 'next/navigation';
+import { useActiveOrder } from '@/context/ActiveOrderContext';
 import CancelOrderModal from '@/components/admin/CancelOrderModal';
 import PendingOrderModification from '@/components/PendingOrderModification';
 import { Order, CustomerInfo, Address } from '@/types';
@@ -32,6 +33,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
   const { cart, clearCart } = useCart();
   const toast = useToast();
   const router = useRouter();
+  const { setActiveOrder, clearActiveOrder } = useActiveOrder();
   const [step, setStep] = useState<'form' | 'pending' | 'confirmation'>('form');
   const [orderNumber, setOrderNumber] = useState('');
   const [orderId, setOrderId] = useState('');
@@ -40,6 +42,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [orderStatus, setOrderStatus] = useState<string>('PENDING_CONFIRMATION');
   const [orderTotal, setOrderTotal] = useState<number>(0);
+  const [isClosing, setIsClosing] = useState(false); // Internal closing state
   
   // Coming Soon modal state for payment methods
   const [showComingSoonModal, setShowComingSoonModal] = useState(false);
@@ -75,12 +78,24 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Cleanup timer on unmount or modal close
+  // Field refs for auto-scroll on validation error
+  const fieldRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  
+  // Notification timeout ref
+  const notificationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Ref to track if we've received notification status (to avoid race condition)
+  const notificationReceivedRef = useRef<boolean>(false);
+  
+  // Cleanup timers on unmount or modal close
   useEffect(() => {
     return () => {
       if (timerIntervalRef.current) {
         clearInterval(timerIntervalRef.current);
         timerIntervalRef.current = null;
+      }
+      if (notificationTimeoutRef.current) {
+        clearTimeout(notificationTimeoutRef.current);
+        notificationTimeoutRef.current = null;
       }
     };
   }, []);
@@ -179,18 +194,60 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
     }
   };
   
-  // Validate form
-  const validateForm = (): boolean => {
+  // Scroll to first error field (native app behavior)
+  const scrollToErrorField = (fieldName: string) => {
+    const field = fieldRefs.current[fieldName];
+    if (field) {
+      // Scroll field into view with smooth animation
+      field.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'center',
+        inline: 'nearest'
+      });
+      
+      // Focus the field after scroll
+      setTimeout(() => {
+        field.focus();
+        
+        // Flash the field to draw attention
+        const originalBorder = field.style.border;
+        field.style.border = '3px solid #EF4444';
+        field.style.animation = 'pulse 0.5s ease-in-out 2';
+        
+        setTimeout(() => {
+          field.style.border = originalBorder;
+        }, 1000);
+      }, 300);
+    }
+  };
+  
+  // Validate form and return first error field name
+  const validateForm = (): { isValid: boolean; firstErrorField?: string } => {
     const newErrors: Record<string, string> = {};
+    let firstErrorField: string | undefined = undefined;
     
-    if (!formData.name.trim()) newErrors.name = 'Name is required';
+    // Define validation order (top to bottom of form)
+    const validationOrder = ['name', 'email', 'phone', 'street', 'city', 'state', 'zipCode', 'paymentMethod'];
+    
+    if (!formData.name.trim()) {
+      newErrors.name = 'Name is required';
+      if (!firstErrorField) firstErrorField = 'name';
+    } else if (/\d/.test(formData.name)) {
+      newErrors.name = 'Name cannot contain numbers';
+      if (!firstErrorField) firstErrorField = 'name';
+    }
+    
     if (!formData.email.trim()) {
       newErrors.email = 'Email is required';
+      if (!firstErrorField) firstErrorField = 'email';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = 'Invalid email format';
+      if (!firstErrorField) firstErrorField = 'email';
     }
+    
     if (!formData.phone.trim()) {
       newErrors.phone = 'Phone is required';
+      if (!firstErrorField) firstErrorField = 'phone';
     } else {
       // Extract only digits from phone
       const phoneDigits = formData.phone.replace(/\D/g, '');
@@ -198,61 +255,73 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
       // Check if it's a valid Indian number (should be exactly 10 digits after +91)
       if (phoneDigits.length < 10) {
         newErrors.phone = 'Phone must be 10 digits';
+        if (!firstErrorField) firstErrorField = 'phone';
       } else if (phoneDigits.length > 12) {
         // More than 12 total (91 + 10 digits)
         newErrors.phone = 'Invalid phone number';
+        if (!firstErrorField) firstErrorField = 'phone';
       } else {
         // Check if starts with valid Indian mobile prefix (6, 7, 8, 9)
         const mobileNumber = phoneDigits.length === 12 ? phoneDigits.substring(2) : phoneDigits;
         if (mobileNumber.length === 10 && !/^[6789]/.test(mobileNumber)) {
           newErrors.phone = 'Indian mobile numbers start with 6, 7, 8, or 9';
+          if (!firstErrorField) firstErrorField = 'phone';
         }
       }
-    }
-    
-    // Validate name: should not contain numbers
-    if (formData.name.trim() && /\d/.test(formData.name)) {
-      newErrors.name = 'Name cannot contain numbers';
     }
     
     // Payment method validation (always allow COD!)
     if (!formData.paymentMethod) {
       newErrors.paymentMethod = 'Please select a payment method';
+      if (!firstErrorField) firstErrorField = 'paymentMethod';
     }
     
     if (formData.orderType === 'delivery') {
-      if (!formData.street.trim()) newErrors.street = 'Street address is required';
+      if (!formData.street.trim()) {
+        newErrors.street = 'Street address is required';
+        if (!firstErrorField) firstErrorField = 'street';
+      }
       
       if (!formData.city.trim()) {
         newErrors.city = 'City is required';
+        if (!firstErrorField) firstErrorField = 'city';
       } else if (/\d/.test(formData.city)) {
         // City cannot contain numbers
         newErrors.city = 'City name cannot contain numbers';
+        if (!firstErrorField) firstErrorField = 'city';
       } else if (!/^[a-zA-Z\s\-'.]+$/.test(formData.city)) {
         // City should only contain letters, spaces, hyphens, apostrophes, and periods
         newErrors.city = 'City name can only contain letters';
+        if (!firstErrorField) firstErrorField = 'city';
       }
       
       if (!formData.state.trim()) {
         newErrors.state = 'State is required';
+        if (!firstErrorField) firstErrorField = 'state';
       } else if (/\d/.test(formData.state)) {
         // State cannot contain numbers
         newErrors.state = 'State name cannot contain numbers';
+        if (!firstErrorField) firstErrorField = 'state';
       } else if (!/^[a-zA-Z\s\-'.]+$/.test(formData.state)) {
         // State should only contain letters, spaces, hyphens, apostrophes, and periods
         newErrors.state = 'State name can only contain letters';
+        if (!firstErrorField) firstErrorField = 'state';
       }
       
       if (!formData.zipCode.trim()) {
         newErrors.zipCode = 'PIN code is required';
+        if (!firstErrorField) firstErrorField = 'zipCode';
       } else if (!/^\d{6}$/.test(formData.zipCode)) {
         // GENIUS FIX: PIN code must be exactly 6 digits
         newErrors.zipCode = 'PIN code must be 6 digits';
+        if (!firstErrorField) firstErrorField = 'zipCode';
       }
     }
     
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    const isValid = Object.keys(newErrors).length === 0;
+    
+    return { isValid, firstErrorField };
   };
   
   // Submit order with retry logic and proper error handling
@@ -261,8 +330,20 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
     
     console.log('🔄 Form submitted, validating...', formData);
     
-    if (!validateForm()) {
+    // Validate and get first error field
+    const validation = validateForm();
+    
+    if (!validation.isValid) {
       console.log('❌ Validation failed:', errors);
+      
+      // Scroll to first error field (native app behavior)
+      if (validation.firstErrorField) {
+        scrollToErrorField(validation.firstErrorField);
+      }
+      
+      // Play alert sound for validation error
+      playAlertSound();
+      
       return;
     }
     
@@ -273,6 +354,9 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
     
     console.log('✅ Validation passed, submitting order...');
     setIsSubmitting(true);
+    
+    // Reset notification received flag for new order submission
+    notificationReceivedRef.current = false;
     
     try {
       // Create order payload
@@ -347,9 +431,35 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
               return Err(new ValidationError(data.error || 'Order creation failed'));
             }
             
-            // Store notification status
+            // Store notification status with fallback
             if (data.notifications) {
+              // Mark that we've received notification status
+              notificationReceivedRef.current = true;
+              
+              // Clear timeout since we got the status
+              if (notificationTimeoutRef.current) {
+                clearTimeout(notificationTimeoutRef.current);
+                notificationTimeoutRef.current = null;
+              }
+              
               setNotificationStatus(data.notifications);
+              console.log('✅ Notification status received from backend:', data.notifications);
+            } else {
+              // Fallback if backend doesn't return notifications (shouldn't happen)
+              console.warn('No notification status returned from backend');
+              notificationReceivedRef.current = true; // Still mark as received
+              
+              // Clear timeout
+              if (notificationTimeoutRef.current) {
+                clearTimeout(notificationTimeoutRef.current);
+                notificationTimeoutRef.current = null;
+              }
+              
+              setNotificationStatus({
+                email: { success: false, error: 'Status not available' },
+                sms: { success: false, error: 'Status not available' },
+                overall: false,
+              });
             }
             
             return Ok(data.order) as Result<Order, AppError>;
@@ -418,11 +528,49 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
       setOrderTotal(order.pricing.total);
       setOrderStatus('PENDING_CONFIRMATION');
       
+      // GENIUS FIX: Set active order in global context so menu additions route to this order
+      setActiveOrder(order);
+      console.log('[CheckoutModal] Set active order in context:', {
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        gracePeriodExpiresAt: order.gracePeriodExpiresAt,
+      });
+      
       // DON'T clear cart yet - allow modifications during grace period
       // clearCart(); // Move this to after finalization
       
       // Go to pending modification step
       setStep('pending');
+      
+      // Safety timeout for notification status (7 seconds)
+      // ONLY set timeout if we haven't received notification status yet
+      // DON'T reset the flag here - it was already set when we received the response above
+      if (!notificationReceivedRef.current) {
+        // Only set timeout if we haven't received status yet
+        if (notificationTimeoutRef.current) {
+          clearTimeout(notificationTimeoutRef.current);
+        }
+        
+        notificationTimeoutRef.current = setTimeout(() => {
+          // Double-check we still haven't received it
+          if (!notificationReceivedRef.current) {
+            console.warn('⚠️ Notification status timeout - backend did not return status within 7 seconds');
+            setNotificationStatus({
+              email: { 
+                success: false, 
+                error: 'Email service timeout. Your order was created successfully, but confirmation email may be delayed.' 
+              },
+              sms: { 
+                success: false, 
+                error: 'SMS service timeout. Your order was created successfully, but confirmation SMS may be delayed.' 
+              },
+              overall: false,
+            });
+          }
+        }, 7000); // 7 second timeout
+      } else {
+        console.log('✅ Notification status already received, no timeout needed');
+      }
       
       // Play success sound for order confirmation
       try {
@@ -446,46 +594,92 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
   
   // Reset and close
   const handleClose = () => {
-    // Clean up timer
+    console.log('[CheckoutModal] handleClose called from step:', step);
+    
+    // CRITICAL: Set internal closing state immediately (prevents rendering)
+    setIsClosing(true);
+    
+    // Clean up timers
     if (timerIntervalRef.current) {
       clearInterval(timerIntervalRef.current);
       timerIntervalRef.current = null;
     }
+    if (notificationTimeoutRef.current) {
+      clearTimeout(notificationTimeoutRef.current);
+      notificationTimeoutRef.current = null;
+    }
+    // Reset notification received flag when closing
+    notificationReceivedRef.current = false;
     setTimeRemaining(null);
     
-    if (step === 'confirmation') {
+    // CRITICAL: Always clear active order context on close (not just on confirmation)
+    clearActiveOrder();
+    console.log('[CheckoutModal] Cleared active order from context');
+    
+    // Reset all order state variables
+    setOrderId('');
+    setOrderNumber('');
+    setCurrentOrder(null);
+    setOrderCreatedAt(null);
+    setOrderStatus('PENDING_CONFIRMATION');
+    setOrderTotal(0);
+    setNotificationStatus(null);
+    
+    // Clear cart and reset to form step
+    if (step === 'confirmation' || step === 'pending') {
       clearCart();
-      setStep('form');
-      setOrderNumber('');
-      setOrderId('');
-      setFormData({
-        name: '',
-        email: '',
-        phone: '',
-        street: '',
-        apartment: '',
-        city: '',
-        state: '',
-        zipCode: '',
-        deliveryInstructions: '',
-        specialInstructions: '',
-        orderType: 'delivery',
-        paymentMethod: 'cash-on-delivery',
-        paymentMethodDetails: '',
-        tip: 0,
-        scheduledTime: '',
-      });
+      console.log('[CheckoutModal] Cleared cart');
     }
+    
+    // Always reset to form step
+    setStep('form');
+    
+    // Reset form data
+    setFormData({
+      name: '',
+      email: '',
+      phone: '',
+      street: '',
+      apartment: '',
+      city: '',
+      state: '',
+      zipCode: '',
+      deliveryInstructions: '',
+      specialInstructions: '',
+      orderType: 'delivery',
+      paymentMethod: 'cash-on-delivery',
+      paymentMethodDetails: '',
+      tip: 0,
+      scheduledTime: '',
+    });
+    
+    console.log('[CheckoutModal] Full reset complete');
     onClose();
+    
+    // Reset closing state after modal is fully closed
+    setTimeout(() => {
+      setIsClosing(false);
+    }, 300);
   };
   
-  if (!isOpen) return null;
+  // Don't render if modal is closed OR if we're in closing state
+  if (!isOpen || isClosing) return null;
   
   return (
     <>
       <style>{`
         @keyframes spin {
           to { transform: rotate(360deg); }
+        }
+        @keyframes pulse {
+          0%, 100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 0.8;
+            transform: scale(1.02);
+          }
         }
         @media (max-width: 768px) {
           [data-checkout-modal] {
@@ -776,6 +970,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                       Full Name *
                     </label>
                     <input
+                      ref={(el) => { fieldRefs.current.name = el; }}
                       type="text"
                       name="name"
                       value={formData.name}
@@ -853,6 +1048,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                         Email *
                       </label>
                       <input
+                        ref={(el) => { fieldRefs.current.email = el; }}
                         type="email"
                         name="email"
                         value={formData.email}
@@ -978,6 +1174,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                         </div>
                         {/* Phone Number Input (Editable) */}
                       <input
+                        ref={(el) => { fieldRefs.current.phone = el; }}
                         type="tel"
                         name="phone"
                           value={formData.phone.startsWith('+91') ? formData.phone.substring(4).trim() : formData.phone.replace(/[^\d\s]/g, '')}
@@ -1105,6 +1302,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                         Street Address *
                       </label>
                       <input
+                        ref={(el) => { fieldRefs.current.street = el; }}
                         type="text"
                         name="street"
                         value={formData.street}
@@ -1208,6 +1406,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                           City *
                         </label>
                         <input
+                          ref={(el) => { fieldRefs.current.city = el; }}
                           type="text"
                           name="city"
                           value={formData.city}
@@ -1277,6 +1476,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                           State *
                         </label>
                         <input
+                          ref={(el) => { fieldRefs.current.state = el; }}
                           type="text"
                           name="state"
                           value={formData.state}
@@ -1346,6 +1546,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                           PIN Code *
                         </label>
                         <input
+                          ref={(el) => { fieldRefs.current.zipCode = el; }}
                           type="text"
                           name="zipCode"
                           value={formData.zipCode}
@@ -1909,7 +2110,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
               </div>
             </form>
           </>
-        ) : step === 'pending' && currentOrder ? (
+        ) : step === 'pending' && currentOrder && currentOrder.status !== 'cancelled' ? (
           /* Pending Modification Screen - Grace Period */
           <div style={{
             flex: 1,
@@ -1954,10 +2155,31 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                     onFinalized={() => {
                       // Order finalized, move to confirmation
                       clearCart();
+                      
+                      // GENIUS FIX: Clear active order from context
+                      clearActiveOrder();
+                      console.log('[CheckoutModal] Cleared active order from context (finalized)');
+                      
                       setStep('confirmation');
                     }}
                     onBrowseMenu={() => {
                       // Close modal to browse menu (cart is still available)
+                      onClose();
+                    }}
+                    onCancelled={() => {
+                      // GENIUS FIX: Order was cancelled, clean up and close modal
+                      console.log('[CheckoutModal] Order cancelled callback triggered');
+                      
+                      // Clear cart
+                      clearCart();
+                      
+                      // Clear active order from context
+                      clearActiveOrder();
+                      
+                      // Reset step to form
+                      setStep('form');
+                      
+                      // Close the modal
                       onClose();
                     }}
                   />
@@ -2467,12 +2689,41 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
           }}
           cancelledBy="customer"
           onSuccess={() => {
+            console.log('[CheckoutModal] Order cancelled - starting IMMEDIATE cleanup...');
+            
+            // 🎯 CRITICAL: Set internal closing state FIRST (hides modal immediately)
+            setIsClosing(true);
+            console.log('[CheckoutModal] Set isClosing=true (modal hidden)');
+            
             // Clean up timer
             if (timerIntervalRef.current) {
               clearInterval(timerIntervalRef.current);
               timerIntervalRef.current = null;
             }
+            if (notificationTimeoutRef.current) {
+              clearTimeout(notificationTimeoutRef.current);
+              notificationTimeoutRef.current = null;
+            }
             setTimeRemaining(null);
+            
+            // CRITICAL: Clear active order from context
+            clearActiveOrder();
+            console.log('[CheckoutModal] Cleared active order from context');
+            
+            // CRITICAL: Clear cart (fresh start)
+            clearCart();
+            console.log('[CheckoutModal] Cleared cart');
+            
+            // Reset all order state
+            setOrderId('');
+            setOrderNumber('');
+            setCurrentOrder(null);
+            setOrderCreatedAt(null);
+            setOrderStatus('PENDING_CONFIRMATION');
+            setOrderTotal(0);
+            setNotificationStatus(null);
+            setStep('form');
+            console.log('[CheckoutModal] Reset all order state');
             
             // Play alert sound for cancellation (red alert)
             try {
@@ -2484,12 +2735,25 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
             // Show error toast notification (red) for cancellation
             toast.error('Order Cancelled', 'Your order has been cancelled successfully. Refund will be processed within 5-7 business days if payment was made.');
             
-            // Close modal and reset
+            // Close cancel modal first
             setShowCancelModal(false);
-            handleClose();
+            console.log('[CheckoutModal] Closed cancel modal');
             
-            // Redirect to profile to see updated orders
-            router.push('/profile');
+            // Force close the checkout modal by calling parent's onClose
+            // This ensures the modal closes immediately
+            onClose();
+            console.log('[CheckoutModal] Closed checkout modal');
+            
+            // Reset closing state after parent closes modal
+            setTimeout(() => {
+              setIsClosing(false);
+            }, 300);
+            
+            // Redirect after a brief delay to ensure modal closes
+            setTimeout(() => {
+              router.push('/profile');
+              console.log('[CheckoutModal] Redirected to profile');
+            }, 200);
           }}
         />
       )}

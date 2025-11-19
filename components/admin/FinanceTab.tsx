@@ -2,19 +2,20 @@
 
 /**
  * FINANCE TAB COMPONENT
- * 
+ *
  * Purpose: Separate all money/revenue data from kitchen operations
  * For: Business owner, accountant - NOT for chefs!
- * 
+ *
  * Contains:
  * - Revenue metrics
  * - Money status
  * - Payment information
  * - Financial analytics
+ * - Pending COD payments list with confirmation
  */
 
-import React from 'react';
-import { IndianRupee, TrendingUp, Clock, DollarSign, CreditCard, Package } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { IndianRupee, TrendingUp, Clock, DollarSign, CreditCard, Package, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface FinanceData {
   todayRevenue: number;
@@ -25,12 +26,94 @@ interface FinanceData {
   averageOrderValue: number;
 }
 
+interface PendingCODOrder {
+  id: string;
+  orderNumber: string;
+  customerName: string;
+  total: number;
+  deliveredAt?: string;
+  createdAt: string;
+  paymentMethod: string;
+}
+
 interface FinanceTabProps {
   financeData: FinanceData;
   onSetupPayments?: () => void;
+  onRefresh?: () => void;
 }
 
-export default function FinanceTab({ financeData, onSetupPayments }: FinanceTabProps) {
+export default function FinanceTab({ financeData, onSetupPayments, onRefresh }: FinanceTabProps) {
+  const [pendingCODOrders, setPendingCODOrders] = useState<PendingCODOrder[]>([]);
+  const [loadingPending, setLoadingPending] = useState(false);
+  const [confirmingOrderId, setConfirmingOrderId] = useState<string | null>(null);
+
+  // Fetch pending COD orders (delivered but payment not confirmed)
+  useEffect(() => {
+    fetchPendingCODOrders();
+  }, []);
+
+  const fetchPendingCODOrders = async () => {
+    try {
+      setLoadingPending(true);
+      const response = await fetch('/api/orders?status=delivered&paymentStatus=PENDING');
+      if (response.ok) {
+        const data = await response.json();
+        const codOrders = (data.orders || []).filter((order: any) =>
+          ['cash-on-delivery', 'cash', 'cod', 'CASH_ON_DELIVERY', 'Cash On-Delivery'].includes(
+            order.paymentMethod?.toLowerCase() || ''
+          )
+        );
+        setPendingCODOrders(
+          codOrders.map((order: any) => ({
+            id: order.id,
+            orderNumber: order.orderNumber,
+            customerName: order.customerName,
+            total: order.total,
+            deliveredAt: order.deliveredAt,
+            createdAt: order.createdAt,
+            paymentMethod: order.paymentMethod,
+          }))
+        );
+      }
+    } catch (error) {
+      console.error('Failed to fetch pending COD orders:', error);
+    } finally {
+      setLoadingPending(false);
+    }
+  };
+
+  const confirmCODPayment = async (orderId: string, received: boolean) => {
+    try {
+      setConfirmingOrderId(orderId);
+      const response = await fetch(`/api/orders/${orderId}/payment-status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          paymentStatus: received ? 'PAID' : 'PENDING',
+          paymentReceivedAt: received ? new Date().toISOString() : undefined,
+          notes: received ? 'Cash confirmed received in Finance tab' : 'Payment still pending',
+        }),
+      });
+
+      if (response.ok) {
+        // Refresh pending orders list
+        await fetchPendingCODOrders();
+        // Trigger parent refresh
+        if (onRefresh) {
+          onRefresh();
+        }
+      } else {
+        console.error('Failed to confirm payment:', await response.text());
+        alert('Failed to confirm payment. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error confirming payment:', error);
+      alert('Error confirming payment. Please try again.');
+    } finally {
+      setConfirmingOrderId(null);
+    }
+  };
+
   return (
     <div style={{ padding: '2rem' }}>
       {/* Page Header */}
@@ -333,6 +416,117 @@ export default function FinanceTab({ financeData, onSetupPayments }: FinanceTabP
           )}
         </div>
       </div>
+
+      {/* Pending COD Payments - Awaiting Confirmation */}
+      {pendingCODOrders.length > 0 && (
+        <div
+          style={{
+            background: 'white',
+            border: '2px solid #fbbf24',
+            borderRadius: '1rem',
+            padding: '2rem',
+            marginBottom: '2rem',
+          }}
+        >
+          <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <AlertCircle size={24} color="#d97706" />
+            <div>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1f2937', marginBottom: '0.25rem' }}>
+                💵 Pending Cash Collection
+              </h2>
+              <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                Delivered orders awaiting payment confirmation ({pendingCODOrders.length} orders)
+              </p>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {pendingCODOrders.map((order) => (
+              <div
+                key={order.id}
+                style={{
+                  background: '#fef3c7',
+                  border: '2px solid #fbbf24',
+                  borderRadius: '0.75rem',
+                  padding: '1.25rem',
+                  display: 'grid',
+                  gridTemplateColumns: '1fr auto',
+                  alignItems: 'center',
+                  gap: '1rem',
+                }}
+              >
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                    <span style={{ fontSize: '1rem', fontWeight: 700, color: '#1f2937' }}>
+                      Order #{order.orderNumber}
+                    </span>
+                    <span
+                      style={{
+                        background: '#f59e0b',
+                        color: 'white',
+                        padding: '0.25rem 0.5rem',
+                        borderRadius: '0.375rem',
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                      }}
+                    >
+                      {order.paymentMethod}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '0.875rem', color: '#92400e', marginBottom: '0.25rem' }}>
+                    Customer: <span style={{ fontWeight: 600 }}>{order.customerName}</span>
+                  </div>
+                  <div style={{ fontSize: '0.875rem', color: '#92400e' }}>
+                    Amount: <span style={{ fontSize: '1.125rem', fontWeight: 900, color: '#b45309' }}>₹{order.total.toFixed(2)}</span>
+                  </div>
+                  {order.deliveredAt && (
+                    <div style={{ fontSize: '0.75rem', color: '#b45309', marginTop: '0.25rem' }}>
+                      Delivered: {new Date(order.deliveredAt).toLocaleString('en-IN')}
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <button
+                    onClick={() => confirmCODPayment(order.id, true)}
+                    disabled={confirmingOrderId === order.id}
+                    style={{
+                      background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '0.5rem',
+                      padding: '0.75rem 1.25rem',
+                      fontSize: '0.875rem',
+                      fontWeight: 600,
+                      cursor: confirmingOrderId === order.id ? 'not-allowed' : 'pointer',
+                      opacity: confirmingOrderId === order.id ? 0.6 : 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      whiteSpace: 'nowrap',
+                      boxShadow: '0 2px 8px rgba(34, 197, 94, 0.3)',
+                      transition: 'all 0.2s',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (confirmingOrderId !== order.id) {
+                        e.currentTarget.style.transform = 'scale(1.05)';
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(34, 197, 94, 0.4)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'scale(1)';
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(34, 197, 94, 0.3)';
+                    }}
+                  >
+                    <CheckCircle size={16} />
+                    <span>Cash Received</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Daily Revenue Chart Placeholder */}
       <div
