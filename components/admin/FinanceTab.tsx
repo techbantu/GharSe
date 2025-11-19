@@ -477,7 +477,7 @@ export default function FinanceTab({ financeData, onSetupPayments, onRefresh }: 
                     Customer: <span style={{ fontWeight: 600 }}>{order.customerName}</span>
                   </div>
                   <div style={{ fontSize: '0.875rem', color: '#92400e' }}>
-                    Amount: <span style={{ fontSize: '1.125rem', fontWeight: 900, color: '#b45309' }}>₹{order.total.toFixed(2)}</span>
+                    Amount: <span style={{ fontSize: '1.125rem', fontWeight: 900, color: '#b45309' }}>₹{(order.total || 0).toFixed(2)}</span>
                   </div>
                   {order.deliveredAt && (
                     <div style={{ fontSize: '0.75rem', color: '#b45309', marginTop: '0.25rem' }}>
