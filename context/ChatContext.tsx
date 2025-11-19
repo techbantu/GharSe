@@ -102,19 +102,29 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         broadcastChannel.current = channel;
         
         channel.onmessage = (event) => {
+          // Ignore messages from THIS component instance
+          if (event.data.instanceId === instanceIdRef.current) {
+            return;
+          }
+
           if (event.data.type === 'MESSAGES_UPDATED') {
-            // Prevent processing our own broadcasts (check instance ID)
-            if (event.data.instanceId === instanceIdRef.current) {
-              return; // Ignore broadcasts from THIS component instance
+            // GENIUS FIX: Only update if messages actually changed (prevent infinite loop)
+            // Compare message contents to avoid unnecessary re-renders
+            const currentMessagesJson = JSON.stringify(messages);
+            const incomingMessagesJson = JSON.stringify(event.data.messages);
+            
+            if (currentMessagesJson === incomingMessagesJson) {
+              console.log('[Chat Sync] Received identical messages, ignoring');
+              return; // Messages haven't changed, no need to update
             }
-            console.log('[Chat Sync] Received messages update from another tab');
+
+            console.log('[Chat Sync] Received message update from another tab');
             lastBroadcastRef.current = Date.now();
             setMessages(event.data.messages.map((msg: any) => ({
               ...msg,
               timestamp: new Date(msg.timestamp),
             })));
           } else if (event.data.type === 'CONTEXT_UPDATED') {
-            // Prevent processing our own broadcasts (check instance ID)
             if (event.data.instanceId === instanceIdRef.current) {
               return; // Ignore broadcasts from THIS component instance
             }

@@ -330,8 +330,17 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               return; // Ignore broadcasts from THIS component instance
             }
 
+            // GENIUS FIX: Only update if cart actually changed (prevent infinite loop)
+            // Compare cart contents to avoid unnecessary re-renders
+            const currentCartJson = JSON.stringify(cart);
+            const incomingCartJson = JSON.stringify(event.data.cart);
+            
+            if (currentCartJson === incomingCartJson) {
+              console.log('[Cart Sync] Received identical cart, ignoring');
+              return; // Cart hasn't changed, no need to update
+            }
+
             console.log('[Cart Sync] Received cart update from another tab');
-            lastBroadcastRef.current = Date.now();
             dispatch({ type: 'LOAD_CART', payload: event.data.cart });
           }
         };
@@ -484,6 +493,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // GENIUS FIX: Removed throttle check that was causing timing issues
     // instanceIdRef already prevents self-receive via BroadcastChannel (line 329)
+    // Deep comparison in receiver prevents infinite loops (line 337)
 
     // Save to localStorage for persistence
     localStorage.setItem('bantusKitchenCart', JSON.stringify(cart));
@@ -491,16 +501,14 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Broadcast ONLY via BroadcastChannel (not localStorage)
     if (broadcastChannel.current) {
       try {
-        const now = Date.now();
         const payload = {
           type: 'CART_UPDATED',
           cart,
           instanceId: instanceIdRef.current, // Instance ID to prevent self-receive
           sessionId: sessionIdRef.current,
-          timestamp: now,
+          timestamp: Date.now(),
         };
         broadcastChannel.current.postMessage(payload);
-        lastBroadcastRef.current = now; // Track for debugging only
         console.log('[Cart Sync] Broadcasted cart update to other tabs');
       } catch (error) {
         console.error('[Cart Sync] BroadcastChannel error:', error);
