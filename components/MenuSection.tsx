@@ -11,7 +11,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Minus, Flame, Leaf, Clock, Search, X, UtensilsCrossed, XCircle, ShoppingBag, PackageX, ChefHat, Soup, Fish, Beef, MapPin, Palmtree, Store, Wheat, Waves, Castle } from 'lucide-react';
+import { Search, ShoppingBag, Plus, Minus, X, ChevronDown, Filter, MapPin, UtensilsCrossed, Flame, Leaf, ChefHat, XCircle, Wheat, WheatOff, Palmtree, Store, Waves, Castle, PackageX } from 'lucide-react';
 import { MenuItem, MenuCategory } from '@/types';
 import { useCart } from '@/context/CartContext';
 import ProductDetailModal from './ProductDetailModal';
@@ -782,16 +782,10 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
                           <span className="text-orange-600 font-black text-sm">
                             ₹{item.price}
                           </span>
-                          {item.isVegetarian && (
-                            <div className="w-4 h-4 bg-green-100 rounded-full flex items-center justify-center">
-                              <Leaf size={10} className="text-green-600" />
-                            </div>
-                          )}
-                          {item.spicyLevel && item.spicyLevel > 0 && (
-                            <div className="w-4 h-4 bg-red-100 rounded-full flex items-center justify-center">
-                              <Flame size={10} className="text-red-600" />
-                            </div>
-                          )}
+                          {item.isVegetarian && <Leaf size={14} className="text-green-600" />}
+                          {item.isVegan && <Leaf size={14} className="text-green-800" fill="currentColor" />}
+                          {item.isGlutenFree && <WheatOff size={14} className="text-amber-600" />}
+                          {item.spicyLevel && item.spicyLevel > 0 && <Flame size={14} className="text-red-500" fill="currentColor" />}
                         </div>
                       </div>
 
@@ -1399,6 +1393,38 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
                         padding: '0.25rem'
                       }} title="Vegetarian">
                         <Leaf size={isDesktop ? 20 : 16} className="text-green-600" strokeWidth={2.5} />
+                      </div>
+                    )}
+                    {item.isVegan === true && (
+                      <div style={{
+                        width: isDesktop ? '36px' : '28px',
+                        height: isDesktop ? '36px' : '28px',
+                        background: 'rgba(255, 255, 255, 0.95)',
+                        backdropFilter: 'blur(8px)',
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+                        padding: '0.25rem'
+                      }} title="Vegan">
+                        <Leaf size={isDesktop ? 20 : 16} className="text-green-800" strokeWidth={2.5} fill="currentColor" />
+                      </div>
+                    )}
+                    {item.isGlutenFree === true && (
+                      <div style={{
+                        width: isDesktop ? '36px' : '28px',
+                        height: isDesktop ? '36px' : '28px',
+                        background: 'rgba(255, 255, 255, 0.95)',
+                        backdropFilter: 'blur(8px)',
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+                        padding: '0.25rem'
+                      }} title="Gluten Free">
+                        <WheatOff size={isDesktop ? 20 : 16} className="text-amber-600" strokeWidth={2.5} />
                       </div>
                     )}
                     {typeof item.spicyLevel === 'number' && item.spicyLevel > 0 && (

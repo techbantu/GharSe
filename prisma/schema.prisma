@@ -197,6 +197,8 @@ model Order {
   deliveryCity    String
   deliveryZip     String
   deliveryNotes   String?
+  latitude        Float? // NEW! For map support
+  longitude       Float? // NEW! For map support
 
   // Order Details
   items       OrderItem[]

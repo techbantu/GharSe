@@ -27,7 +27,7 @@ import CustomerCancelOrderModal from '@/components/CustomerCancelOrderModal';
 // Order status configuration
 const ORDER_STATUS = {
   PENDING_CONFIRMATION: {
-    label: 'Confirming Order',
+    label: 'Waiting for GharKha confirmation',
     color: '#F97316',
     bgColor: '#FFF7ED',
     icon: Clock,

@@ -24,9 +24,9 @@ import { format } from 'date-fns';
 
 // Order status configuration
 const ORDER_STATUS = {
-  PENDING_CONFIRMATION: { label: 'Confirming Order', color: '#F97316', icon: Clock },
+  PENDING_CONFIRMATION: { label: 'Waiting for GharKha confirmation', color: '#F97316', icon: Clock },
   PENDING: { label: 'Order Placed', color: '#F59E0B', icon: Package },
-  CONFIRMED: { label: 'Confirmed', color: '#3B82F6', icon: CheckCircle2 },
+  CONFIRMED: { label: 'Waiting for GharKha confirmation', color: '#3B82F6', icon: CheckCircle2 },
   PREPARING: { label: 'Preparing', color: '#8B5CF6', icon: ChefHat },
   OUT_FOR_DELIVERY: { label: 'Out for Delivery', color: '#F97316', icon: Truck },
   DELIVERED: { label: 'Delivered', color: '#10B981', icon: Home },
