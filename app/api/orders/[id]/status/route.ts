@@ -17,16 +17,7 @@ export async function PUT(
       );
     }
 
-    // Validate status against allowed values
-    const validStatuses = [
-      'PENDING', 'CONFIRMED', 'PREPARING', 'READY', 
-      'OUT_FOR_DELIVERY', 'DELIVERED', 'CANCELLED'
-    ];
-
-    // Normalize status to uppercase for DB
-    const normalizedStatus = status.toUpperCase().replace(/-/g, '_');
-    
-    // Map frontend status to DB status if needed
+    // Validate status against allowed values (including legacy frontend strings)
     const statusMap: Record<string, string> = {
       'PENDING_CONFIRMATION': 'PENDING_CONFIRMATION',
       'PENDING': 'PENDING',
@@ -35,14 +26,26 @@ export async function PUT(
       'READY': 'READY',
       'OUT_FOR_DELIVERY': 'OUT_FOR_DELIVERY',
       'DELIVERED': 'DELIVERED',
-      'CANCELLED': 'CANCELLED'
+      'PICKED_UP': 'DELIVERED', // Legacy frontend label mapped to DB enum
+      'CANCELLED': 'CANCELLED',
+      'REFUNDED': 'CANCELLED', // Legacy/typo label mapped to DB enum
     };
 
-    const dbStatus = statusMap[normalizedStatus] || normalizedStatus;
+    // Normalize status to uppercase and convert hyphens to underscores for mapping
+    const normalizedStatus = String(status).toUpperCase().replace(/-/g, '_');
 
-    if (!validStatuses.includes(dbStatus) && dbStatus !== 'PENDING_CONFIRMATION') {
-       // Allow PENDING_CONFIRMATION as it might be passed, though usually internal
-       // But strictly speaking, we should check against OrderStatus enum
+    const dbStatus = statusMap[normalizedStatus];
+
+    if (!dbStatus) {
+      const allowedStatuses = Object.keys(statusMap).join(', ');
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Invalid status: ${status}. Must be one of: ${allowedStatuses}`,
+          code: 'VALIDATION_ERROR',
+        },
+        { status: 400 }
+      );
     }
 
     console.log(`[Order API] Updating status for order ${id} to ${dbStatus}`);
