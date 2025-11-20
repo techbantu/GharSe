@@ -61,6 +61,150 @@ export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetai
     return colors[status] || '#6b7280';
   };
 
+  const updateStatus = async (newStatus: string) => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`/api/orders/${order.id}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+
+      if (response.ok) {
+        // Close modal and refresh orders (parent component should handle refresh, 
+        // but for now we'll just close and let the auto-refresh catch it)
+        onClose();
+        // Ideally we should trigger a refresh callback here
+        window.location.reload(); // Temporary force refresh to show new status
+      } else {
+        alert('Failed to update status');
+      }
+    } catch (error) {
+      console.error('Error updating status:', error);
+      alert('Error updating status');
+    }
+  };
+
+  const renderActionButtons = () => {
+    const status = order.status.toLowerCase();
+    
+    switch (status) {
+      case 'pending':
+      case 'pending-confirmation':
+        return (
+          <div style={{ display: 'flex', gap: '1rem' }}>
+            <button
+              onClick={() => updateStatus('cancelled')}
+              style={{
+                padding: '0.75rem 1.5rem',
+                backgroundColor: '#fee2e2',
+                color: '#ef4444',
+                border: 'none',
+                borderRadius: '0.5rem',
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >
+              Reject Order
+            </button>
+            <button
+              onClick={() => updateStatus('confirmed')}
+              style={{
+                padding: '0.75rem 1.5rem',
+                backgroundColor: '#16a34a',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '0.5rem',
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >
+              Confirm Order
+            </button>
+          </div>
+        );
+      case 'confirmed':
+        return (
+          <button
+            onClick={() => updateStatus('preparing')}
+            style={{
+              padding: '0.75rem 1.5rem',
+              backgroundColor: '#a855f7',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '0.5rem',
+              fontSize: '0.875rem',
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
+          >
+            Start Preparing
+          </button>
+        );
+      case 'preparing':
+        return (
+          <button
+            onClick={() => updateStatus('ready')}
+            style={{
+              padding: '0.75rem 1.5rem',
+              backgroundColor: '#10b981',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '0.5rem',
+              fontSize: '0.875rem',
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
+          >
+            Mark as Ready
+          </button>
+        );
+      case 'ready':
+        return (
+          <button
+            onClick={() => updateStatus(order.deliveryAddress ? 'out-for-delivery' : 'delivered')}
+            style={{
+              padding: '0.75rem 1.5rem',
+              backgroundColor: '#f97316',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '0.5rem',
+              fontSize: '0.875rem',
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
+          >
+            {order.deliveryAddress ? 'Send for Delivery' : 'Mark Picked Up'}
+          </button>
+        );
+      case 'out-for-delivery':
+        return (
+          <button
+            onClick={() => updateStatus('delivered')}
+            style={{
+              padding: '0.75rem 1.5rem',
+              backgroundColor: '#6b7280',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '0.5rem',
+              fontSize: '0.875rem',
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
+          >
+            Mark Delivered
+          </button>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <div style={{
       position: 'fixed',
@@ -130,23 +274,41 @@ export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetai
             marginBottom: '1.5rem',
             display: 'flex',
             alignItems: 'center',
+            justifyContent: 'space-between',
             gap: '0.75rem'
           }}>
-            <div style={{
-              width: '8px',
-              height: '8px',
-              borderRadius: '50%',
-              backgroundColor: getStatusColor(order.status)
-            }} />
-            <span style={{
-              fontWeight: 600,
-              color: getStatusColor(order.status),
-              textTransform: 'uppercase',
-              fontSize: '0.875rem'
-            }}>
-              {order.status.replace('-', ' ')}
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                backgroundColor: getStatusColor(order.status)
+              }} />
+              <span style={{
+                fontWeight: 600,
+                color: getStatusColor(order.status),
+                textTransform: 'uppercase',
+                fontSize: '0.875rem'
+              }}>
+                {order.status.replace('-', ' ')}
+              </span>
+            </div>
           </div>
+
+          {/* Action Buttons - Prominently displayed at top */}
+          {renderActionButtons() && (
+            <div style={{ 
+              marginBottom: '2rem', 
+              padding: '1rem', 
+              backgroundColor: '#f8fafc', 
+              borderRadius: '0.75rem',
+              border: '1px solid #e2e8f0',
+              display: 'flex',
+              justifyContent: 'center'
+            }}>
+              {renderActionButtons()}
+            </div>
+          )}
 
           {/* Customer Details */}
           <div style={{ marginBottom: '2rem' }}>

@@ -580,7 +580,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
       }
       
       // Show success toast notification (green)
-      toast.success('Order Confirmed!', `Order #${order.orderNumber} has been placed successfully.`);
+      toast.success('Order Placed!', `Order #${order.orderNumber} has been placed successfully. Waiting for kitchen confirmation.`);
       
     } catch (error) {
       console.error('Unexpected error in handleSubmit:', error);
@@ -2251,7 +2251,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif',
                 letterSpacing: '-0.02em'
               }}>
-                Order Confirmed!
+                Order Placed!
               </h2>
               <p style={{
                 fontSize: '1.125rem',

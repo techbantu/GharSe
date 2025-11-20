@@ -490,7 +490,7 @@ const PendingOrderModification: React.FC<PendingOrderModificationProps> = ({
 
       // Success!
       toast.success(
-        'Order Confirmed! 🎉',
+        'Order Placed! 🎉',
         'Your order has been sent to the kitchen. You\'ll receive updates as it\'s prepared.'
       );
 
@@ -705,7 +705,7 @@ const PendingOrderModification: React.FC<PendingOrderModificationProps> = ({
           opacity: 0.9,
           marginBottom: '4px',
         }}>
-          Order Confirmed
+          Order Placed
         </div>
         <div style={{
           fontSize: '1.75rem',

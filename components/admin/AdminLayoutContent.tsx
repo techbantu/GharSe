@@ -142,10 +142,18 @@ const AdminLayoutContent: React.FC<AdminLayoutContentProps> = ({ children }) => 
           display: 'flex',
           flexDirection: 'column',
           minWidth: 0,
-          transition: 'all 0.3s'
+          transition: 'all 0.3s',
+          marginLeft: '0' // Default for mobile
         }}
-        className="lg:pl-64"
+        className="admin-main-content"
       >
+        <style jsx global>{`
+          @media (min-width: 1024px) {
+            .admin-main-content {
+              margin-left: 16rem !important;
+            }
+          }
+        `}</style>
         <AdminHeader 
           onMenuClick={() => setSidebarOpen(true)} 
           user={user}

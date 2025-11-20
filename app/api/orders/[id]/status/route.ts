@@ -53,7 +53,31 @@ export async function PUT(
     const updatedOrder = await prisma.order.update({
       where: { id },
       data: { status: dbStatus as any },
+      include: {
+        items: {
+          include: {
+            menuItem: true
+          }
+        }
+      }
     });
+
+    // Send notifications for status changes
+    try {
+      // Import dynamically to avoid circular dependencies
+      const { notificationManager } = await import('@/lib/notifications/notification-manager');
+      
+      // Map DB status to OrderStatus type
+      const orderStatus = dbStatus.toLowerCase().replace(/_/g, '-') as any;
+      
+      // Send notification based on status
+      await notificationManager.sendOrderStatusUpdate(updatedOrder as any, orderStatus);
+      
+      console.log(`[Order API] Sent notifications for status: ${dbStatus}`);
+    } catch (notificationError) {
+      console.error('[Order API] Failed to send notifications:', notificationError);
+      // Don't fail the request, just log the error
+    }
 
     // TODO: Emit socket event for real-time update
     // io.emit('orderStatusUpdated', updatedOrder);
