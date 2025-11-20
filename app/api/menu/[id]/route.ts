@@ -2,6 +2,33 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/utils/logger';
 
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const id = params.id;
+    logger.info(`[Menu API] Fetching item ${id}`);
+
+    const menuItem = await prisma.menuItem.findUnique({ where: { id } });
+
+    if (!menuItem) {
+      return NextResponse.json(
+        { success: false, error: 'Item not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({ success: true, item: menuItem });
+  } catch (error) {
+    logger.error('[Menu API] GET item error', { error });
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch item' },
+      { status: 500 }
+    );
+  }
+}
+
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }
