@@ -302,6 +302,8 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   
   // Mark as mounted (client-side only)
   // Setup cross-tab sync
+  const isLocalUpdate = useRef(false);
+
   useEffect(() => {
     setIsMounted(true);
     
@@ -324,24 +326,16 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         broadcastChannel.current = channel;
         
         channel.onmessage = (event) => {
-          if (event.data.type === 'CART_UPDATED') {
-            // Prevent processing our own broadcasts (check instance ID)
-            if (event.data.instanceId === instanceIdRef.current) {
-              return; // Ignore broadcasts from THIS component instance
-            }
+          const { type, source, cart: incomingCart } = event.data || {};
 
-            // GENIUS FIX: Only update if cart actually changed (prevent infinite loop)
-            // Compare cart contents to avoid unnecessary re-renders
-            const currentCartJson = JSON.stringify(cart);
-            const incomingCartJson = JSON.stringify(event.data.cart);
-            
-            if (currentCartJson === incomingCartJson) {
-              console.log('[Cart Sync] Received identical cart, ignoring');
-              return; // Cart hasn't changed, no need to update
-            }
+          if (type === 'CART_UPDATED') {
+            // Ignore local echoes
+            if (source === 'local') return;
 
             console.log('[Cart Sync] Received cart update from another tab');
-            dispatch({ type: 'LOAD_CART', payload: event.data.cart });
+            
+            // We do NOT set isLocalUpdate here, so the useEffect won't broadcast back
+            dispatch({ type: 'LOAD_CART', payload: incomingCart });
           }
         };
         
@@ -351,15 +345,12 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     }
     
-    // DISABLED: localStorage event listener (was causing duplicate events)
-    // BroadcastChannel is sufficient for modern browsers
-    // const handleStorageEvent = (e: StorageEvent) => { ... };
-    // window.addEventListener('storage', handleStorageEvent);
-    
     // Cleanup
     return () => {
       if (broadcastChannel.current) {
+        broadcastChannel.current.onmessage = null;
         broadcastChannel.current.close();
+        broadcastChannel.current = null;
       }
     };
   }, []);
@@ -376,6 +367,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         
         // GENIUS: Check for stale prices and refresh from database
         validateAndRefreshCartPrices(parsedCart).then((updatedCart) => {
+          // This dispatch is from loading, not a local user action, so isLocalUpdate is not set.
           dispatch({ type: 'LOAD_CART', payload: updatedCart });
         });
       } catch (error) {
@@ -491,25 +483,25 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     if (!isMounted || !sessionIdRef.current) return;
 
-    // GENIUS FIX: Removed throttle check that was causing timing issues
-    // instanceIdRef already prevents self-receive via BroadcastChannel (line 329)
-    // Deep comparison in receiver prevents infinite loops (line 337)
-
     // Save to localStorage for persistence
     localStorage.setItem('bantusKitchenCart', JSON.stringify(cart));
 
-    // Broadcast ONLY via BroadcastChannel (not localStorage)
-    if (broadcastChannel.current) {
+    // Broadcast ONLY if this was a local update
+    if (broadcastChannel.current && isLocalUpdate.current) {
       try {
         const payload = {
           type: 'CART_UPDATED',
           cart,
-          instanceId: instanceIdRef.current, // Instance ID to prevent self-receive
+          source: 'local', // Tag as local
+          instanceId: instanceIdRef.current,
           sessionId: sessionIdRef.current,
           timestamp: Date.now(),
         };
         broadcastChannel.current.postMessage(payload);
         console.log('[Cart Sync] Broadcasted cart update to other tabs');
+        
+        // Reset flag
+        isLocalUpdate.current = false;
       } catch (error) {
         console.error('[Cart Sync] BroadcastChannel error:', error);
       }
@@ -646,27 +638,33 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
     
     // Regular cart addition (when no active order)
+    isLocalUpdate.current = true; // Mark as local update
     dispatch({ type: 'ADD_ITEM', payload: { menuItem, quantity, customizations, specialInstructions } });
     console.log('[CartContext] ADD_ITEM dispatched to regular cart');
   };
   
   const removeItem = (id: string) => {
+    isLocalUpdate.current = true; // Mark as local update
     dispatch({ type: 'REMOVE_ITEM', payload: { id } });
   };
   
   const updateQuantity = (id: string, quantity: number) => {
+    isLocalUpdate.current = true; // Mark as local update
     dispatch({ type: 'UPDATE_QUANTITY', payload: { id, quantity } });
   };
   
   const clearCart = () => {
+    isLocalUpdate.current = true; // Mark as local update
     dispatch({ type: 'CLEAR_CART' });
   };
   
   const applyPromoCode = (code: string, discount: number) => {
+    isLocalUpdate.current = true; // Mark as local update
     dispatch({ type: 'APPLY_PROMO', payload: { code, discount } });
   };
   
   const removePromoCode = () => {
+    isLocalUpdate.current = true; // Mark as local update
     dispatch({ type: 'REMOVE_PROMO' });
   };
   

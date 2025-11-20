@@ -28,6 +28,7 @@ import { checkRefereeDiscount, applyRefereeDiscount } from '@/lib/referral-engin
 import { calculateFirstOrderDiscount, markFirstOrderUsed } from '@/lib/first-order-discount';
 import { getMaxWalletUsage, debitWallet } from '@/lib/wallet-manager';
 import { withIdempotency } from '@/lib/idempotency';
+import { geocodeAddress } from '@/lib/geocoding';
 
 /**
  * Validation Schema for Order Creation
@@ -256,6 +257,13 @@ async function createOrderLogic(body: unknown): Promise<Result<{
     // CRITICAL FIX: Declare order variable in outer scope
     let order: Order;
     
+    // Geocode address if delivery
+    let coordinates: { lat: number; lng: number } | null = null;
+    if (data.orderType === 'delivery' && data.deliveryAddress) {
+      const fullAddress = `${data.deliveryAddress.street}, ${data.deliveryAddress.city}, ${data.deliveryAddress.state}, ${data.deliveryAddress.zipCode}`;
+      coordinates = await geocodeAddress(fullAddress);
+    }
+    
     // Declare notification result in outer scope so it's accessible after try-catch
     let notificationResult: {
       email?: { success: boolean; error?: string; skipped?: boolean };
@@ -286,6 +294,8 @@ async function createOrderLogic(body: unknown): Promise<Result<{
             deliveryCity: data.deliveryAddress?.city || '',
             deliveryZip: data.deliveryAddress?.zipCode || '',
             deliveryNotes: data.deliveryAddress?.deliveryInstructions || '',
+            latitude: coordinates?.lat,
+            longitude: coordinates?.lng,
             subtotal: data.pricing.subtotal,
             tax: data.pricing.tax,
             deliveryFee: data.pricing.deliveryFee,
@@ -910,37 +920,11 @@ export async function GET(request: NextRequest) {
       },
     });
     
-    // SIMPLIFIED FILTERING: Only filter OBVIOUS test/sample orders
-    // Be conservative - we'd rather show a test order than hide a real one!
-    const dbOrders = allDbOrders.filter((order: any) => {
-      const email = order.customerEmail.toLowerCase();
-      const name = order.customerName.toLowerCase();
-      
-      // Only exclude VERY OBVIOUS test patterns
-      // Be VERY conservative to avoid hiding real orders
-      if (
-        // Only filter exact @example.com (standard test domain)
-        email.endsWith('@example.com') ||
-        // Only filter emails that START with obvious test words
-        email.startsWith('test@') ||
-        email.startsWith('sample@') ||
-        email.startsWith('dummy@') ||
-        email.startsWith('fake@') ||
-        // Only filter EXACT matches of obvious test names
-        name === 'test' ||
-        name === 'test user' ||
-        name === 'sample' ||
-        name === 'sample user' ||
-        name === 'dummy' ||
-        name === 'fake'
-      ) {
-        console.log('🚫 Filtered out test order:', order.orderNumber, name, email);
-        return false;
-      }
-      
-      console.log('✅ Including order:', order.orderNumber, name, email);
-      return true; // Real order - show it!
-    });
+    // SIMPLIFIED FILTERING: Show ALL orders for now to fix "missing history" issue
+    // The previous filter was too aggressive and hid valid test orders
+    const dbOrders = allDbOrders;
+    
+    logger.info(`Fetched ${dbOrders.length} orders from database`);
     
     // Transform database orders to frontend Order format
     const transformedOrders: Order[] = dbOrders.map((dbOrder: any) => {
@@ -1044,6 +1028,8 @@ export async function GET(request: NextRequest) {
         createdAt: dbOrder.createdAt,
         updatedAt: dbOrder.updatedAt,
         deliveryAddress,
+        latitude: dbOrder.latitude || undefined,
+        longitude: dbOrder.longitude || undefined,
         contactPreference: ['email', 'sms'],
         notifications: [],
       };

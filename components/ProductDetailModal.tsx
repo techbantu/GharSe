@@ -8,7 +8,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, Plus, Minus, Star, Flame, Leaf } from 'lucide-react';
+import { X, Plus, Minus, Star, Flame, Leaf, WheatOff, Clock, Utensils, Scale } from 'lucide-react';
 import { MenuItem } from '@/types';
 import { useCart } from '@/context/CartContext';
 
@@ -185,6 +185,42 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   <Star size={18} style={{ color: '#fbbf24' }} fill="#fbbf24" />
                 </div>
               )}
+              {item.isVegan && (
+                <div
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    background: 'rgba(255, 255, 255, 0.95)',
+                    backdropFilter: 'blur(8px)',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)'
+                  }}
+                  title="Vegan"
+                >
+                  <Leaf size={18} className="text-green-800" fill="currentColor" />
+                </div>
+              )}
+              {item.isGlutenFree && (
+                <div
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    background: 'rgba(255, 255, 255, 0.95)',
+                    backdropFilter: 'blur(8px)',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)'
+                  }}
+                  title="Gluten Free"
+                >
+                  <WheatOff size={18} className="text-amber-600" />
+                </div>
+              )}
             </div>
           </div>
 
@@ -210,6 +246,28 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             }}>
               {item.description}
             </p>
+
+            {/* Key Stats Row */}
+            <div className="flex items-center gap-4 mb-4 text-sm text-gray-600">
+              {item.preparationTime && (
+                <div className="flex items-center gap-1.5 bg-orange-50 px-2.5 py-1 rounded-lg border border-orange-100">
+                  <Clock size={14} className="text-orange-500" />
+                  <span>{item.preparationTime} mins</span>
+                </div>
+              )}
+              {item.calories && (
+                <div className="flex items-center gap-1.5 bg-green-50 px-2.5 py-1 rounded-lg border border-green-100">
+                  <Flame size={14} className="text-green-500" />
+                  <span>{item.calories} kcal</span>
+                </div>
+              )}
+              {item.servingSize && (
+                <div className="flex items-center gap-1.5 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-100">
+                  <Utensils size={14} className="text-blue-500" />
+                  <span>{item.servingSize}</span>
+                </div>
+              )}
+            </div>
 
             {/* Price */}
             <div style={{
