@@ -24,48 +24,48 @@ import { useCart } from '@/context/CartContext';
 import { useToast } from '@/context/ToastContext';
 import CustomerCancelOrderModal from '@/components/CustomerCancelOrderModal';
 
-// Order status configuration
+// Order status configuration - Food-themed colors matching website palette
 const ORDER_STATUS = {
   PENDING_CONFIRMATION: {
     label: 'Waiting for GharKha confirmation',
-    color: '#F97316',
-    bgColor: '#FFF7ED',
+    color: '#f59e0b', // Warm amber (waiting)
+    bgColor: '#FEF3C7', // Light amber background
     icon: Clock,
   },
   PENDING: {
     label: 'Preparing',
-    color: '#F59E0B',
-    bgColor: '#FEF3C7',
+    color: '#f59e0b', // Warm amber (waiting)
+    bgColor: '#FEF3C7', // Light amber background
     icon: Clock,
   },
   CONFIRMED: {
     label: 'Confirmed',
-    color: '#3B82F6',
-    bgColor: '#DBEAFE',
+    color: '#f97316', // Orange (order confirmed)
+    bgColor: '#FFF7ED', // Light orange background
     icon: CheckCircle2,
   },
   PREPARING: {
     label: 'Cooking',
-    color: '#8B5CF6',
-    bgColor: '#EDE9FE',
+    color: '#ea580c', // Deep orange/red (cooking - like fire)
+    bgColor: '#FFEDD5', // Warm orange background
     icon: ChefHat,
   },
   OUT_FOR_DELIVERY: {
     label: 'On the Way',
-    color: '#F97316',
-    bgColor: '#FFEDD5',
+    color: '#fb923c', // Warm orange (on the way)
+    bgColor: '#FFEDD5', // Light orange background
     icon: Truck,
   },
   DELIVERED: {
     label: 'Delivered',
-    color: '#10B981',
-    bgColor: '#D1FAE5',
+    color: '#10b981', // Fresh green (delivered successfully)
+    bgColor: '#D1FAE5', // Light green background
     icon: CheckCircle2,
   },
   CANCELLED: {
     label: 'Cancelled',
-    color: '#EF4444',
-    bgColor: '#FEE2E2',
+    color: '#dc2626', // Deep red (cancelled)
+    bgColor: '#FEE2E2', // Light red background
     icon: XCircle,
   },
 };

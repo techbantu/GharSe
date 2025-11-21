@@ -37,80 +37,290 @@ export default function EditProfileModal({ isOpen, onClose, currentUser, onSave 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-neutral-200 dark:border-neutral-800">
-        <div className="p-6 border-b border-neutral-200 dark:border-neutral-800 flex justify-between items-center">
-          <h2 className="text-xl font-bold text-neutral-900 dark:text-white">Edit Profile</h2>
-          <button onClick={onClose} className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-colors">
-            <X className="w-5 h-5 text-neutral-500" />
+    <div style={{
+      position: 'fixed',
+      inset: 0,
+      zIndex: 50,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      backdropFilter: 'blur(4px)',
+      padding: '1rem'
+    }}>
+      <div style={{
+        backgroundColor: '#ffffff',
+        borderRadius: '1rem',
+        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+        width: '100%',
+        maxWidth: '28rem',
+        overflow: 'hidden',
+        border: '1px solid #e5e7eb'
+      }}>
+        {/* Header */}
+        <div style={{
+          padding: '1.5rem',
+          borderBottom: '1px solid #e5e7eb',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <h2 style={{
+            fontSize: '1.25rem',
+            fontWeight: 700,
+            color: '#111827',
+            margin: 0
+          }}>
+            Edit Profile
+          </h2>
+          <button 
+            onClick={onClose}
+            style={{
+              padding: '0.5rem',
+              backgroundColor: 'transparent',
+              border: 'none',
+              borderRadius: '9999px',
+              cursor: 'pointer',
+              transition: 'background-color 0.2s',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          >
+            <X size={20} style={{ color: '#6b7280' }} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Full Name</label>
-            <div className="relative">
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
+        {/* Form */}
+        <form onSubmit={handleSubmit} style={{ padding: '1.5rem' }}>
+          {/* Full Name Field */}
+          <div style={{ marginBottom: '1.25rem' }}>
+            <label style={{
+              display: 'block',
+              fontSize: '0.875rem',
+              fontWeight: 500,
+              color: '#374151',
+              marginBottom: '0.5rem'
+            }}>
+              Full Name
+            </label>
+            <div style={{ position: 'relative' }}>
+              <User style={{
+                position: 'absolute',
+                left: '0.75rem',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: '1.25rem',
+                height: '1.25rem',
+                color: '#9ca3af'
+              }} />
               <input
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full pl-10 pr-4 py-2 rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                style={{
+                  width: '100%',
+                  paddingLeft: '2.75rem',
+                  paddingRight: '1rem',
+                  paddingTop: '0.625rem',
+                  paddingBottom: '0.625rem',
+                  borderRadius: '0.5rem',
+                  border: '1px solid #d1d5db',
+                  backgroundColor: '#ffffff',
+                  color: '#111827',
+                  fontSize: '0.875rem',
+                  outline: 'none',
+                  transition: 'all 0.2s'
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = '#ea580c';
+                  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(234, 88, 12, 0.1)';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = '#d1d5db';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
                 required
               />
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Email Address</label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
+          {/* Email Field */}
+          <div style={{ marginBottom: '1.25rem' }}>
+            <label style={{
+              display: 'block',
+              fontSize: '0.875rem',
+              fontWeight: 500,
+              color: '#374151',
+              marginBottom: '0.5rem'
+            }}>
+              Email Address
+            </label>
+            <div style={{ position: 'relative' }}>
+              <Mail style={{
+                position: 'absolute',
+                left: '0.75rem',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: '1.25rem',
+                height: '1.25rem',
+                color: '#9ca3af'
+              }} />
               <input
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full pl-10 pr-4 py-2 rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                style={{
+                  width: '100%',
+                  paddingLeft: '2.75rem',
+                  paddingRight: '1rem',
+                  paddingTop: '0.625rem',
+                  paddingBottom: '0.625rem',
+                  borderRadius: '0.5rem',
+                  border: '1px solid #d1d5db',
+                  backgroundColor: '#ffffff',
+                  color: '#111827',
+                  fontSize: '0.875rem',
+                  outline: 'none',
+                  transition: 'all 0.2s'
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = '#ea580c';
+                  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(234, 88, 12, 0.1)';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = '#d1d5db';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
                 required
               />
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Phone Number</label>
-            <div className="relative">
-              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
+          {/* Phone Field */}
+          <div style={{ marginBottom: '1.25rem' }}>
+            <label style={{
+              display: 'block',
+              fontSize: '0.875rem',
+              fontWeight: 500,
+              color: '#374151',
+              marginBottom: '0.5rem'
+            }}>
+              Phone Number
+            </label>
+            <div style={{ position: 'relative' }}>
+              <Phone style={{
+                position: 'absolute',
+                left: '0.75rem',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: '1.25rem',
+                height: '1.25rem',
+                color: '#9ca3af'
+              }} />
               <input
                 type="tel"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="w-full pl-10 pr-4 py-2 rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                style={{
+                  width: '100%',
+                  paddingLeft: '2.75rem',
+                  paddingRight: '1rem',
+                  paddingTop: '0.625rem',
+                  paddingBottom: '0.625rem',
+                  borderRadius: '0.5rem',
+                  border: '1px solid #d1d5db',
+                  backgroundColor: '#ffffff',
+                  color: '#111827',
+                  fontSize: '0.875rem',
+                  outline: 'none',
+                  transition: 'all 0.2s'
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = '#ea580c';
+                  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(234, 88, 12, 0.1)';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = '#d1d5db';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
               />
             </div>
           </div>
 
-          <div className="pt-4 flex justify-end gap-3">
+          {/* Action Buttons */}
+          <div style={{
+            paddingTop: '1rem',
+            display: 'flex',
+            justifyContent: 'flex-end',
+            gap: '0.75rem'
+          }}>
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
+              style={{
+                padding: '0.625rem 1rem',
+                fontSize: '0.875rem',
+                fontWeight: 500,
+                color: '#374151',
+                backgroundColor: 'transparent',
+                border: 'none',
+                borderRadius: '0.5rem',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                padding: '0.625rem 1rem',
+                fontSize: '0.875rem',
+                fontWeight: 500,
+                color: '#ffffff',
+                backgroundColor: '#ea580c',
+                border: 'none',
+                borderRadius: '0.5rem',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                transition: 'background-color 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                opacity: loading ? 0.5 : 1
+              }}
+              onMouseEnter={(e) => !loading && (e.currentTarget.style.backgroundColor = '#c2410c')}
+              onMouseLeave={(e) => !loading && (e.currentTarget.style.backgroundColor = '#ea580c')}
             >
               {loading ? (
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <div style={{
+                  width: '1rem',
+                  height: '1rem',
+                  border: '2px solid rgba(255, 255, 255, 0.3)',
+                  borderTop: '2px solid #ffffff',
+                  borderRadius: '9999px',
+                  animation: 'spin 1s linear infinite'
+                }} />
               ) : (
-                <Save className="w-4 h-4" />
+                <Save size={16} />
               )}
               Save Changes
             </button>
           </div>
         </form>
       </div>
+
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }

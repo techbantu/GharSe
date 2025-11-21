@@ -1,6 +1,6 @@
-# 🏠 GharSe - Revolutionary Home Chef Marketplace
+# 🏠 GharSe - Home Chef Marketplace
 
-> **GharSe** (Hindi: घर से, meaning "From Home") - Connecting authentic home chefs with food lovers worldwide. A next-generation food delivery platform that brings homemade culinary experiences to your doorstep.
+> **GharSe** (Hindi: घर से, meaning "From Home") - Connecting authentic home chefs with food lovers. A platform for homemade culinary experiences delivered to your doorstep.
 
 [![Next.js](https://img.shields.io/badge/Next.js-16.0-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
@@ -10,9 +10,9 @@
 
 ---
 
-## 🌟 Vision
+## 🌟 About
 
-GharSe is revolutionizing the food delivery industry by creating a trusted marketplace where home chefs can share their culinary talents with the world. Unlike traditional food delivery platforms, we focus on authentic, homemade cuisine prepared with love and cultural heritage.
+GharSe is a marketplace connecting home chefs with customers seeking authentic, homemade cuisine. The platform enables chefs to share their culinary skills while customers discover dishes prepared with traditional recipes and cultural heritage.
 
 ---
 

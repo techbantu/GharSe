@@ -2,13 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/utils/logger';
 
-export async function PUT(
-  request: NextRequest,
-  context: { params: Promise<{ id: string }> }
-) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  
+  console.log('==== STATUS UPDATE REQUEST RECEIVED ====');
+  console.log('[Order API] Request URL:', request.url);
+  console.log('[Order API] Order ID:', id);
+
   try {
-    const { id } = await context.params;
-    const { status } = await request.json();
+    const body = await request.json();
+    const { status } = body;
+    
+    console.log(`[Order API] Updating status for order ${id} to ${status}`);
 
     if (!status) {
       return NextResponse.json(
@@ -50,10 +55,12 @@ export async function PUT(
 
     console.log(`[Order API] Updating status for order ${id} to ${dbStatus}`);
 
+    // CRITICAL: Include customer relation for notifications
     const updatedOrder = await prisma.order.update({
       where: { id },
       data: { status: dbStatus as any },
       include: {
+        customer: true, // Include customer for notifications
         items: {
           include: {
             menuItem: true
@@ -67,15 +74,94 @@ export async function PUT(
       // Import dynamically to avoid circular dependencies
       const { notificationManager } = await import('@/lib/notifications/notification-manager');
       
-      // Map DB status to OrderStatus type
+      // Map DB status to OrderStatus type (e.g., PREPARING -> preparing)
       const orderStatus = dbStatus.toLowerCase().replace(/_/g, '-') as any;
       
-      // Send notification based on status
-      await notificationManager.sendOrderStatusUpdate(updatedOrder as any, orderStatus);
+      // CRITICAL: Transform Prisma order to notification manager's expected format
+      // The notification manager expects order.customer.email and order.customer.phone
+      // Prisma order has customerEmail, customerPhone, and optional customer relation
+      const transformedOrder = {
+        ...updatedOrder,
+        customer: {
+          id: updatedOrder.customer?.id || undefined,
+          name: updatedOrder.customerName,
+          email: updatedOrder.customer?.email || updatedOrder.customerEmail,
+          phone: updatedOrder.customer?.phone || updatedOrder.customerPhone,
+          isReturningCustomer: !!updatedOrder.customer,
+        },
+        pricing: {
+          subtotal: updatedOrder.subtotal,
+          tax: updatedOrder.tax,
+          deliveryFee: updatedOrder.deliveryFee,
+          discount: updatedOrder.discount || 0,
+          tip: updatedOrder.tip || 0,
+          total: updatedOrder.total,
+        },
+        orderType: (updatedOrder as any).orderType || 'delivery',
+        estimatedReadyTime: updatedOrder.estimatedDelivery || new Date(),
+        deliveryAddress: updatedOrder.deliveryAddress ? {
+          street: updatedOrder.deliveryAddress,
+          city: updatedOrder.deliveryCity || '',
+          zipCode: updatedOrder.deliveryZip || '',
+          state: (updatedOrder as any).deliveryState || '',
+          country: 'India',
+        } : undefined,
+        items: updatedOrder.items.map(item => ({
+          id: item.id,
+          menuItem: item.menuItem,
+          quantity: item.quantity,
+          price: item.price,
+          subtotal: item.subtotal,
+          specialInstructions: item.specialInstructions,
+        })),
+        contactPreference: ['email', 'sms'] as any,
+        notifications: [],
+      };
       
-      console.log(`[Order API] Sent notifications for status: ${dbStatus}`);
+      console.log(`[Order API] 📧 Preparing to send notifications for status: ${dbStatus} (${orderStatus})`);
+      console.log(`[Order API] Customer email: ${transformedOrder.customer.email}`);
+      console.log(`[Order API] Customer phone: ${transformedOrder.customer.phone}`);
+      console.log(`[Order API] Order number: ${transformedOrder.orderNumber}`);
+      
+      // CRITICAL: Send ORDER CONFIRMATION when chef confirms (not just status update)
+      let notificationResult;
+      if (dbStatus === 'CONFIRMED') {
+        // Chef just confirmed the order - send FULL confirmation email + SMS
+        console.log('[Order API] 🎉 Sending ORDER CONFIRMATION (chef approved!)');
+        notificationResult = await notificationManager.sendOrderConfirmation(transformedOrder as any);
+      } else {
+        // Regular status update for other statuses
+        notificationResult = await notificationManager.sendStatusUpdate(transformedOrder as any, orderStatus);
+      }
+      
+      console.log(`[Order API] ✅ Notification result:`, {
+        overall: notificationResult.overall,
+        email: notificationResult.email,
+        sms: notificationResult.sms,
+        orderNumber: transformedOrder.orderNumber,
+        status: orderStatus,
+      });
+      
+      if (!notificationResult.overall) {
+        console.warn(`[Order API] ⚠️ All notifications failed for order ${id}`, {
+          emailError: notificationResult.email?.error,
+          smsError: notificationResult.sms?.error,
+          emailSkipped: notificationResult.email?.skipped,
+          smsSkipped: notificationResult.sms?.skipped,
+        });
+      } else {
+        console.log(`[Order API] 🎉 Successfully sent notifications for order ${transformedOrder.orderNumber}`);
+      }
     } catch (notificationError) {
-      console.error('[Order API] Failed to send notifications:', notificationError);
+      console.error('[Order API] ❌ Failed to send notifications:', {
+        error: notificationError instanceof Error ? notificationError.message : String(notificationError),
+        stack: notificationError instanceof Error ? notificationError.stack : undefined,
+        orderId: id,
+        orderNumber: updatedOrder.orderNumber,
+        status: dbStatus,
+        customerEmail: updatedOrder.customerEmail,
+        customerPhone: updatedOrder.customerPhone,
+      });
       // Don't fail the request, just log the error
     }
 

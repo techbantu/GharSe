@@ -1,5 +1,5 @@
-import React from 'react';
-import { X, Printer, Phone, MapPin, CreditCard, Clock, CheckCircle, User } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Printer, Phone, MapPin, CreditCard, Clock, CheckCircle, User, ChevronDown, ChevronUp } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface OrderItem {
@@ -41,6 +41,8 @@ interface OrderDetailsModalProps {
 }
 
 export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetailsModalProps) {
+  const [showMap, setShowMap] = useState(false);
+  
   if (!isOpen || !order) return null;
 
   const handlePrint = () => {
@@ -60,6 +62,31 @@ export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetai
     };
     return colors[status] || '#6b7280';
   };
+
+  // Calculate pricing breakdown
+  const calculatePricing = () => {
+    const subtotal = order.items.reduce((sum, item) => {
+      return sum + (Number(item.menuItem?.price || 0) * Number(item.quantity || 0));
+    }, 0);
+    
+    // GST/Tax calculation (assuming 5% GST)
+    const taxRate = 0.05;
+    const taxAmount = subtotal * taxRate;
+    
+    // Delivery fee (if applicable)
+    const deliveryFee = order.deliveryAddress ? 50 : 0;
+    
+    const total = subtotal + taxAmount + deliveryFee;
+    
+    return {
+      subtotal,
+      taxAmount,
+      deliveryFee,
+      total
+    };
+  };
+
+  const pricing = calculatePricing();
 
   const updateStatus = async (newStatus: string) => {
     try {
@@ -95,36 +122,38 @@ export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetai
       case 'pending':
       case 'pending-confirmation':
         return (
-          <div style={{ display: 'flex', gap: '1rem' }}>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
             <button
               onClick={() => updateStatus('cancelled')}
               style={{
-                padding: '0.75rem 1.5rem',
+                padding: '0.375rem 0.75rem',
                 backgroundColor: '#fee2e2',
                 color: '#ef4444',
                 border: 'none',
-                borderRadius: '0.5rem',
-                fontSize: '0.875rem',
+                borderRadius: '0.375rem',
+                fontSize: '0.75rem',
                 fontWeight: 600,
-                cursor: 'pointer'
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
               }}
             >
-              Reject Order
+              Reject
             </button>
             <button
               onClick={() => updateStatus('confirmed')}
               style={{
-                padding: '0.75rem 1.5rem',
+                padding: '0.375rem 0.75rem',
                 backgroundColor: '#16a34a',
                 color: '#ffffff',
                 border: 'none',
-                borderRadius: '0.5rem',
-                fontSize: '0.875rem',
+                borderRadius: '0.375rem',
+                fontSize: '0.75rem',
                 fontWeight: 600,
-                cursor: 'pointer'
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
               }}
             >
-              Confirm Order
+              Confirm
             </button>
           </div>
         );
@@ -133,14 +162,15 @@ export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetai
           <button
             onClick={() => updateStatus('preparing')}
             style={{
-              padding: '0.75rem 1.5rem',
+              padding: '0.375rem 0.75rem',
               backgroundColor: '#a855f7',
               color: '#ffffff',
               border: 'none',
-              borderRadius: '0.5rem',
-              fontSize: '0.875rem',
+              borderRadius: '0.375rem',
+              fontSize: '0.75rem',
               fontWeight: 600,
-              cursor: 'pointer'
+              cursor: 'pointer',
+              whiteSpace: 'nowrap'
             }}
           >
             Start Preparing
@@ -151,14 +181,15 @@ export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetai
           <button
             onClick={() => updateStatus('ready')}
             style={{
-              padding: '0.75rem 1.5rem',
+              padding: '0.375rem 0.75rem',
               backgroundColor: '#10b981',
               color: '#ffffff',
               border: 'none',
-              borderRadius: '0.5rem',
-              fontSize: '0.875rem',
+              borderRadius: '0.375rem',
+              fontSize: '0.75rem',
               fontWeight: 600,
-              cursor: 'pointer'
+              cursor: 'pointer',
+              whiteSpace: 'nowrap'
             }}
           >
             Mark as Ready
@@ -169,17 +200,18 @@ export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetai
           <button
             onClick={() => updateStatus(order.deliveryAddress ? 'out-for-delivery' : 'delivered')}
             style={{
-              padding: '0.75rem 1.5rem',
+              padding: '0.375rem 0.75rem',
               backgroundColor: '#f97316',
               color: '#ffffff',
               border: 'none',
-              borderRadius: '0.5rem',
-              fontSize: '0.875rem',
+              borderRadius: '0.375rem',
+              fontSize: '0.75rem',
               fontWeight: 600,
-              cursor: 'pointer'
+              cursor: 'pointer',
+              whiteSpace: 'nowrap'
             }}
           >
-            {order.deliveryAddress ? 'Send for Delivery' : 'Mark Picked Up'}
+            {order.deliveryAddress ? 'Out for Delivery' : 'Picked Up'}
           </button>
         );
       case 'out-for-delivery':
@@ -187,14 +219,15 @@ export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetai
           <button
             onClick={() => updateStatus('delivered')}
             style={{
-              padding: '0.75rem 1.5rem',
+              padding: '0.375rem 0.75rem',
               backgroundColor: '#6b7280',
               color: '#ffffff',
               border: 'none',
-              borderRadius: '0.5rem',
-              fontSize: '0.875rem',
+              borderRadius: '0.375rem',
+              fontSize: '0.75rem',
               fontWeight: 600,
-              cursor: 'pointer'
+              cursor: 'pointer',
+              whiteSpace: 'nowrap'
             }}
           >
             Mark Delivered
@@ -228,9 +261,9 @@ export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetai
         overflowY: 'auto',
         boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
       }}>
-        {/* Header */}
+        {/* Header - Compact */}
         <div style={{
-          padding: '1.5rem',
+          padding: '1rem',
           borderBottom: '1px solid #e5e7eb',
           display: 'flex',
           justifyContent: 'space-between',
@@ -241,46 +274,49 @@ export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetai
           zIndex: 10
         }}>
           <div>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111827' }}>
+            <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#111827' }}>
               Order #{order.orderNumber}
             </h2>
-            <p style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.25rem' }}>
-              Placed on {format(new Date(order.createdAt), 'MMM d, yyyy • h:mm a')}
+            <p style={{ fontSize: '0.6875rem', color: '#6b7280', marginTop: '0.125rem' }}>
+              {format(new Date(order.createdAt), 'MMM d, yyyy • h:mm a')}
             </p>
           </div>
           <button
             onClick={onClose}
             style={{
-              padding: '0.5rem',
-              borderRadius: '0.5rem',
+              padding: '0.375rem',
+              borderRadius: '0.375rem',
               border: 'none',
               backgroundColor: '#f3f4f6',
               cursor: 'pointer',
-              color: '#4b5563'
+              color: '#4b5563',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
             }}
           >
-            <X size={20} />
+            <X size={16} />
           </button>
         </div>
 
         {/* Content */}
-        <div style={{ padding: '1.5rem' }}>
-          {/* Status Banner */}
+        <div style={{ padding: '1rem' }}>
+          {/* Status Banner & Action - Compact */}
           <div style={{
-            padding: '1rem',
+            padding: '0.75rem 1rem',
             borderRadius: '0.5rem',
             backgroundColor: `${getStatusColor(order.status)}15`,
             border: `1px solid ${getStatusColor(order.status)}30`,
-            marginBottom: '1.5rem',
+            marginBottom: '1rem',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             gap: '0.75rem'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <div style={{
-                width: '8px',
-                height: '8px',
+                width: '6px',
+                height: '6px',
                 borderRadius: '50%',
                 backgroundColor: getStatusColor(order.status)
               }} />
@@ -288,208 +324,279 @@ export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetai
                 fontWeight: 600,
                 color: getStatusColor(order.status),
                 textTransform: 'uppercase',
-                fontSize: '0.875rem'
+                fontSize: '0.75rem',
+                letterSpacing: '0.05em'
               }}>
                 {order.status.replace('-', ' ')}
               </span>
             </div>
+            {renderActionButtons()}
           </div>
 
-          {/* Action Buttons - Prominently displayed at top */}
-          {renderActionButtons() && (
+          {/* Customer Details - Compact 2-Column Grid */}
+          <div style={{ 
+            marginBottom: '1rem',
+            padding: '0.75rem',
+            backgroundColor: '#f9fafb',
+            borderRadius: '0.5rem',
+            border: '1px solid #e5e7eb'
+          }}>
             <div style={{ 
-              marginBottom: '2rem', 
-              padding: '1rem', 
-              backgroundColor: '#f8fafc', 
-              borderRadius: '0.75rem',
-              border: '1px solid #e2e8f0',
-              display: 'flex',
-              justifyContent: 'center'
+              display: 'grid', 
+              gridTemplateColumns: '1fr 1fr',
+              gap: '0.75rem',
+              fontSize: '0.75rem'
             }}>
-              {renderActionButtons()}
-            </div>
-          )}
-
-          {/* Customer Details */}
-          <div style={{ marginBottom: '2rem' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: 600, color: '#111827', marginBottom: '1rem' }}>
-              Customer Details
-            </h3>
-            <div style={{ display: 'grid', gap: '1rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <div style={{ padding: '0.5rem', backgroundColor: '#f3f4f6', borderRadius: '0.5rem' }}>
-                  <User size={18} color="#4b5563" />
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: '0.25rem' }}>
+                  <User size={12} color="#6b7280" />
+                  <span style={{ color: '#6b7280', fontWeight: 500 }}>Customer</span>
                 </div>
-                <div>
-                  <p style={{ fontSize: '0.75rem', color: '#6b7280' }}>Name</p>
-                  <p style={{ fontSize: '0.875rem', fontWeight: 500, color: '#111827' }}>
-                    {order.customer?.name || 'Guest User'}
-                  </p>
-                </div>
+                <p style={{ color: '#111827', fontWeight: 600, fontSize: '0.8125rem' }}>
+                  {order.customer?.name || 'Guest User'}
+                </p>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <div style={{ padding: '0.5rem', backgroundColor: '#f3f4f6', borderRadius: '0.5rem' }}>
-                  <Phone size={18} color="#4b5563" />
+              
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: '0.25rem' }}>
+                  <Phone size={12} color="#6b7280" />
+                  <span style={{ color: '#6b7280', fontWeight: 500 }}>Phone</span>
                 </div>
-                <div>
-                  <p style={{ fontSize: '0.75rem', color: '#6b7280' }}>Phone</p>
-                  <p style={{ fontSize: '0.875rem', fontWeight: 500, color: '#111827' }}>
-                    {order.customer?.phone || 'Not provided'}
-                  </p>
-                </div>
+                <p style={{ color: '#111827', fontWeight: 600, fontSize: '0.8125rem' }}>
+                  {order.customer?.phone || 'Not provided'}
+                </p>
               </div>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
-                <div style={{ padding: '0.5rem', backgroundColor: '#f3f4f6', borderRadius: '0.5rem' }}>
-                  <MapPin size={18} color="#4b5563" />
+              
+              <div style={{ gridColumn: '1 / -1' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: '0.25rem' }}>
+                  <MapPin size={12} color="#6b7280" />
+                  <span style={{ color: '#6b7280', fontWeight: 500 }}>Address</span>
                 </div>
-                <div style={{ width: '100%' }}>
-                  <p style={{ fontSize: '0.75rem', color: '#6b7280' }}>Delivery Address</p>
-                  <p style={{ fontSize: '0.875rem', fontWeight: 500, color: '#111827' }}>
-                    {order.deliveryAddress ? `${order.deliveryAddress.street}, ${order.deliveryAddress.city}, ${order.deliveryAddress.zipCode}` : 'Pickup Order'}
-                  </p>
-                  
-                  {/* Map Preview in Modal */}
-                  {((order.latitude && order.longitude) || order.deliveryAddress) && (
-                    <div 
+                <p style={{ color: '#111827', fontWeight: 600, fontSize: '0.8125rem', lineHeight: '1.3' }}>
+                  {order.deliveryAddress 
+                    ? `${order.deliveryAddress.street}, ${order.deliveryAddress.city}, ${order.deliveryAddress.zipCode}` 
+                    : 'Pickup Order'}
+                </p>
+                
+                {/* Collapsible Map */}
+                {((order.latitude && order.longitude) || order.deliveryAddress) && (
+                  <>
+                    <button
+                      onClick={() => setShowMap(!showMap)}
                       style={{
-                        marginTop: '0.75rem',
-                        width: '100%',
-                        height: '160px',
-                        borderRadius: '0.5rem',
-                        overflow: 'hidden',
-                        boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+                        marginTop: '0.5rem',
+                        padding: '0.25rem 0.5rem',
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '0.25rem',
+                        fontSize: '0.6875rem',
+                        fontWeight: 500,
+                        color: '#4b5563',
                         cursor: 'pointer',
-                        position: 'relative'
-                      }}
-                      onClick={() => {
-                        const mapCenter = (order.latitude && order.longitude) 
-                          ? `${order.latitude},${order.longitude}`
-                          : (order.deliveryAddress
-                            ? `${encodeURIComponent(`${order.deliveryAddress.street}, ${order.deliveryAddress.city}`)}`
-                            : '');
-                        window.open(`https://www.google.com/maps/search/?api=1&query=${mapCenter}`, '_blank');
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.25rem'
                       }}
                     >
-                      <img 
-                        src={`https://maps.googleapis.com/maps/api/staticmap?center=${
-                          (order.latitude && order.longitude) 
+                      {showMap ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                      {showMap ? 'Hide Map' : 'Show Map'}
+                    </button>
+                    
+                    {showMap && (
+                      <div 
+                        style={{
+                          marginTop: '0.5rem',
+                          width: '100%',
+                          height: '120px',
+                          borderRadius: '0.375rem',
+                          overflow: 'hidden',
+                          boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+                          cursor: 'pointer',
+                          position: 'relative'
+                        }}
+                        onClick={() => {
+                          const mapCenter = (order.latitude && order.longitude) 
                             ? `${order.latitude},${order.longitude}`
                             : (order.deliveryAddress
                               ? `${encodeURIComponent(`${order.deliveryAddress.street}, ${order.deliveryAddress.city}`)}`
-                              : '')
-                        }&zoom=15&size=600x300&maptype=roadmap&markers=color:red%7C${
-                          (order.latitude && order.longitude) 
-                            ? `${order.latitude},${order.longitude}`
-                            : (order.deliveryAddress
-                              ? `${encodeURIComponent(`${order.deliveryAddress.street}, ${order.deliveryAddress.city}`)}`
-                              : '')
-                        }&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`}
-                        alt="Delivery Location"
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      />
-                      <div style={{
-                        position: 'absolute',
-                        bottom: '0.5rem',
-                        right: '0.5rem',
-                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                        padding: '0.25rem 0.5rem',
-                        borderRadius: '0.25rem',
-                        fontSize: '0.75rem',
-                        fontWeight: 500,
-                        color: '#374151',
-                        boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
-                      }}>
-                        Click to open
+                              : '');
+                          window.open(`https://www.google.com/maps/search/?api=1&query=${mapCenter}`, '_blank');
+                        }}
+                      >
+                        <img 
+                          src={`https://maps.googleapis.com/maps/api/staticmap?center=${
+                            (order.latitude && order.longitude) 
+                              ? `${order.latitude},${order.longitude}`
+                              : (order.deliveryAddress
+                                ? `${encodeURIComponent(`${order.deliveryAddress.street}, ${order.deliveryAddress.city}`)}`
+                                : '')
+                          }&zoom=15&size=600x300&maptype=roadmap&markers=color:red%7C${
+                            (order.latitude && order.longitude) 
+                              ? `${order.latitude},${order.longitude}`
+                              : (order.deliveryAddress
+                                ? `${encodeURIComponent(`${order.deliveryAddress.street}, ${order.deliveryAddress.city}`)}`
+                                : '')
+                          }&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`}
+                          alt="Delivery Location"
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                        <div style={{
+                          position: 'absolute',
+                          bottom: '0.375rem',
+                          right: '0.375rem',
+                          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                          padding: '0.125rem 0.375rem',
+                          borderRadius: '0.25rem',
+                          fontSize: '0.625rem',
+                          fontWeight: 500,
+                          color: '#374151',
+                          boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                        }}>
+                          Click to open
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Order Items */}
-          <div style={{ marginBottom: '2rem' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: 600, color: '#111827', marginBottom: '1rem' }}>
+          {/* Order Items - Compact Table */}
+          <div style={{ marginBottom: '1rem' }}>
+            <h3 style={{ fontSize: '0.875rem', fontWeight: 600, color: '#111827', marginBottom: '0.5rem' }}>
               Order Items
             </h3>
-            <div style={{ border: '1px solid #e5e7eb', borderRadius: '0.75rem', overflow: 'hidden' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <div style={{ border: '1px solid #e5e7eb', borderRadius: '0.5rem', overflow: 'hidden' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
                 <thead style={{ backgroundColor: '#f9fafb' }}>
                   <tr>
-                    <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.75rem', color: '#6b7280', fontWeight: 600 }}>Item</th>
-                    <th style={{ padding: '0.75rem 1rem', textAlign: 'center', fontSize: '0.75rem', color: '#6b7280', fontWeight: 600 }}>Qty</th>
-                    <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.75rem', color: '#6b7280', fontWeight: 600 }}>Price</th>
-                    <th style={{ padding: '0.75rem 1rem', textAlign: 'right', fontSize: '0.75rem', color: '#6b7280', fontWeight: 600 }}>Total</th>
+                    <th style={{ padding: '0.5rem 0.75rem', textAlign: 'left', fontSize: '0.6875rem', color: '#6b7280', fontWeight: 600 }}>Item</th>
+                    <th style={{ padding: '0.5rem 0.75rem', textAlign: 'center', fontSize: '0.6875rem', color: '#6b7280', fontWeight: 600, width: '50px' }}>Qty</th>
+                    <th style={{ padding: '0.5rem 0.75rem', textAlign: 'right', fontSize: '0.6875rem', color: '#6b7280', fontWeight: 600, width: '80px' }}>Total</th>
                   </tr>
                 </thead>
-                <tbody style={{ fontSize: '0.875rem' }}>
+                <tbody>
                   {order.items.map((item, idx) => {
                     const price = Number(item.menuItem?.price) || 0;
                     const qty = Number(item.quantity) || 0;
                     return (
-                      <tr key={idx} style={{ borderTop: '1px solid #e5e7eb' }}>
-                        <td style={{ padding: '0.75rem 1rem', color: '#111827' }}>{item.menuItem?.name || 'Unknown Item'}</td>
-                        <td style={{ padding: '0.75rem 1rem', textAlign: 'center', color: '#4b5563' }}>{qty}</td>
-                        <td style={{ padding: '0.75rem 1rem', textAlign: 'right', color: '#4b5563' }}>₹{price.toLocaleString('en-IN')}</td>
-                        <td style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: 500, color: '#111827' }}>
-                          ₹{(price * qty).toLocaleString('en-IN')}
+                      <tr key={idx} style={{ borderTop: '1px solid #f3f4f6' }}>
+                        <td style={{ padding: '0.5rem 0.75rem', color: '#111827' }}>
+                          {item.menuItem?.name || 'Unknown Item'}
+                          <span style={{ fontSize: '0.6875rem', color: '#9ca3af', marginLeft: '0.25rem' }}>
+                            @₹{price}
+                          </span>
+                        </td>
+                        <td style={{ padding: '0.5rem 0.75rem', textAlign: 'center', color: '#4b5563', fontWeight: 600 }}>
+                          {qty}
+                        </td>
+                        <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right', fontWeight: 600, color: '#111827' }}>
+                          ₹{(price * qty).toFixed(2)}
                         </td>
                       </tr>
                     );
                   })}
                 </tbody>
-                <tfoot style={{ backgroundColor: '#f9fafb', borderTop: '1px solid #e5e7eb' }}>
-                  <tr>
-                    <td colSpan={3} style={{ padding: '1rem', textAlign: 'right', fontWeight: 600, color: '#111827' }}>Total Amount</td>
-                    <td style={{ padding: '1rem', textAlign: 'right', fontWeight: 700, color: '#ea580c', fontSize: '1.125rem' }}>
-                      ₹{Number(order.pricing?.total || 0).toLocaleString('en-IN')}
-                    </td>
-                  </tr>
-                </tfoot>
               </table>
             </div>
           </div>
 
-          {/* Payment Info */}
-          <div>
-            <h3 style={{ fontSize: '1rem', fontWeight: 600, color: '#111827', marginBottom: '1rem' }}>
-              Payment Information
-            </h3>
-            <div style={{ 
-              padding: '1rem', 
-              borderRadius: '0.75rem', 
-              border: '1px solid #e5e7eb',
+          {/* Pricing Breakdown Card - Beautiful & Compact */}
+          <div style={{
+            marginBottom: '1rem',
+            padding: '0.75rem',
+            background: 'linear-gradient(135deg, #fff5f0 0%, #fff9f5 100%)',
+            borderRadius: '0.5rem',
+            border: '1px solid #fed7aa',
+            boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
+          }}>
+            <h3 style={{ 
+              fontSize: '0.875rem', 
+              fontWeight: 600, 
+              color: '#111827', 
+              marginBottom: '0.625rem',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'space-between'
+              gap: '0.375rem'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <CreditCard size={20} color="#4b5563" />
-                <div>
-                  <p style={{ fontSize: '0.875rem', fontWeight: 500, color: '#111827' }}>
-                    {order.paymentMethod || 'Cash on Delivery'}
-                  </p>
-                  <p style={{ fontSize: '0.75rem', color: '#6b7280' }}>Payment Method</p>
-                </div>
+              <CreditCard size={14} color="#ea580c" />
+              Order Summary
+            </h3>
+            
+            <div style={{ fontSize: '0.8125rem', display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#4b5563' }}>
+                <span>Subtotal</span>
+                <span style={{ fontWeight: 500 }}>₹{pricing.subtotal.toFixed(2)}</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <CheckCircle size={16} color="#16a34a" />
-                <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#16a34a' }}>
-                  Paid
+              
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#4b5563' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                  GST (5%)
                 </span>
+                <span style={{ fontWeight: 500 }}>₹{pricing.taxAmount.toFixed(2)}</span>
               </div>
+              
+              {pricing.deliveryFee > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#4b5563' }}>
+                  <span>Delivery Fee</span>
+                  <span style={{ fontWeight: 500 }}>₹{pricing.deliveryFee.toFixed(2)}</span>
+                </div>
+              )}
+              
+              <div style={{ 
+                height: '1px', 
+                backgroundColor: '#fed7aa', 
+                margin: '0.375rem 0'
+              }} />
+              
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                fontWeight: 700,
+                fontSize: '1rem',
+                color: '#ea580c'
+              }}>
+                <span>Total Amount</span>
+                <span>₹{pricing.total.toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Payment Info - Compact */}
+          <div style={{ 
+            padding: '0.625rem 0.75rem',
+            borderRadius: '0.5rem',
+            border: '1px solid #e5e7eb',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            backgroundColor: '#f9fafb'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <CreditCard size={14} color="#4b5563" />
+              <div>
+                <p style={{ fontSize: '0.75rem', fontWeight: 600, color: '#111827' }}>
+                  {order.paymentMethod || 'Cash on Delivery'}
+                </p>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+              <CheckCircle size={14} color="#16a34a" />
+              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#16a34a' }}>
+                Paid
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Footer */}
+        {/* Footer - Compact */}
         <div style={{
-          padding: '1.5rem',
+          padding: '0.75rem 1rem',
           borderTop: '1px solid #e5e7eb',
           display: 'flex',
           justifyContent: 'flex-end',
-          gap: '1rem',
+          gap: '0.5rem',
           position: 'sticky',
           bottom: 0,
           backgroundColor: '#ffffff',
@@ -499,34 +606,34 @@ export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetai
           <button
             onClick={handlePrint}
             style={{
-              padding: '0.75rem 1.5rem',
+              padding: '0.5rem 1rem',
               backgroundColor: '#ffffff',
               color: '#4b5563',
               border: '1px solid #d1d5db',
-              borderRadius: '0.5rem',
-              fontSize: '0.875rem',
+              borderRadius: '0.375rem',
+              fontSize: '0.75rem',
               fontWeight: 500,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '0.5rem',
+              gap: '0.375rem',
               transition: 'all 0.2s'
             }}
             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ffffff'}
           >
-            <Printer size={18} />
-            Print Receipt
+            <Printer size={14} />
+            Print
           </button>
           <button
             onClick={onClose}
             style={{
-              padding: '0.75rem 1.5rem',
+              padding: '0.5rem 1rem',
               backgroundColor: '#ea580c',
               color: '#ffffff',
               border: 'none',
-              borderRadius: '0.5rem',
-              fontSize: '0.875rem',
+              borderRadius: '0.375rem',
+              fontSize: '0.75rem',
               fontWeight: 500,
               cursor: 'pointer',
               transition: 'background-color 0.2s'

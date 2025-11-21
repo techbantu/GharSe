@@ -569,55 +569,31 @@ async function createOrderLogic(body: unknown): Promise<Result<{
         });
       }
       
-      // Send order confirmation notifications (email + SMS)
-      // NOW SYNCHRONOUS - wait for results to show real status to customer
-      try {
-        const { notificationManager } = await import('@/lib/notifications/notification-manager');
-        notificationResult = await notificationManager.sendOrderConfirmation(order);
-        
-        // CRITICAL DEBUG: Log exactly what we're about to return to frontend
-        console.log('🔍 [BACKEND] Notification result that will be sent to frontend:', JSON.stringify({
-          email: {
-            success: notificationResult.email?.success,
-            error: notificationResult.email?.error,
-            skipped: notificationResult.email?.skipped
-          },
-          sms: {
-            success: notificationResult.sms?.success,
-            error: notificationResult.sms?.error,
-            skipped: notificationResult.sms?.skipped
-          },
-          overall: notificationResult.overall
-        }, null, 2));
-        
-        logger.info('Order confirmation notifications sent', {
-          orderId: order.id,
-          orderNumber: order.orderNumber,
-          emailSuccess: notificationResult.email?.success,
-          emailError: notificationResult.email?.error,
-          smsSuccess: notificationResult.sms?.success,
-          smsSkipped: notificationResult.sms?.skipped,
-        });
-      } catch (notificationError) {
-        // Don't fail order creation if notifications fail (graceful degradation)
-        logger.error('Failed to send order confirmation notifications', {
-          orderId: order.id,
-          orderNumber: order.orderNumber,
-          error: notificationError instanceof Error ? notificationError.message : String(notificationError),
-        });
-        
-        notificationResult = {
-          email: { 
-            success: false, 
-            error: notificationError instanceof Error ? notificationError.message : 'Unknown error' 
-          },
-          sms: { 
-            success: false, 
-            error: notificationError instanceof Error ? notificationError.message : 'Unknown error' 
-          },
-          overall: false,
-        };
-      }
+      // DO NOT SEND CONFIRMATION YET - Order needs chef approval first!
+      // Notifications will be sent when chef clicks "Confirm Order" in Kitchen Display
+      // This is handled by /api/orders/[id]/status when status changes to CONFIRMED
+      
+      logger.info('Order created - awaiting chef confirmation (no notifications sent yet)', {
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        status: 'PENDING_CONFIRMATION',
+        note: 'Notifications will be sent when chef confirms the order'
+      });
+      
+      // Set notification result to indicate no notifications sent yet
+      notificationResult = {
+        email: { 
+          success: false, 
+          skipped: true,
+          error: 'Awaiting chef confirmation - no email sent yet'
+        },
+        sms: { 
+          success: false, 
+          skipped: true,
+          error: 'Awaiting chef confirmation - no SMS sent yet'
+        },
+        overall: false,
+      };
       
       // Mark first-order discount as used (async, don't block response)
       if (firstOrderDiscountApplied && data.customerId) {
@@ -1022,6 +998,13 @@ export async function GET(request: NextRequest) {
         estimatedReadyTime: dbOrder.estimatedDelivery || dbOrder.createdAt,
         actualReadyTime: dbOrder.readyAt || undefined,
         deliveryTime: dbOrder.deliveredAt || undefined,
+        // Timestamp tracking for performance metrics
+        confirmedAt: dbOrder.confirmedAt || null,
+        preparingAt: dbOrder.preparingAt || null,
+        readyAt: dbOrder.readyAt || null,
+        deliveredAt: dbOrder.deliveredAt || null,
+        estimatedDelivery: dbOrder.estimatedDelivery || null,
+        estimatedPrepTime: dbOrder.estimatedPrepTime || undefined,
         paymentMethod: frontendPaymentMethod,
         paymentStatus: frontendPaymentStatus,
         specialInstructions: dbOrder.deliveryNotes || undefined, // Order-level special instructions stored in deliveryNotes

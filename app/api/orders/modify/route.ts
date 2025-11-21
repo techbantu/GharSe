@@ -249,7 +249,8 @@ export async function POST(request: NextRequest) {
         )
       );
       
-      // Update order - if finalize=true, change status to CONFIRMED and send to kitchen
+      // Update order - NO AUTO-CONFIRMATION! Status stays the same, chef must manually confirm
+      // Even if finalize=true, order stays in PENDING_CONFIRMATION until chef clicks confirm in Kitchen Display
       const updated = await tx.order.update({
         where: { id: order.id },
         data: {
@@ -258,10 +259,10 @@ export async function POST(request: NextRequest) {
           deliveryFee: pricing.deliveryFee,
           total: pricing.total,
           modificationCount: order.modificationCount + 1,
-          gracePeriodExpiresAt: data.finalize ? null : newGracePeriodExpiry, // Clear grace period if finalized
+          gracePeriodExpiresAt: newGracePeriodExpiry, // Keep grace period active
           lastModifiedAt: new Date(),
-          status: data.finalize ? 'CONFIRMED' : order.status, // Change to CONFIRMED if user clicked "Send to Kitchen"
-          confirmedAt: data.finalize ? new Date() : order.confirmedAt, // Set confirmation timestamp
+          // status: NEVER AUTO-CHANGE! Chef must manually confirm in Kitchen Display
+          // confirmedAt: Only set when chef clicks confirm button
         },
         include: {
           items: {
@@ -275,38 +276,38 @@ export async function POST(request: NextRequest) {
       return updated;
     });
     
-    // Calculate time remaining for client (0 if finalized)
-    const timeRemaining = data.finalize ? 0 : Math.max(
+    // Calculate time remaining for client
+    const timeRemaining = Math.max(
       0,
       newGracePeriodExpiry.getTime() - Date.now()
     );
     
-    logger.info(data.finalize ? 'Order finalized and sent to kitchen' : 'Order modified successfully', {
+    logger.info('Order modified successfully - awaiting chef confirmation', {
       orderId: order.id,
       orderNumber: order.orderNumber,
       modificationCount: updatedOrder.modificationCount,
       itemCount: validItems.length,
       newTotal: pricing.total,
-      gracePeriodExpiresAt: data.finalize ? 'cleared' : newGracePeriodExpiry.toISOString(),
+      gracePeriodExpiresAt: newGracePeriodExpiry.toISOString(),
       timeRemainingMs: timeRemaining,
-      newStatus: updatedOrder.status,
-      finalized: data.finalize || false,
+      status: updatedOrder.status,
+      note: 'Auto-confirmation disabled - chef must manually confirm'
     });
 
     // Broadcast real-time update to kitchen and customer
     (async () => {
       try {
         await broadcastOrderUpdate(order.id, updatedOrder.status, {
-          modificationType: data.finalize ? 'finalized' : 'item_update',
+          modificationType: 'item_update',
           newItemCount: validItems.length,
           totalChanged: pricing.total !== order.total,
           newTotal: pricing.total,
-          finalized: data.finalize || false,
+          awaitingConfirmation: true, // Order still needs chef approval
         });
-        logger.info(data.finalize ? 'Order finalization broadcasted to kitchen' : 'Order modification broadcasted to real-time clients', {
+        logger.info('Order modification broadcasted - still awaiting chef confirmation', {
           orderId: order.id,
           orderNumber: order.orderNumber,
-          newStatus: updatedOrder.status,
+          status: updatedOrder.status,
         });
       } catch (broadcastError) {
         logger.error('Failed to broadcast order update', {
@@ -382,10 +383,8 @@ export async function POST(request: NextRequest) {
       success: true,
       order: formattedOrder,
       timeRemaining, // in milliseconds
-      finalized: data.finalize || false,
-      message: data.finalize 
-        ? 'Order confirmed and sent to kitchen! You will receive updates as it\'s prepared.' 
-        : `Order updated! You have ${Math.ceil(timeRemaining / 1000 / 60)} minutes to make more changes.`,
+      awaitingConfirmation: true, // Order still needs chef approval
+      message: `Order updated! You have ${Math.ceil(timeRemaining / 1000 / 60)} minutes to make more changes. Your order is awaiting kitchen confirmation.`,
     });
     
   } catch (error) {

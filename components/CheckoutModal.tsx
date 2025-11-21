@@ -2251,7 +2251,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif',
                 letterSpacing: '-0.02em'
               }}>
-                Order Placed!
+                Order Received!
               </h2>
               <p style={{
                 fontSize: '1.125rem',
@@ -2260,6 +2260,27 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                 marginBottom: '8px'
               }}>
                 Thank you for your order, <span style={{ fontWeight: 700, color: '#1F2937' }}>{formData.name}</span>!
+              </p>
+              <p style={{
+                fontSize: '0.9375rem',
+                color: '#F59E0B',
+                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif',
+                fontWeight: 600,
+                marginTop: '8px',
+                padding: '12px',
+                background: '#FEF3C7',
+                borderRadius: '8px',
+                border: '1px solid #FCD34D'
+              }}>
+                ⏳ Awaiting Kitchen Confirmation
+              </p>
+              <p style={{
+                fontSize: '0.875rem',
+                color: '#6B7280',
+                marginTop: '8px',
+                lineHeight: '1.5'
+              }}>
+                Your order has been sent to our kitchen. You'll receive a confirmation once our chef reviews and accepts it.
               </p>
             </div>
             
@@ -2353,7 +2374,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
               </div>
             </div>
             
-            {/* Notification Info - Confirmation Messages */}
+            {/* What Happens Next Info */}
             <div style={{
               width: '100%',
               maxWidth: '480px',
@@ -2364,88 +2385,120 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
               marginBottom: '8px',
               boxShadow: '0 4px 12px rgba(59, 130, 246, 0.15)'
             }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: '16px' }}>
-                <div style={{
-                  width: '32px',
-                  height: '32px',
-                  background: '#3B82F6',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0
-                }}>
-                  <Mail size={18} color="white" />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <p style={{
-                    fontSize: '0.875rem',
-                    color: notificationStatus?.email?.success ? '#1E3A8A' : '#DC2626',
-                    fontWeight: 700,
-                    marginBottom: '4px',
-                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif'
-                  }}>
-                    {!notificationStatus ? (
-                      'Sending Email...'
-                    ) : notificationStatus.email?.success ? (
-                      '✅ Email Confirmation Sent!'
-                    ) : notificationStatus.email?.skipped ? (
-                      '⚠️ Email Skipped'
-                    ) : (
-                      '❌ Email Failed'
-                    )}
-                  </p>
-                  <p style={{
-                    fontSize: '0.8125rem',
-                    color: notificationStatus?.email?.success ? '#1E40AF' : '#991B1B',
-                    lineHeight: '1.5',
-                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, monospace',
-                    wordBreak: 'break-all'
-                  }}>
-                    {notificationStatus?.email?.error || formData.email}
-                  </p>
-                </div>
-              </div>
+              <h3 style={{
+                fontSize: '1rem',
+                fontWeight: 700,
+                color: '#1E3A8A',
+                marginBottom: '16px',
+                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif'
+              }}>
+                What Happens Next?
+              </h3>
               
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                <div style={{
-                  width: '32px',
-                  height: '32px',
-                  background: '#10B981',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0
-                }}>
-                  <Phone size={18} color="white" />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <p style={{
-                    fontSize: '0.875rem',
-                    color: notificationStatus?.sms?.success ? '#1E3A8A' : '#DC2626',
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                  <div style={{
+                    width: '28px',
+                    height: '28px',
+                    background: '#3B82F6',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    fontSize: '0.75rem',
                     fontWeight: 700,
-                    marginBottom: '4px',
-                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif'
+                    color: 'white'
                   }}>
-                    {!notificationStatus ? (
-                      'Sending SMS...'
-                    ) : notificationStatus.sms?.success ? (
-                      '✅ SMS Confirmation Sent!'
-                    ) : notificationStatus.sms?.skipped ? (
-                      '⚠️ SMS Skipped (Not configured)'
-                    ) : (
-                      '❌ SMS Failed'
-                    )}
-                  </p>
-                  <p style={{
-                    fontSize: '0.8125rem',
-                    color: notificationStatus?.sms?.success ? '#1E40AF' : '#991B1B',
-                    lineHeight: '1.5',
-                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, monospace'
+                    1
+                  </div>
+                  <div>
+                    <p style={{
+                      fontSize: '0.875rem',
+                      color: '#1E3A8A',
+                      fontWeight: 600,
+                      marginBottom: '2px'
+                    }}>
+                      Kitchen Reviews Your Order
+                    </p>
+                    <p style={{
+                      fontSize: '0.8125rem',
+                      color: '#3B82F6',
+                      lineHeight: '1.4'
+                    }}>
+                      Our chef will check availability and confirm
+                    </p>
+                  </div>
+                </div>
+                
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                  <div style={{
+                    width: '28px',
+                    height: '28px',
+                    background: '#10B981',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    color: 'white'
                   }}>
-                    {notificationStatus?.sms?.error || formData.phone}
-                  </p>
+                    2
+                  </div>
+                  <div>
+                    <p style={{
+                      fontSize: '0.875rem',
+                      color: '#065F46',
+                      fontWeight: 600,
+                      marginBottom: '2px'
+                    }}>
+                      You'll Get Confirmation
+                    </p>
+                    <p style={{
+                      fontSize: '0.8125rem',
+                      color: '#10B981',
+                      lineHeight: '1.4'
+                    }}>
+                      Email & SMS when chef confirms your order
+                    </p>
+                  </div>
+                </div>
+                
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                  <div style={{
+                    width: '28px',
+                    height: '28px',
+                    background: '#F97316',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    color: 'white'
+                  }}>
+                    3
+                  </div>
+                  <div>
+                    <p style={{
+                      fontSize: '0.875rem',
+                      color: '#9A3412',
+                      fontWeight: 600,
+                      marginBottom: '2px'
+                    }}>
+                      We Start Cooking
+                    </p>
+                    <p style={{
+                      fontSize: '0.8125rem',
+                      color: '#EA580C',
+                      lineHeight: '1.4'
+                    }}>
+                      Fresh preparation of your delicious meal
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>

@@ -14,9 +14,13 @@ import {
   AlertCircle,
   User,
   Calendar,
-  ShoppingBag
+  ShoppingBag,
+  TrendingUp,
+  TrendingDown,
+  Timer,
+  Zap
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow, differenceInMinutes, differenceInSeconds } from 'date-fns';
 import OrderDetailsModal from '@/components/admin/orders/OrderDetailsModal';
 import { 
   CartItem, 
@@ -54,11 +58,223 @@ interface Order {
   specialInstructions?: string;
   createdAt: string;
   updatedAt: string;
+  // Timestamp tracking for performance metrics
+  confirmedAt?: string | null;
+  preparingAt?: string | null;
+  readyAt?: string | null;
+  deliveredAt?: string | null;
+  estimatedDelivery?: string | null;
+  estimatedPrepTime?: number;
   deliveryAddress?: Address;
   contactPreference: ('email' | 'sms')[];
   notifications: OrderNotification[];
   latitude?: number;
   longitude?: number;
+}
+
+// Real-time elapsed time component
+function OrderElapsedTime({ order, currentTime }: { order: Order; currentTime: Date }) {
+  const [elapsed, setElapsed] = useState<string>('');
+  const [timeInStatus, setTimeInStatus] = useState<string>('');
+  
+  useEffect(() => {
+    if (!order.createdAt) return;
+    
+    const updateTimes = () => {
+      const createdAt = new Date(order.createdAt);
+      const totalSeconds = differenceInSeconds(currentTime, createdAt);
+      
+      // Total elapsed time
+      if (totalSeconds < 60) {
+        setElapsed(`${totalSeconds}s`);
+      } else if (totalSeconds < 3600) {
+        const minutes = Math.floor(totalSeconds / 60);
+        setElapsed(`${minutes}m`);
+      } else {
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        setElapsed(`${hours}h ${minutes}m`);
+      }
+      
+      // Time in current status
+      const getStatusStartTime = () => {
+        switch (order.status) {
+          case 'confirmed':
+            return order.confirmedAt ? new Date(order.confirmedAt) : createdAt;
+          case 'preparing':
+            return order.preparingAt ? new Date(order.preparingAt) : (order.confirmedAt ? new Date(order.confirmedAt) : createdAt);
+          case 'ready':
+            return order.readyAt ? new Date(order.readyAt) : createdAt;
+          case 'out-for-delivery':
+            return order.readyAt ? new Date(order.readyAt) : createdAt;
+          default:
+            return createdAt;
+        }
+      };
+      
+      const statusStart = getStatusStartTime();
+      const statusSeconds = differenceInSeconds(currentTime, statusStart);
+      
+      if (statusSeconds < 60) {
+        setTimeInStatus(`${statusSeconds}s`);
+      } else {
+        const minutes = Math.floor(statusSeconds / 60);
+        setTimeInStatus(`${minutes}m`);
+      }
+    };
+    
+    updateTimes();
+  }, [order, currentTime]);
+  
+  if (!elapsed) return null;
+  
+  return (
+    <div style={{ 
+      display: 'flex', 
+      alignItems: 'center', 
+      gap: '0.5rem',
+      marginTop: '0.25rem',
+      fontSize: '0.75rem',
+      color: '#6b7280'
+    }}>
+      <Timer size={12} style={{ color: '#9ca3af' }} />
+      <span style={{ fontWeight: 600, color: '#374151' }}>{elapsed}</span>
+      {timeInStatus && order.status !== 'pending' && order.status !== 'pending-confirmation' && (
+        <>
+          <span style={{ color: '#d1d5db' }}>•</span>
+          <span style={{ color: '#9ca3af' }}>In {order.status}: {timeInStatus}</span>
+        </>
+      )}
+    </div>
+  );
+}
+
+// Performance indicator component
+function OrderPerformanceIndicator({ order, currentTime }: { order: Order; currentTime: Date }) {
+  const metrics = calculateOrderPerformance(order);
+  
+  if (order.status === 'cancelled') return null;
+  
+  return (
+    <div style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '0.375rem',
+      padding: '0.25rem 0.625rem',
+      borderRadius: '0.5rem',
+      backgroundColor: `${metrics.performanceColor}15`,
+      border: `1px solid ${metrics.performanceColor}40`,
+      fontSize: '0.75rem',
+      fontWeight: 600,
+      color: metrics.performanceColor,
+    }}>
+      {metrics.performanceIcon}
+      <span>{metrics.performanceText}</span>
+    </div>
+  );
+}
+
+// Calculate order performance metrics
+function calculateOrderPerformance(order: Order) {
+  const now = new Date();
+  const createdAt = new Date(order.createdAt);
+  const totalElapsed = differenceInMinutes(now, createdAt);
+  
+  // Get status start time
+  const getStatusStartTime = () => {
+    switch (order.status) {
+      case 'confirmed':
+        return order.confirmedAt ? new Date(order.confirmedAt) : createdAt;
+      case 'preparing':
+        return order.preparingAt ? new Date(order.preparingAt) : (order.confirmedAt ? new Date(order.confirmedAt) : createdAt);
+      case 'ready':
+        return order.readyAt ? new Date(order.readyAt) : createdAt;
+      case 'out-for-delivery':
+        return order.readyAt ? new Date(order.readyAt) : createdAt;
+      case 'delivered':
+        return order.deliveredAt ? new Date(order.deliveredAt) : createdAt;
+      default:
+        return createdAt;
+    }
+  };
+  
+  const statusStartTime = getStatusStartTime();
+  const timeInStatus = differenceInMinutes(now, statusStartTime);
+  
+  // Calculate performance
+  let performance: 'fast' | 'on-time' | 'slow' | 'late' = 'on-time';
+  let performanceColor = '#10b981'; // Green
+  let performanceIcon = <TrendingUp size={14} />;
+  let performanceText = 'On Time';
+  
+  if (order.status === 'delivered' && order.deliveredAt) {
+    const deliveredAt = new Date(order.deliveredAt);
+    const totalTime = differenceInMinutes(deliveredAt, createdAt);
+    const estimatedTime = order.estimatedPrepTime || 40; // Default 40 minutes
+    
+    if (totalTime < estimatedTime * 0.8) {
+      performance = 'fast';
+      performanceColor = '#10b981';
+      performanceIcon = <Zap size={14} />;
+      performanceText = 'Fast Delivery';
+    } else if (totalTime <= estimatedTime * 1.2) {
+      performance = 'on-time';
+      performanceColor = '#10b981';
+      performanceIcon = <CheckCircle size={14} />;
+      performanceText = 'On Time';
+    } else if (totalTime <= estimatedTime * 1.5) {
+      performance = 'slow';
+      performanceColor = '#f59e0b';
+      performanceIcon = <Clock size={14} />;
+      performanceText = 'Slightly Slow';
+    } else {
+      performance = 'late';
+      performanceColor = '#ef4444';
+      performanceIcon = <TrendingDown size={14} />;
+      performanceText = 'Late Delivery';
+    }
+  } else if (order.status !== 'delivered' && order.status !== 'cancelled') {
+    // For active orders, check if they're taking longer than expected
+    const estimatedTime = order.estimatedPrepTime || 40;
+    const expectedCompletion = new Date(createdAt.getTime() + estimatedTime * 60000);
+    
+    if (now > expectedCompletion) {
+      const delay = differenceInMinutes(now, expectedCompletion);
+      if (delay > 20) {
+        performance = 'late';
+        performanceColor = '#ef4444';
+        performanceIcon = <TrendingDown size={14} />;
+        performanceText = `${delay}m Overdue`;
+      } else {
+        performance = 'slow';
+        performanceColor = '#f59e0b';
+        performanceIcon = <Clock size={14} />;
+        performanceText = `${delay}m Overdue`;
+      }
+    } else {
+      const remaining = differenceInMinutes(expectedCompletion, now);
+      if (remaining < 10) {
+        performance = 'slow';
+        performanceColor = '#f59e0b';
+        performanceIcon = <Clock size={14} />;
+        performanceText = `${remaining}m Remaining`;
+      } else {
+        performance = 'on-time';
+        performanceColor = '#10b981';
+        performanceIcon = <CheckCircle size={14} />;
+        performanceText = `${remaining}m Remaining`;
+      }
+    }
+  }
+  
+  return {
+    totalElapsed,
+    timeInStatus,
+    performance,
+    performanceColor,
+    performanceIcon,
+    performanceText,
+  };
 }
 
 export default function OrdersPage() {
@@ -68,6 +284,7 @@ export default function OrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const prevOrderCountRef = useRef(0);
+  const [currentTime, setCurrentTime] = useState(new Date()); // For real-time updates
 
   const fetchOrders = async () => {
     try {
@@ -106,6 +323,14 @@ export default function OrdersPage() {
     return () => clearInterval(interval);
   }, []);
 
+  // Update current time every second for real-time metrics
+  useEffect(() => {
+    const timeInterval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timeInterval);
+  }, []);
+
   // Play sound notification when new orders arrive
   useEffect(() => {
     if (orders.length > prevOrderCountRef.current && prevOrderCountRef.current > 0) {
@@ -122,30 +347,60 @@ export default function OrdersPage() {
     prevOrderCountRef.current = orders.length;
   }, [orders]);
 
+  // Food-themed status colors matching website palette
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
-      'pending': '#fbbf24',
-      'pending-confirmation': '#fbbf24',
-      'confirmed': '#3b82f6',
-      'preparing': '#a855f7',
-      'ready': '#10b981',
-      'out-for-delivery': '#f97316',
-      'delivered': '#16a34a',
-      'cancelled': '#ef4444',
-      'refunded': '#ef4444'
+      'pending': '#f59e0b', // Warm amber (waiting)
+      'pending-confirmation': '#f59e0b', // Warm amber
+      'confirmed': '#f97316', // Orange (order confirmed)
+      'preparing': '#ea580c', // Deep orange/red (cooking - like fire)
+      'ready': '#fbbf24', // Golden yellow (ready to serve)
+      'out-for-delivery': '#fb923c', // Warm orange (on the way)
+      'delivered': '#10b981', // Fresh green (delivered successfully)
+      'cancelled': '#dc2626', // Deep red (cancelled)
+      'refunded': '#dc2626' // Deep red (refunded)
     };
     return colors[status] || '#6b7280';
   };
 
+  // Get next logical status based on current status (workflow-based)
+  // Using food-themed colors matching website palette
+  const getNextActions = (currentStatus: string): { status: string; label: string; color: string; icon?: string }[] => {
+    const statusWorkflow: Record<string, { status: string; label: string; color: string }[]> = {
+      'pending': [
+        { status: 'confirmed', label: 'Confirm Order', color: '#f97316' }, // Orange
+      ],
+      'confirmed': [
+        { status: 'preparing', label: 'Start Preparing', color: '#ea580c' }, // Deep orange/red (cooking)
+      ],
+      'preparing': [
+        { status: 'ready', label: 'Mark as Ready', color: '#fbbf24' }, // Golden yellow
+      ],
+      'ready': [
+        { status: 'out-for-delivery', label: 'Out for Delivery', color: '#fb923c' }, // Warm orange
+      ],
+      'out-for-delivery': [
+        { status: 'delivered', label: 'Mark Delivered', color: '#10b981' }, // Fresh green
+      ],
+      'delivered': [],
+      'cancelled': [],
+    };
+
+    return statusWorkflow[currentStatus] || [];
+  };
+
+  const [showCancelDialog, setShowCancelDialog] = useState<string | null>(null);
+
+  // Food-themed colors matching website palette
   const filterOptions = [
-    { id: 'all', label: 'All Orders', color: '#6b7280' },
-    { id: 'pending', label: 'Pending', color: '#fbbf24' },
-    { id: 'confirmed', label: 'Confirmed', color: '#3b82f6' },
-    { id: 'preparing', label: 'Preparing', color: '#a855f7' },
-    { id: 'ready', label: 'Ready', color: '#10b981' },
-    { id: 'out-for-delivery', label: 'Out for Delivery', color: '#f97316' },
-    { id: 'delivered', label: 'Delivered', color: '#16a34a' },
-    { id: 'cancelled', label: 'Cancelled', color: '#ef4444' },
+    { id: 'all', label: 'All Orders', color: '#6b7280' }, // Neutral gray
+    { id: 'pending', label: 'Pending', color: '#f59e0b' }, // Warm amber (waiting)
+    { id: 'confirmed', label: 'Confirmed', color: '#f97316' }, // Orange (order confirmed)
+    { id: 'preparing', label: 'Preparing', color: '#ea580c' }, // Deep orange/red (cooking - like fire)
+    { id: 'ready', label: 'Ready', color: '#fbbf24' }, // Golden yellow (ready to serve)
+    { id: 'out-for-delivery', label: 'Out for Delivery', color: '#fb923c' }, // Warm orange (on the way)
+    { id: 'delivered', label: 'Delivered', color: '#10b981' }, // Fresh green (delivered successfully)
+    { id: 'cancelled', label: 'Cancelled', color: '#dc2626' }, // Deep red (cancelled)
   ];
 
   const filteredOrders = filterStatus === 'all' 
@@ -159,9 +414,13 @@ export default function OrdersPage() {
         order.id === orderId ? { ...order, status: newStatus as OrderStatus } : order
       ));
 
+      const token = localStorage.getItem('adminToken');
       const response = await fetch(`/api/orders/${orderId}/status`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ status: newStatus }),
       });
 
@@ -228,39 +487,65 @@ export default function OrdersPage() {
           display: none;
         }
       `}</style>
-        {filterOptions.map((option) => (
-          <button
-            key={option.id}
-            onClick={() => setFilterStatus(option.id)}
-            style={{
-              padding: '0.5rem 1rem',
-              borderRadius: '9999px',
-              fontSize: '0.875rem',
-              fontWeight: 600,
-              backgroundColor: filterStatus === option.id ? option.color : '#ffffff',
-              color: filterStatus === option.id ? '#ffffff' : '#374151',
-              border: filterStatus === option.id ? 'none' : '1px solid #e5e7eb',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              transition: 'all 0.2s',
-              boxShadow: filterStatus === option.id ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' : 'none'
-            }}
-          >
-            {option.label}
-            {option.id !== 'all' && (
-              <span style={{ 
-                marginLeft: '0.5rem', 
-                fontSize: '0.75rem', 
-                opacity: 0.8,
-                backgroundColor: 'rgba(255,255,255,0.2)',
-                padding: '0.1rem 0.4rem',
-                borderRadius: '9999px'
-              }}>
-                {orders.filter(o => o.status === option.id).length}
-              </span>
-            )}
-          </button>
-        ))}
+        {filterOptions.map((option) => {
+          const isActive = filterStatus === option.id;
+          // For "All Orders", use neutral gray, otherwise use food-themed colors
+          const bgColor = option.id === 'all' 
+            ? (isActive ? '#6b7280' : '#f3f4f6')
+            : (isActive ? option.color : `${option.color}20`); // 20% opacity when inactive
+          const textColor = option.id === 'all'
+            ? (isActive ? '#ffffff' : '#374151')
+            : (isActive ? '#ffffff' : option.color); // Full color text when inactive
+          
+          return (
+            <button
+              key={option.id}
+              onClick={() => setFilterStatus(option.id)}
+              style={{
+                padding: '0.5rem 1rem',
+                borderRadius: '9999px',
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                backgroundColor: bgColor,
+                color: textColor,
+                border: isActive ? 'none' : `2px solid ${option.id === 'all' ? '#e5e7eb' : option.color}`,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                transition: 'all 0.2s',
+                boxShadow: isActive ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' : '0 1px 2px rgba(0, 0, 0, 0.05)',
+                transform: isActive ? 'scale(1.05)' : 'scale(1)',
+              }}
+              onMouseEnter={(e) => {
+                if (!isActive) {
+                  e.currentTarget.style.backgroundColor = option.id === 'all' ? '#e5e7eb' : `${option.color}30`;
+                  e.currentTarget.style.transform = 'scale(1.02)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isActive) {
+                  e.currentTarget.style.backgroundColor = bgColor;
+                  e.currentTarget.style.transform = 'scale(1)';
+                }
+              }}
+            >
+              {option.label}
+              {option.id !== 'all' && (
+                <span style={{ 
+                  marginLeft: '0.5rem', 
+                  fontSize: '0.75rem', 
+                  opacity: isActive ? 0.9 : 0.8,
+                  backgroundColor: isActive ? 'rgba(255,255,255,0.25)' : `${option.color}40`,
+                  color: isActive ? '#ffffff' : option.color,
+                  padding: '0.1rem 0.4rem',
+                  borderRadius: '9999px',
+                  fontWeight: 700,
+                }}>
+                  {orders.filter(o => o.status === option.id).length}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {filteredOrders.length === 0 ? (
@@ -310,12 +595,17 @@ export default function OrdersPage() {
                     display: 'flex', 
                     alignItems: 'center', 
                     gap: '0.5rem',
-                    marginTop: '0.25rem'
+                    marginTop: '0.25rem',
+                    flexWrap: 'wrap'
                   }}>
                     <Clock size={14} style={{ color: '#6b7280' }} />
                     <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>
                       {order.createdAt ? format(new Date(order.createdAt), 'MMM d, yyyy • h:mm a') : 'Date unknown'}
                     </span>
+                    {/* Real-time elapsed time */}
+                    {order.createdAt && (
+                      <OrderElapsedTime order={order} currentTime={currentTime} />
+                    )}
                   </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
@@ -398,6 +688,8 @@ export default function OrdersPage() {
                   }}>
                     {order.status.replace('-', ' ')}
                   </span>
+                  {/* Performance indicator */}
+                  <OrderPerformanceIndicator order={order} currentTime={currentTime} />
                   <p style={{ fontSize: '1.25rem', fontWeight: 700, color: '#111827' }}>
                     ₹{Number(order.pricing?.total || 0).toLocaleString('en-IN')}
                   </p>
@@ -431,46 +723,53 @@ export default function OrdersPage() {
                 })}
               </div>
 
+              {/* Action Buttons - Contextual based on current status */}
               <div style={{ 
                 display: 'flex', 
                 gap: '0.75rem',
-                flexWrap: 'wrap'
+                flexWrap: 'wrap',
+                alignItems: 'center'
               }}>
-                <div style={{ position: 'relative' }}>
-                  <select
-                    value={order.status}
-                    onChange={(e) => handleStatusUpdate(order.id, e.target.value)}
+                {/* Next Action Buttons */}
+                {getNextActions(order.status).map((action) => (
+                  <button
+                    key={action.status}
+                    onClick={() => handleStatusUpdate(order.id, action.status)}
                     style={{
-                      padding: '0.625rem 2rem 0.625rem 1rem',
-                      backgroundColor: '#fff7ed',
-                      color: '#ea580c',
-                      border: '1px solid #ffedd5',
+                      padding: '0.75rem 1.5rem',
+                      backgroundColor: action.color,
+                      color: '#ffffff',
+                      border: 'none',
                       borderRadius: '0.5rem',
                       fontSize: '0.875rem',
                       fontWeight: 600,
                       cursor: 'pointer',
-                      appearance: 'none',
-                      backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23ea580c' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
-                      backgroundPosition: 'right 0.5rem center',
-                      backgroundRepeat: 'no-repeat',
-                      backgroundSize: '1.5em 1.5em',
-                      transition: 'all 0.2s'
+                      transition: 'all 0.2s',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
                     }}
                   >
-                    <option value="pending">Pending</option>
-                    <option value="confirmed">Confirmed</option>
-                    <option value="preparing">Preparing</option>
-                    <option value="ready">Ready</option>
-                    <option value="out-for-delivery">Out for Delivery</option>
-                    <option value="delivered">Delivered</option>
-                    <option value="cancelled">Cancelled</option>
-                  </select>
-                </div>
+                    <CheckCircle size={16} />
+                    {action.label}
+                  </button>
+                ))}
+
+                {/* View Details Button */}
                 <button
                   onClick={() => handleViewDetails(order)}
                   style={{
-                    padding: '0.625rem 1rem',
-                    backgroundColor: 'transparent',
+                    padding: '0.75rem 1.25rem',
+                    backgroundColor: '#ffffff',
                     color: '#6b7280',
                     border: '1px solid #e5e7eb',
                     borderRadius: '0.5rem',
@@ -480,17 +779,139 @@ export default function OrdersPage() {
                     transition: 'all 0.2s'
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#f3f4f6';
+                    e.currentTarget.style.backgroundColor = '#f9fafb';
                     e.currentTarget.style.borderColor = '#d1d5db';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.backgroundColor = '#ffffff';
                     e.currentTarget.style.borderColor = '#e5e7eb';
                   }}
                 >
                   View Details
                 </button>
+
+                {/* Cancel Button - Only show for active orders */}
+                {!['delivered', 'cancelled'].includes(order.status) && (
+                  <button
+                    onClick={() => setShowCancelDialog(order.id)}
+                    style={{
+                      padding: '0.75rem 1.25rem',
+                      backgroundColor: '#ffffff',
+                      color: '#ef4444',
+                      border: '1px solid #fecaca',
+                      borderRadius: '0.5rem',
+                      fontSize: '0.875rem',
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#fef2f2';
+                      e.currentTarget.style.borderColor = '#f87171';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#ffffff';
+                      e.currentTarget.style.borderColor = '#fecaca';
+                    }}
+                  >
+                    <XCircle size={16} style={{ display: 'inline', marginRight: '0.25rem' }} />
+                    Cancel Order
+                  </button>
+                )}
               </div>
+
+              {/* Cancel Confirmation Dialog */}
+              {showCancelDialog === order.id && (
+                <div style={{
+                  position: 'fixed',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: 'rgba(0,0,0,0.5)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 9999
+                }}>
+                  <div style={{
+                    backgroundColor: '#ffffff',
+                    padding: '2rem',
+                    borderRadius: '0.75rem',
+                    maxWidth: '400px',
+                    width: '90%',
+                    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)'
+                  }}>
+                    <div style={{ marginBottom: '1.5rem' }}>
+                      <div style={{
+                        width: '48px',
+                        height: '48px',
+                        backgroundColor: '#fef2f2',
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        margin: '0 auto 1rem'
+                      }}>
+                        <AlertCircle size={24} style={{ color: '#ef4444' }} />
+                      </div>
+                      <h3 style={{ 
+                        fontSize: '1.125rem', 
+                        fontWeight: 700, 
+                        color: '#111827',
+                        textAlign: 'center',
+                        marginBottom: '0.5rem'
+                      }}>
+                        Cancel Order #{order.orderNumber}?
+                      </h3>
+                      <p style={{ 
+                        fontSize: '0.875rem', 
+                        color: '#6b7280',
+                        textAlign: 'center'
+                      }}>
+                        This action cannot be undone. The customer will be notified.
+                      </p>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                      <button
+                        onClick={() => setShowCancelDialog(null)}
+                        style={{
+                          flex: 1,
+                          padding: '0.75rem',
+                          backgroundColor: '#ffffff',
+                          color: '#6b7280',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '0.5rem',
+                          fontSize: '0.875rem',
+                          fontWeight: 600,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Keep Order
+                      </button>
+                      <button
+                        onClick={() => {
+                          handleStatusUpdate(order.id, 'cancelled');
+                          setShowCancelDialog(null);
+                        }}
+                        style={{
+                          flex: 1,
+                          padding: '0.75rem',
+                          backgroundColor: '#ef4444',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '0.5rem',
+                          fontSize: '0.875rem',
+                          fontWeight: 600,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Yes, Cancel
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>

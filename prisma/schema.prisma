@@ -133,6 +133,7 @@ model MenuItem {
   isVegetarian    Boolean @default(false)
   isVegan         Boolean @default(false)
   isGlutenFree    Boolean @default(false)
+  isDairyFree     Boolean @default(false)
   spicyLevel      Int     @default(0)
   preparationTime Int     @default(30)
   isAvailable     Boolean @default(true) // Whether item is on menu (not about stock)
@@ -213,6 +214,7 @@ model Order {
   status        OrderStatus   @default(PENDING_CONFIRMATION)
   paymentStatus PaymentStatus @default(PENDING)
   paymentMethod String? // "cash-on-delivery", "card", "upi", "paytm", "razorpay", "stripe", etc.
+  rejectionReason String? // Reason if order was rejected by kitchen (e.g., "Item(s) Out of Stock", "Kitchen Closed")
 
   // Timestamps
   createdAt   DateTime  @default(now())
@@ -364,6 +366,7 @@ model Admin {
   id           String    @id @default(cuid())
   email        String    @unique
   name         String
+  phone        String?   // Phone number for admin contact
   passwordHash String
   role         AdminRole @default(STAFF)
 

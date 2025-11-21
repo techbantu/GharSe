@@ -263,6 +263,114 @@ const generateStatusUpdateHTML = (order: Order, newStatus: string): string => {
   `;
 };
 
+/**
+ * Generate Order Rejection Email HTML
+ */
+const generateOrderRejectionHTML = (order: any): string => {
+  const itemsHTML = order.items
+    .map(
+      (item: any) => `
+    <tr>
+      <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">
+        <p style="margin: 0; color: #1f2937; font-weight: 600; font-size: 15px;">${item.menuItem.name}</p>
+        <p style="margin: 4px 0 0 0; color: #6b7280; font-size: 13px;">Qty: ${item.quantity}</p>
+      </td>
+      <td style="padding: 10px; text-align: right; border-bottom: 1px solid #e5e7eb; color: #1f2937; font-weight: 500;">
+        ₹${((item.menuItem.price || 0) * item.quantity).toFixed(2)}
+      </td>
+    </tr>
+  `
+    )
+    .join('');
+
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Declined</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f3f4f6;">
+  <div style="max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+    
+    <!-- Header with Logo -->
+    <div style="background: linear-gradient(135deg, #fff9f5 0%, #ffffff 100%); padding: 16px 20px; text-align: center; border-bottom: 3px solid #dc2626;">
+      <img src="${process.env.NEXT_PUBLIC_APP_URL || 'https://gharse.app'}/images/GharSe.png" alt="GharSe" style="max-width: 140px; height: auto; display: inline-block;" />
+    </div>
+
+    <!-- Rejection Badge -->
+    <div style="text-align: center; padding: 20px; background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);">
+      <div style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: #ffffff; display: inline-block; padding: 8px 20px; border-radius: 6px; font-weight: 600; font-size: 14px; box-shadow: 0 2px 6px rgba(220, 38, 38, 0.25);">
+        ✗ Order Declined
+      </div>
+    </div>
+
+    <!-- Apology Message -->
+    <div style="padding: 24px 20px; background: #fffbf8;">
+      <h2 style="color: #1f2937; font-size: 20px; margin: 0 0 12px 0; font-weight: 600; text-align: center;">
+        We're Sorry 😔
+      </h2>
+      <p style="color: #4b5563; font-size: 15px; line-height: 1.6; margin: 0 0 16px 0; text-align: center;">
+        Unfortunately, we're unable to fulfill your order at this time.
+      </p>
+      
+      <!-- Rejection Reason -->
+      <div style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border-left: 4px solid #dc2626; padding: 16px; border-radius: 6px; margin-bottom: 20px; box-shadow: 0 2px 6px rgba(220, 38, 38, 0.08);">
+        <p style="margin: 0 0 6px 0; color: #991b1b; font-size: 12px; text-transform: uppercase; letter-spacing: 0.3px; font-weight: 600;">
+          Reason
+        </p>
+        <p style="margin: 0; color: #1f2937; font-size: 16px; font-weight: 600;">
+          ${order.rejectionReason || 'Unable to fulfill order'}
+        </p>
+      </div>
+
+      <!-- Order Details -->}
+      <div style="background-color: #f9fafb; padding: 14px; border-radius: 6px; margin-bottom: 16px; text-align: center;">
+        <p style="margin: 0 0 4px 0; color: #6b7280; font-size: 13px; font-weight: 600;">ORDER NUMBER</p>
+        <p style="margin: 0; color: #1f2937; font-size: 18px; font-weight: 700;">${order.orderNumber}</p>
+      </div>
+
+      <!-- Your Order Items -->
+      <h3 style="color: #6b7280; font-size: 14px; margin: 0 0 10px 0; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px;">Your Order</h3>
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px; background-color: #ffffff; border-radius: 6px; overflow: hidden;">
+        <tbody>
+          ${itemsHTML}
+        </tbody>
+      </table>
+
+      <!-- Refund Information -->
+      <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-left: 3px solid #f59e0b; padding: 14px; border-radius: 6px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(245, 158, 11, 0.08);">
+        <p style="margin: 0 0 6px 0; color: #78350f; font-size: 12px; text-transform: uppercase; letter-spacing: 0.3px; font-weight: 600;">
+          Refund Information
+        </p>
+        <p style="margin: 0; color: #1f2937; font-size: 14px; line-height: 1.5;">
+          ${order.pricing.total > 0 ? 'If you\'ve already paid, your refund will be processed within 3-5 business days.' : 'No payment was collected for this order.'}
+        </p>
+      </div>
+
+      <!-- CTA -->
+      <div style="text-align: center; margin-top: 24px;">
+        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://gharse.app'}" style="display: inline-block; background: linear-gradient(135deg, #FF6B35 0%, #f77f00 100%); color: #ffffff; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 15px; box-shadow: 0 3px 8px rgba(255, 107, 53, 0.3);">
+          Browse Menu Again
+        </a>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="background: #fee2e2; border-top: 3px solid #dc2626; padding: 18px; text-align: center;">
+      <p style="margin: 0 0 10px 0; color: #1f2937; font-size: 14px; font-weight: 600;">We apologize for the inconvenience</p>
+      <p style="margin: 0 0 3px 0; font-size: 11px; font-weight: 600; color: #dc2626;">NEED HELP?</p>
+      <p style="margin: 0 0 2px 0;"><a href="mailto:support@gharse.app" style="color: #dc2626; text-decoration: none; font-size: 12px; font-weight: 600;">support@gharse.app</a></p>
+      <p style="margin: 0 0 8px 0;"><a href="https://gharse.app" style="color: #dc2626; text-decoration: none; font-size: 12px; font-weight: 600;">www.gharse.app</a></p>
+      <p style="margin: 0; font-size: 10px; color: #92400e; padding-top: 8px; border-top: 1px solid rgba(220, 38, 38, 0.2);">© 2025 GharSe</p>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+};
+
 // SMTP Transporter (with retry logic)
 let transporter: nodemailer.Transporter | null = null;
 
@@ -381,6 +489,16 @@ export const emailService = {
   async sendStatusUpdate(order: Order, newStatus: string): Promise<{ success: boolean; error?: string }> {
     const subject = `Order Update - ${order.orderNumber} | ${restaurantInfo.name}`;
     const html = generateStatusUpdateHTML(order, newStatus);
+
+    return sendEmailWithRetry(order.customer.email, subject, html);
+  },
+
+  /**
+   * Send order rejection email
+   */
+  async sendOrderRejection(order: any): Promise<{ success: boolean; error?: string }> {
+    const subject = `Order Declined - ${order.orderNumber} | ${restaurantInfo.name}`;
+    const html = generateOrderRejectionHTML(order);
 
     return sendEmailWithRetry(order.customer.email, subject, html);
   },

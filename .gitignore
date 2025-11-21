@@ -97,6 +97,8 @@ secrets/
 .nyc_output/
 coverage/
 *.lcov
+test-results/
+playwright-report/
 
 # Environment
 .env.backup

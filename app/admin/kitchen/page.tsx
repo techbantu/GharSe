@@ -22,6 +22,9 @@ interface KitchenOrder {
 export default function KitchenPage() {
   const [orders, setOrders] = useState<KitchenOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('out-of-stock');
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -36,9 +39,9 @@ export default function KitchenPage() {
         if (response.ok) {
           const data = await response.json();
           if (data.success) {
-            // Filter for active kitchen orders
+            // Filter for active kitchen orders - INCLUDE pending-confirmation, confirmed, and preparing
             const kitchenOrders = data.orders.filter((o: any) => 
-              ['confirmed', 'preparing'].includes(o.status)
+              ['pending-confirmation', 'pending', 'confirmed', 'preparing'].includes(o.status)
             );
             setOrders(kitchenOrders);
           }
@@ -51,18 +54,79 @@ export default function KitchenPage() {
     };
 
     fetchOrders();
-    const interval = setInterval(fetchOrders, 10000);
+    // Refresh every 5 seconds for real-time updates
+    const interval = setInterval(fetchOrders, 5000);
     return () => clearInterval(interval);
   }, []);
 
   const updateStatus = async (orderId: string, newStatus: string) => {
-    // In a real app, call API to update status
-    // For now, update local state
-    setOrders(prev => prev.map(o => 
-      o.id === orderId ? { ...o, status: newStatus } : o
-    ).filter(o => newStatus !== 'ready')); // Remove from KDS if ready (optional workflow)
+    try {
+      const token = localStorage.getItem('adminToken');
+      if (!token) return;
+
+      // Call API to update order status
+      const response = await fetch(`/api/orders/${orderId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+
+      if (response.ok) {
+        // Update local state
+        setOrders(prev => prev.map(o => 
+          o.id === orderId ? { ...o, status: newStatus } : o
+        ).filter(o => newStatus !== 'ready')); // Remove from KDS if marked ready
+        
+        console.log(`Order ${orderId} status updated to ${newStatus}`);
+      } else {
+        console.error('Failed to update order status');
+        alert('Failed to update order status. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error updating order status:', error);
+      alert('Error updating order status. Please try again.');
+    }
+  };
+
+  const handleRejectOrder = (orderId: string) => {
+    setSelectedOrderId(orderId);
+    setShowRejectModal(true);
+  };
+
+  const confirmRejectOrder = async () => {
+    if (!selectedOrderId) return;
     
-    alert(`Order ${orderId} marked as ${newStatus}`);
+    try {
+      const token = localStorage.getItem('adminToken');
+      if (!token) return;
+
+      // Call API to reject order with reason
+      const response = await fetch(`/api/orders/${selectedOrderId}/reject`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ reason: rejectionReason })
+      });
+
+      if (response.ok) {
+        // Remove order from local state
+        setOrders(prev => prev.filter(o => o.id !== selectedOrderId));
+        setShowRejectModal(false);
+        setSelectedOrderId(null);
+        console.log(`Order ${selectedOrderId} rejected with reason: ${rejectionReason}`);
+      } else {
+        console.error('Failed to reject order');
+        alert('Failed to reject order. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error rejecting order:', error);
+      alert('Error rejecting order. Please try again.');
+    }
   };
 
   if (isLoading) {
@@ -145,7 +209,10 @@ export default function KitchenPage() {
             >
               <div style={{ 
                 padding: '1rem', 
-                backgroundColor: order.status === 'preparing' ? '#fff7ed' : '#f3f4f6',
+                backgroundColor: 
+                  order.status === 'preparing' ? '#fff7ed' : 
+                  order.status === 'pending-confirmation' || order.status === 'pending' ? '#fef3c7' : 
+                  '#f3f4f6',
                 borderBottom: '1px solid #e5e7eb',
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -167,11 +234,14 @@ export default function KitchenPage() {
                   borderRadius: '9999px',
                   fontSize: '0.75rem',
                   fontWeight: 700,
-                  backgroundColor: order.status === 'preparing' ? '#ea580c' : '#3b82f6',
+                  backgroundColor: 
+                    order.status === 'preparing' ? '#ea580c' : 
+                    order.status === 'pending-confirmation' || order.status === 'pending' ? '#f59e0b' : 
+                    '#3b82f6',
                   color: '#ffffff',
                   textTransform: 'uppercase'
                 }}>
-                  {order.status}
+                  {order.status.replace('-', ' ')}
                 </span>
               </div>
 
@@ -221,6 +291,46 @@ export default function KitchenPage() {
               </div>
 
               <div style={{ padding: '1rem', borderTop: '1px solid #e5e7eb', display: 'flex', gap: '0.75rem' }}>
+                {(order.status === 'pending-confirmation' || order.status === 'pending') && (
+                  <>
+                    <button
+                      onClick={() => handleRejectOrder(order.id)}
+                      style={{
+                        flex: 1,
+                        padding: '0.75rem',
+                        backgroundColor: '#fee2e2',
+                        color: '#dc2626',
+                        border: '1px solid #fca5a5',
+                        borderRadius: '0.5rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fecaca'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#fee2e2'}
+                    >
+                      Reject
+                    </button>
+                    <button
+                      onClick={() => updateStatus(order.id, 'confirmed')}
+                      style={{
+                        flex: 1,
+                        padding: '0.75rem',
+                        backgroundColor: '#3b82f6',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '0.5rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        transition: 'background-color 0.2s'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3b82f6'}
+                    >
+                      Confirm Order
+                    </button>
+                  </>
+                )}
                 {order.status === 'confirmed' && (
                   <button
                     onClick={() => updateStatus(order.id, 'preparing')}
@@ -235,6 +345,8 @@ export default function KitchenPage() {
                       cursor: 'pointer',
                       transition: 'background-color 0.2s'
                     }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#c2410c'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ea580c'}
                   >
                     Start Preparing
                   </button>
@@ -253,6 +365,8 @@ export default function KitchenPage() {
                       cursor: 'pointer',
                       transition: 'background-color 0.2s'
                     }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#15803d'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#16a34a'}
                   >
                     Mark Ready
                   </button>
@@ -260,6 +374,101 @@ export default function KitchenPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Rejection Modal */}
+      {showRejectModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 50
+        }}>
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '1rem',
+            padding: '2rem',
+            maxWidth: '480px',
+            width: '90%',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)'
+          }}>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#111827', marginBottom: '1rem' }}>
+              Reject Order
+            </h3>
+            <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '1.5rem' }}>
+              Please select a reason for rejecting this order. The customer will be notified via email.
+            </p>
+            
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{ fontSize: '0.875rem', fontWeight: 600, color: '#374151', display: 'block', marginBottom: '0.5rem' }}>
+                Rejection Reason
+              </label>
+              <select
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  borderRadius: '0.5rem',
+                  border: '1px solid #d1d5db',
+                  fontSize: '0.875rem',
+                  color: '#111827',
+                  backgroundColor: '#ffffff',
+                  cursor: 'pointer'
+                }}
+              >
+                <option value="out-of-stock">Item(s) Out of Stock</option>
+                <option value="kitchen-closed">Kitchen Closed</option>
+                <option value="too-busy">Too Busy / High Order Volume</option>
+                <option value="delivery-unavailable">Delivery Unavailable to Address</option>
+                <option value="payment-issue">Payment Issue</option>
+                <option value="other">Other Reason</option>
+              </select>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button
+                onClick={() => {
+                  setShowRejectModal(false);
+                  setSelectedOrderId(null);
+                }}
+                style={{
+                  flex: 1,
+                  padding: '0.75rem',
+                  backgroundColor: '#f3f4f6',
+                  color: '#374151',
+                  border: 'none',
+                  borderRadius: '0.5rem',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmRejectOrder}
+                style={{
+                  flex: 1,
+                  padding: '0.75rem',
+                  backgroundColor: '#dc2626',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '0.5rem',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                Reject Order
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

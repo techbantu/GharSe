@@ -75,14 +75,31 @@ export default function AdminDashboard() {
   }, [orders]);
 
   const calculateStats = (orderData: any[]) => {
-    const today = new Date().toISOString().split('T')[0];
+    // Use local date, not UTC
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    
+    console.log('🔍 Revenue Debug:', {
+      today,
+      totalOrders: orderData.length,
+      sampleDates: orderData.slice(0, 3).map(o => ({ id: o.orderNumber, createdAt: o.createdAt, status: o.status }))
+    });
+    
     const todayOrders = orderData.filter((o: any) => 
       o.createdAt && o.createdAt.startsWith(today) && o.status !== 'cancelled'
     );
     
+    console.log('📊 Today\'s Orders:', todayOrders.length, todayOrders.map(o => ({ 
+      id: o.orderNumber, 
+      total: o.total,
+      pricingTotal: o.pricing?.total,
+      status: o.status 
+    })));
+    
     // Safe summation with Number() and isNaN check
     const todayRevenue = todayOrders.reduce((sum: number, o: any) => {
-      const val = Number(o.total);
+      // Try both o.total and o.pricing.total
+      const val = Number(o.pricing?.total || o.total || 0);
       return sum + (isNaN(val) ? 0 : val);
     }, 0);
 
@@ -306,70 +323,163 @@ export default function AdminDashboard() {
             </p>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {orders.slice(0, 5).map((order) => (
+          <div style={{ 
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+            gap: '1rem'
+          }}>
+            {orders.slice(0, 8).map((order) => (
               <div 
                 key={order.id}
                 style={{
-                  padding: '1rem',
-                  backgroundColor: '#f9fafb',
-                  borderRadius: '0.5rem',
-                  border: '1px solid #f3f4f6',
+                  padding: '1.25rem',
+                  backgroundColor: '#ffffff',
+                  borderRadius: '0.75rem',
+                  border: `2px solid ${getStatusColor(order.status)}30`,
                   cursor: 'pointer',
-                  transition: 'all 0.2s'
+                  transition: 'all 0.2s',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '1rem',
+                  position: 'relative',
+                  overflow: 'hidden'
                 }}
-                className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0"
                 onClick={() => {
                   setSelectedOrder(order);
                   setIsModalOpen(true);
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#f3f4f6';
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)';
+                  e.currentTarget.style.transform = 'translateY(-4px)';
+                  e.currentTarget.style.boxShadow = `0 8px 16px -4px ${getStatusColor(order.status)}40`;
+                  e.currentTarget.style.borderColor = getStatusColor(order.status);
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#f9fafb';
                   e.currentTarget.style.transform = 'translateY(0)';
                   e.currentTarget.style.boxShadow = 'none';
+                  e.currentTarget.style.borderColor = `${getStatusColor(order.status)}30`;
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <div style={{
-                    width: '2.5rem',
-                    height: '2.5rem',
-                    backgroundColor: '#ffffff',
+                {/* Status Indicator Bar */}
+                <div style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: '4px',
+                  backgroundColor: getStatusColor(order.status),
+                  background: `linear-gradient(90deg, ${getStatusColor(order.status)} 0%, ${getStatusColor(order.status)}CC 100%)`
+                }} />
+
+                {/* Header with Order Number & Status */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ 
+                      fontSize: '0.875rem', 
+                      fontWeight: 700, 
+                      color: '#111827',
+                      marginBottom: '0.25rem'
+                    }}>
+                      #{order.orderNumber.replace('BK-', '')}
+                    </p>
+                    <p style={{ 
+                      fontSize: '0.75rem', 
+                      color: '#6b7280',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.25rem'
+                    }}>
+                      <Clock size={12} />
+                      {format(new Date(order.createdAt), 'h:mm a')}
+                    </p>
+                  </div>
+                  <span style={{
+                    padding: '0.25rem 0.625rem',
                     borderRadius: '9999px',
+                    fontSize: '0.625rem',
+                    fontWeight: 600,
+                    backgroundColor: getStatusColor(order.status),
+                    color: '#ffffff',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.025em',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    {order.status === 'out-for-delivery' ? 'OUT' : order.status.replace('-', ' ').split(' ')[0]}
+                  </span>
+                </div>
+
+                {/* Items Count */}
+                <div style={{
+                  padding: '0.75rem',
+                  backgroundColor: '#f9fafb',
+                  borderRadius: '0.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.625rem'
+                }}>
+                  <div style={{
+                    width: '2rem',
+                    height: '2rem',
+                    backgroundColor: `${getStatusColor(order.status)}15`,
+                    borderRadius: '0.5rem',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    border: '1px solid #e5e7eb'
+                    justifyContent: 'center'
                   }}>
-                    <ShoppingBag size={18} style={{ color: '#6b7280' }} />
+                    <Package size={16} style={{ color: getStatusColor(order.status) }} />
                   </div>
-                  <div>
-                    <p style={{ fontSize: '0.875rem', fontWeight: 700, color: '#111827' }}>
-                      Order #{order.orderNumber}
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.125rem' }}>
+                      Items
                     </p>
-                    <p style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-                      {order.items.length} items • {format(new Date(order.createdAt), 'MMM d, h:mm a')}
+                    <p style={{ fontSize: '0.875rem', fontWeight: 600, color: '#111827' }}>
+                      {order.items.length} {order.items.length === 1 ? 'item' : 'items'}
                     </p>
                   </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <span style={{
-                    padding: '0.25rem 0.75rem',
-                    borderRadius: '9999px',
-                    fontSize: '0.75rem',
-                    fontWeight: 500,
-                    backgroundColor: `${getStatusColor(order.status)}20`,
-                    color: getStatusColor(order.status)
-                  }}>
-                    {order.status.replace('-', ' ').toUpperCase()}
+
+                {/* Total Amount */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  paddingTop: '0.75rem',
+                  borderTop: '1px solid #f3f4f6'
+                }}>
+                  <span style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 500 }}>
+                    Total
                   </span>
-                  <p style={{ fontSize: '0.875rem', fontWeight: 700, color: '#111827', minWidth: '80px', textAlign: 'right' }}>
+                  <span style={{ 
+                    fontSize: '1.125rem', 
+                    fontWeight: 700, 
+                    color: getStatusColor(order.status),
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}>
                     ₹{order.total}
-                  </p>
+                  </span>
+                </div>
+
+                {/* Quick View Indicator */}
+                <div style={{
+                  position: 'absolute',
+                  bottom: '0.5rem',
+                  right: '0.5rem',
+                  width: '1.5rem',
+                  height: '1.5rem',
+                  borderRadius: '50%',
+                  backgroundColor: `${getStatusColor(order.status)}20`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  opacity: 0.6,
+                  transition: 'opacity 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
+                >
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ color: getStatusColor(order.status) }}>
+                    <path d="M4 2L8 6L4 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
                 </div>
               </div>
             ))}

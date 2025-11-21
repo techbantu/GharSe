@@ -50,6 +50,7 @@ export async function PUT(
         isVegetarian: body.isVegetarian,
         isVegan: body.isVegan,
         isGlutenFree: body.isGlutenFree,
+        isDairyFree: body.isDairyFree,
         spicyLevel: parseInt(body.spicyLevel),
         preparationTime: parseInt(body.preparationTime),
         isAvailable: body.isAvailable,

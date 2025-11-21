@@ -260,18 +260,32 @@ export const smsService = {
     newStatus: string,
     customerPreference?: boolean
   ): Promise<{ success: boolean; error?: string; skipped?: boolean }> {
-    // Only send SMS for these critical statuses
-    const criticalStatuses = ['confirmed', 'ready', 'out-for-delivery', 'delivered'];
+    // Only send SMS for these critical statuses (cost optimization)
+    // Email is sent for ALL statuses, SMS only for key milestones
+    const criticalStatuses = ['confirmed', 'preparing', 'ready', 'out-for-delivery', 'delivered'];
     
     if (!criticalStatuses.includes(newStatus)) {
+      logger.debug('SMS skipped - not a critical status', { 
+        orderNumber: order.orderNumber, 
+        status: newStatus 
+      });
       return { success: true, skipped: true };
     }
 
     if (!this.shouldSendSMS(order, customerPreference)) {
+      logger.debug('SMS skipped - shouldSendSMS returned false', { 
+        orderNumber: order.orderNumber, 
+        status: newStatus 
+      });
       return { success: true, skipped: true };
     }
 
     const message = generateStatusUpdateSMS(order, newStatus);
+    logger.info('Sending status update SMS', { 
+      orderNumber: order.orderNumber, 
+      status: newStatus,
+      phone: order.customer.phone.substring(0, 3) + '***'
+    });
     return twilioClient.sendSMS(order.customer.phone, message);
   },
 

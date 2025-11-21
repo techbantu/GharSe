@@ -684,12 +684,30 @@ const PendingOrderModification: React.FC<PendingOrderModificationProps> = ({
     items.some((item, idx) => item.quantity !== (order.items[idx] as any)?.quantity);
   
   return (
-    <div style={{
-      maxWidth: '720px',
-      margin: '0 auto',
-      padding: '24px',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif',
-    }}>
+    <>
+      <style jsx>{`
+        @media (max-width: 640px) {
+          .order-items-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+          }
+        }
+        @media (min-width: 641px) and (max-width: 768px) {
+          .order-items-grid {
+            grid-template-columns: repeat(3, 1fr) !important;
+          }
+        }
+        @media (min-width: 769px) {
+          .order-items-grid {
+            grid-template-columns: repeat(4, 1fr) !important;
+          }
+        }
+      `}</style>
+      <div style={{
+        maxWidth: '720px',
+        margin: '0 auto',
+        padding: '24px',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif',
+      }}>
       {/* Order Number Banner */}
       <div style={{
         background: 'linear-gradient(135deg, #10b981, #059669)',
@@ -773,21 +791,27 @@ const PendingOrderModification: React.FC<PendingOrderModificationProps> = ({
           Your Order
         </h3>
         
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div className="order-items-grid" style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', 
+          gap: '12px'
+        }}>
           {items.map((item) => (
             <div key={item.id} style={{
               display: 'flex',
+              flexDirection: 'column',
               alignItems: 'center',
-              gap: '12px',
+              gap: '8px',
               padding: '12px',
               background: '#F9FAFB',
               borderRadius: '12px',
+              textAlign: 'center'
             }}>
               {/* Item Image */}
               {item.menuItem?.image && (
                 <div style={{
-                  width: '60px',
-                  height: '60px',
+                  width: '100%',
+                  aspectRatio: '1',
                   borderRadius: '10px',
                   overflow: 'hidden',
                   border: '2px solid #E5E7EB',
@@ -795,7 +819,7 @@ const PendingOrderModification: React.FC<PendingOrderModificationProps> = ({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  flexShrink: 0,
+                  marginBottom: '8px'
                 }}>
                   <img
                     src={item.menuItem.image}
@@ -819,18 +843,27 @@ const PendingOrderModification: React.FC<PendingOrderModificationProps> = ({
                 </div>
               )}
               
-              <div style={{ flex: 1 }}>
+              <div style={{ width: '100%' }}>
                 <div style={{
-                  fontSize: '0.9375rem',
+                  fontSize: '0.875rem',
                   fontWeight: 600,
                   color: '#1F2937',
                   marginBottom: '4px',
+                  lineHeight: '1.3',
+                  minHeight: '34px',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
                 }}>
                   {item.menuItem.name}
                 </div>
                 <div style={{
                   fontSize: '0.875rem',
-                  color: '#6B7280',
+                  fontWeight: 700,
+                  color: '#f97316',
+                  marginBottom: '8px'
                 }}>
                   ₹{item.price}
                 </div>
@@ -840,18 +873,20 @@ const PendingOrderModification: React.FC<PendingOrderModificationProps> = ({
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px',
+                justifyContent: 'center',
+                gap: '6px',
                 background: 'white',
                 borderRadius: '10px',
                 padding: '4px',
                 border: '2px solid #E5E7EB',
+                width: '100%'
               }}>
                 <button
                   onClick={() => updateItemQuantity(item.id, -1)}
                   style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '8px',
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '6px',
                     border: 'none',
                     background: '#F3F4F6',
                     color: '#6B7280',
@@ -860,15 +895,16 @@ const PendingOrderModification: React.FC<PendingOrderModificationProps> = ({
                     justifyContent: 'center',
                     cursor: 'pointer',
                     transition: 'all 0.2s',
+                    flexShrink: 0
                   }}
                 >
-                  {item.quantity === 1 ? <Trash2 size={16} /> : <Minus size={16} />}
+                  {item.quantity === 1 ? <Trash2 size={14} /> : <Minus size={14} />}
                 </button>
                 <span style={{
-                  fontSize: '1rem',
-                  fontWeight: 600,
+                  fontSize: '0.9375rem',
+                  fontWeight: 700,
                   color: '#1F2937',
-                  minWidth: '24px',
+                  minWidth: '28px',
                   textAlign: 'center',
                 }}>
                   {item.quantity}
@@ -876,9 +912,9 @@ const PendingOrderModification: React.FC<PendingOrderModificationProps> = ({
                 <button
                   onClick={() => updateItemQuantity(item.id, 1)}
                   style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '8px',
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '6px',
                     border: 'none',
                     background: '#f97316',
                     color: 'white',
@@ -887,9 +923,10 @@ const PendingOrderModification: React.FC<PendingOrderModificationProps> = ({
                     justifyContent: 'center',
                     cursor: 'pointer',
                     transition: 'all 0.2s',
+                    flexShrink: 0
                   }}
                 >
-                  <Plus size={16} />
+                  <Plus size={14} />
                 </button>
               </div>
             </div>
@@ -953,20 +990,23 @@ const PendingOrderModification: React.FC<PendingOrderModificationProps> = ({
         <div style={{
           display: 'flex',
           flexDirection: 'column',
-          gap: '12px',
+          alignItems: 'center',
+          gap: '10px',
           marginTop: '16px',
         }}>
           {/* PRIMARY: Confirm & Send to Kitchen Button */}
           <button
             onClick={handleConfirmOrder}
             style={{
-              width: '100%',
-              padding: '14px 20px',
+              width: 'fit-content',
+              minWidth: '280px',
+              maxWidth: '100%',
+              padding: '12px 24px',
               background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
               color: 'white',
               border: 'none',
-              borderRadius: '12px',
-              fontSize: '1rem',
+              borderRadius: '10px',
+              fontSize: '0.9375rem',
               fontWeight: 700,
               cursor: 'pointer',
               transition: 'all 0.3s',
@@ -993,8 +1033,10 @@ const PendingOrderModification: React.FC<PendingOrderModificationProps> = ({
           <button
             onClick={onBrowseMenu}
             style={{
-              width: '100%',
-              padding: '12px 20px',
+              width: 'fit-content',
+              minWidth: '220px',
+              maxWidth: '100%',
+              padding: '10px 20px',
               background: '#f97316',
               color: 'white',
               border: 'none',
@@ -1025,12 +1067,14 @@ const PendingOrderModification: React.FC<PendingOrderModificationProps> = ({
           <button
             onClick={() => setShowCancelModal(true)}
             style={{
-              width: '100%',
-              padding: '10px 20px',
+              width: 'fit-content',
+              minWidth: '180px',
+              maxWidth: '100%',
+              padding: '8px 16px',
               background: 'white',
               color: '#EF4444',
-              border: '2px solid #EF4444',
-              borderRadius: '10px',
+              border: '1.5px solid #EF4444',
+              borderRadius: '8px',
               fontSize: '0.8125rem',
               fontWeight: 600,
               cursor: 'pointer',
@@ -1214,7 +1258,8 @@ const PendingOrderModification: React.FC<PendingOrderModificationProps> = ({
           }}
         />
       )}
-    </div>
+      </div>
+    </>
   );
 };
 

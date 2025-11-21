@@ -1377,70 +1377,99 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
                     </div>
                   </div>
                   
-                  {/* Clean Icon Badges - Top Right - All Screen Sizes */}
-                  <div className="absolute flex items-center" style={{ top: '0.75rem', right: '0.75rem', gap: '0.5rem', zIndex: 5 }}>
+                  {/* Badge Grid - Top Right - 2x2 Grid Layout */}
+                  <div 
+                    className="absolute" 
+                    style={{ 
+                      top: '8px', 
+                      right: '8px', 
+                      display: 'grid', 
+                      gridTemplateColumns: 'repeat(2, auto)', 
+                      gap: '4px',
+                      maxWidth: '70px',
+                      zIndex: 5 
+                    }}
+                  >
+                    {/* Stock Status Badge - Full Width at Top */}
+                    <span style={{
+                      gridColumn: '1 / -1',
+                      padding: '3px 8px',
+                      borderRadius: '12px',
+                      fontSize: '10px',
+                      fontWeight: 600,
+                      backgroundColor: isInStock(item) ? '#dcfce7' : '#fee2e2',
+                      color: isInStock(item) ? '#166534' : '#991b1b',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
+                      textAlign: 'center',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {isInStock(item) ? 'In Stock' : 'Out of Stock'}
+                    </span>
+                    
+                    {/* Dietary Badges - 2x2 Grid Below */}
                     {item.isVegetarian === true && (
                       <div style={{
-                        width: isDesktop ? '36px' : '28px',
-                        height: isDesktop ? '36px' : '28px',
+                        width: isDesktop ? '28px' : '24px',
+                        height: isDesktop ? '28px' : '24px',
                         background: 'rgba(255, 255, 255, 0.95)',
                         backdropFilter: 'blur(8px)',
-                        borderRadius: '50%',
+                        borderRadius: '6px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-                        padding: '0.25rem'
+                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.15)',
+                        padding: '4px'
                       }} title="Vegetarian">
-                        <Leaf size={isDesktop ? 20 : 16} className="text-green-600" strokeWidth={2.5} />
+                        <Leaf size={isDesktop ? 16 : 14} className="text-green-600" strokeWidth={2.5} />
                       </div>
                     )}
                     {item.isVegan === true && (
                       <div style={{
-                        width: isDesktop ? '36px' : '28px',
-                        height: isDesktop ? '36px' : '28px',
+                        width: isDesktop ? '28px' : '24px',
+                        height: isDesktop ? '28px' : '24px',
                         background: 'rgba(255, 255, 255, 0.95)',
                         backdropFilter: 'blur(8px)',
-                        borderRadius: '50%',
+                        borderRadius: '6px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-                        padding: '0.25rem'
+                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.15)',
+                        padding: '4px'
                       }} title="Vegan">
-                        <Leaf size={isDesktop ? 20 : 16} className="text-green-800" strokeWidth={2.5} fill="currentColor" />
+                        <Leaf size={isDesktop ? 16 : 14} className="text-green-800" strokeWidth={2.5} fill="currentColor" />
                       </div>
                     )}
                     {item.isGlutenFree === true && (
                       <div style={{
-                        width: isDesktop ? '36px' : '28px',
-                        height: isDesktop ? '36px' : '28px',
+                        width: isDesktop ? '28px' : '24px',
+                        height: isDesktop ? '28px' : '24px',
                         background: 'rgba(255, 255, 255, 0.95)',
                         backdropFilter: 'blur(8px)',
-                        borderRadius: '50%',
+                        borderRadius: '6px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-                        padding: '0.25rem'
-                      }} title="Gluten Free">
-                        <WheatOff size={isDesktop ? 20 : 16} className="text-amber-600" strokeWidth={2.5} />
+                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.15)',
+                        padding: '4px'
+                      }} title="Gluten-Free">
+                        <WheatOff size={isDesktop ? 16 : 14} className="text-amber-600" strokeWidth={2.5} />
                       </div>
                     )}
                     {typeof item.spicyLevel === 'number' && item.spicyLevel > 0 && (
                       <div style={{
-                        width: isDesktop ? '36px' : '28px',
-                        height: isDesktop ? '36px' : '28px',
+                        width: isDesktop ? '28px' : '24px',
+                        height: isDesktop ? '28px' : '24px',
                         background: 'rgba(255, 255, 255, 0.95)',
                         backdropFilter: 'blur(8px)',
-                        borderRadius: '50%',
+                        borderRadius: '6px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-                        padding: '0.25rem'
-                      }} title="Spicy">
-                        <Flame size={isDesktop ? 20 : 16} className="text-red-600" strokeWidth={2.5} fill="currentColor" />
+                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.15)',
+                        padding: '2px',
+                        fontSize: isDesktop ? '10px' : '9px'
+                      }} title={`Spicy Level: ${item.spicyLevel}`}>
+                        {'🌶️'.repeat(Math.min(item.spicyLevel, 3))}
                       </div>
                     )}
                   </div>

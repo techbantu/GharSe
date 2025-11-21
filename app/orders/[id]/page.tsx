@@ -22,15 +22,15 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 
-// Order status configuration
+// Order status configuration - Food-themed colors matching website palette
 const ORDER_STATUS = {
-  PENDING_CONFIRMATION: { label: 'Waiting for GharKha confirmation', color: '#F97316', icon: Clock },
-  PENDING: { label: 'Order Placed', color: '#F59E0B', icon: Package },
-  CONFIRMED: { label: 'Waiting for GharKha confirmation', color: '#3B82F6', icon: CheckCircle2 },
-  PREPARING: { label: 'Preparing', color: '#8B5CF6', icon: ChefHat },
-  OUT_FOR_DELIVERY: { label: 'Out for Delivery', color: '#F97316', icon: Truck },
-  DELIVERED: { label: 'Delivered', color: '#10B981', icon: Home },
-  CANCELLED: { label: 'Cancelled', color: '#EF4444', icon: AlertCircle },
+  PENDING_CONFIRMATION: { label: 'Waiting for GharKha confirmation', color: '#f59e0b', icon: Clock }, // Warm amber
+  PENDING: { label: 'Order Placed', color: '#f59e0b', icon: Package }, // Warm amber
+  CONFIRMED: { label: 'Waiting for GharKha confirmation', color: '#f97316', icon: CheckCircle2 }, // Orange
+  PREPARING: { label: 'Preparing', color: '#ea580c', icon: ChefHat }, // Deep orange/red (cooking)
+  OUT_FOR_DELIVERY: { label: 'Out for Delivery', color: '#fb923c', icon: Truck }, // Warm orange
+  DELIVERED: { label: 'Delivered', color: '#10b981', icon: Home }, // Fresh green
+  CANCELLED: { label: 'Cancelled', color: '#dc2626', icon: AlertCircle }, // Deep red
 };
 
 type OrderStatus = keyof typeof ORDER_STATUS;
@@ -303,15 +303,15 @@ export default function OrderDetailPage() {
                 const isCompleted = index <= currentStepIndex;
                 const isCurrent = index === currentStepIndex;
 
-                // Define nice colors for each step
+                // Food-themed colors for each step matching website palette
                 const colors: Record<string, string> = {
-                  PENDING_CONFIRMATION: '#6B7280', // Gray (waiting)
-                  PENDING: '#10B981',      // Green
-                  CONFIRMED: '#3B82F6',    // Blue
-                  PREPARING: '#8B5CF6',    // Purple
-                  OUT_FOR_DELIVERY: '#F97316', // Orange
-                  DELIVERED: '#10B981',    // Green
-                  CANCELLED: '#EF4444',    // Red
+                  PENDING_CONFIRMATION: '#f59e0b', // Warm amber (waiting)
+                  PENDING: '#f59e0b',      // Warm amber
+                  CONFIRMED: '#f97316',    // Orange (order confirmed)
+                  PREPARING: '#ea580c',    // Deep orange/red (cooking - like fire)
+                  OUT_FOR_DELIVERY: '#fb923c', // Warm orange (on the way)
+                  DELIVERED: '#10b981',    // Fresh green (delivered successfully)
+                  CANCELLED: '#dc2626',    // Deep red (cancelled)
                 };
 
                 return (

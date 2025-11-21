@@ -101,6 +101,21 @@ export async function POST(request: NextRequest) {
       });
     }
     
+    // DISABLED AUTO-FINALIZATION: Order stays in PENDING_CONFIRMATION until chef manually confirms
+    // Orders should only be confirmed by the chef in the Kitchen Display System
+    logger.warn('Finalize endpoint called but auto-confirmation is disabled', {
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+    });
+    
+    return NextResponse.json({
+      success: true,
+      message: 'Order awaiting kitchen confirmation. Chef will review and confirm.',
+      order,
+      note: 'Auto-confirmation disabled - requires manual chef approval'
+    });
+    
+    /* COMMENTED OUT - NO AUTO-CONFIRMATION
     // Update order status to PENDING (visible to kitchen)
     const finalizedOrder = await (prisma.order.update as any)({
       where: { id: data.orderId },
@@ -166,6 +181,7 @@ export async function POST(request: NextRequest) {
       message: 'Order has been sent to the kitchen',
       order: finalizedOrder,
     });
+    */
     
   } catch (error) {
     logger.error('Order finalization failed', {

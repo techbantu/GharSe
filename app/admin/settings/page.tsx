@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { User, Bell, Lock, CreditCard } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, Bell, Lock, CreditCard, Loader2 } from 'lucide-react';
 import EditNotificationsModal from '@/components/admin/settings/EditNotificationsModal';
 import EditProfileModal from '@/components/admin/settings/EditProfileModal';
 import EditSecurityModal from '@/components/admin/settings/EditSecurityModal';
@@ -10,11 +10,13 @@ import EditPaymentModal from '@/components/admin/settings/EditPaymentModal';
 export default function SettingsPage() {
   // State for settings data
   const [profile, setProfile] = useState({
-    name: 'Bantu',
-    email: 'admin@bantuskitchen.com',
-    role: 'Owner',
-    phone: '+91 98765 43210'
+    name: 'Loading...',
+    email: 'Loading...',
+    role: 'STAFF',
+    phone: ''
   });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [security, setSecurity] = useState({
     twoFactor: 'Not Configured',
@@ -37,13 +39,67 @@ export default function SettingsPage() {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isNotificationsModalOpen, setIsNotificationsModalOpen] = useState(false);
 
+  // Fetch admin profile on component mount
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/admin/profile');
+        const data = await response.json();
+
+        if (data.success && data.admin) {
+          setProfile({
+            name: data.admin.name,
+            email: data.admin.email,
+            role: data.admin.role,
+            phone: data.admin.phone || ''
+          });
+          setError(null);
+        } else {
+          setError(data.error || 'Failed to load profile');
+        }
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+        setError('Failed to load profile');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, []);
+
   // Handlers
   const handleUpdateProfile = async (data: { name: string; email: string; phone: string }) => {
-    // TODO: API Call
-    console.log('Updating profile:', data);
-    setProfile(prev => ({ ...prev, ...data }));
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      const response = await fetch('/api/admin/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Update local state with the returned data
+        setProfile(prev => ({
+          ...prev,
+          name: result.admin.name,
+          email: result.admin.email,
+          phone: result.admin.phone || ''
+        }));
+        
+        console.log('✅ Profile updated successfully');
+      } else {
+        throw new Error(result.error || 'Failed to update profile');
+      }
+    } catch (error: any) {
+      console.error('❌ Error updating profile:', error);
+      alert(error.message || 'Failed to update profile');
+      throw error; // Re-throw to let the modal handle it
+    }
   };
 
   const handleUpdateSecurity = async (data: { currentPass: string; newPass: string }) => {
@@ -121,6 +177,73 @@ export default function SettingsPage() {
       ]
     }
   ];
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '400px',
+        gap: '1rem'
+      }}>
+        <Loader2 size={48} style={{ color: '#ea580c', animation: 'spin 1s linear infinite' }} />
+        <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>Loading your settings...</p>
+        <style>{`
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '400px',
+        gap: '1rem'
+      }}>
+        <div style={{
+          padding: '1rem',
+          backgroundColor: '#fee2e2',
+          borderRadius: '0.5rem',
+          border: '1px solid #fecaca',
+          maxWidth: '32rem',
+          textAlign: 'center'
+        }}>
+          <p style={{ fontSize: '0.875rem', color: '#991b1b', marginBottom: '0.5rem', fontWeight: 600 }}>
+            Failed to load settings
+          </p>
+          <p style={{ fontSize: '0.75rem', color: '#7f1d1d' }}>
+            {error}
+          </p>
+        </div>
+        <button
+          onClick={() => window.location.reload()}
+          style={{
+            padding: '0.5rem 1rem',
+            backgroundColor: '#ea580c',
+            color: 'white',
+            border: 'none',
+            borderRadius: '0.5rem',
+            fontSize: '0.875rem',
+            cursor: 'pointer'
+          }}
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>

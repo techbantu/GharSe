@@ -303,6 +303,29 @@ export const notificationManager = {
   },
 
   /**
+   * Send order rejection notification
+   */
+  async sendOrderRejection(
+    order: any,
+    options: NotificationOptions = {}
+  ): Promise<NotificationResult> {
+    logger.info('Sending order rejection notification', {
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      reason: order.rejectionReason,
+      via: options.via || ['email'],
+    });
+
+    return sendNotifications(
+      order,
+      'status_update',
+      () => emailService.sendOrderRejection(order),
+      () => Promise.resolve({ success: true, skipped: true }), // Skip SMS for rejections
+      options
+    );
+  },
+
+  /**
    * Retry failed notifications
    * Useful for cron jobs that process notification queue
    */
