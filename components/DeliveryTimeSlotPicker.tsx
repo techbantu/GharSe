@@ -66,6 +66,26 @@ export const DeliveryTimeSlotPicker: React.FC<DeliveryTimeSlotPickerProps> = ({
     return dates;
   }, [maxAdvanceDays]);
   
+  // Helper to get user-friendly sublabel for time slot
+  const getSlotSublabel = (time: Date): string => {
+    const now = new Date();
+    const diffMinutes = Math.floor((time.getTime() - now.getTime()) / 60000);
+    const diffHours = Math.floor(diffMinutes / 60);
+    
+    if (diffMinutes < 180) {
+      return `In ${Math.floor(diffMinutes / 60)}h ${diffMinutes % 60}m`;
+    } else if (diffHours < 24) {
+      return `In ${diffHours} hours`;
+    } else if (isToday(time)) {
+      return 'Today';
+    } else if (isTomorrow(time)) {
+      return 'Tomorrow';
+    } else {
+      const days = Math.floor(diffHours / 24);
+      return `In ${days} days`;
+    }
+  };
+  
   // Generate time slots for selected date
   const availableTimeSlots = useMemo(() => {
     if (!selectedDate) return [];
@@ -105,26 +125,6 @@ export const DeliveryTimeSlotPicker: React.FC<DeliveryTimeSlotPickerProps> = ({
     
     return slots;
   }, [selectedDate, minimumDeliveryTime]);
-  
-  // Helper to get user-friendly sublabel for time slot
-  const getSlotSublabel = (time: Date): string => {
-    const now = new Date();
-    const diffMinutes = Math.floor((time.getTime() - now.getTime()) / 60000);
-    const diffHours = Math.floor(diffMinutes / 60);
-    
-    if (diffMinutes < 180) {
-      return `In ${Math.floor(diffMinutes / 60)}h ${diffMinutes % 60}m`;
-    } else if (diffHours < 24) {
-      return `In ${diffHours} hours`;
-    } else if (isToday(time)) {
-      return 'Today';
-    } else if (isTomorrow(time)) {
-      return 'Tomorrow';
-    } else {
-      const days = Math.floor(diffHours / 24);
-      return `In ${days} days`;
-    }
-  };
   
   // Handle date selection
   const handleDateSelect = (date: Date) => {
