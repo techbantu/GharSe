@@ -146,7 +146,7 @@ export default function EditMenuItemModal({ isOpen, onClose, item, onSave }: Edi
             
             {/* LEFT COLUMN - Image & Basic Info */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            {/* Image Preview & Input */}
+              {/* Image Preview & Input */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 <label style={{
                   display: 'block',
@@ -169,18 +169,18 @@ export default function EditMenuItemModal({ isOpen, onClose, item, onSave }: Edi
                 }}
                 onMouseEnter={(e) => e.currentTarget.style.borderColor = '#fed7aa'}
                 onMouseLeave={(e) => e.currentTarget.style.borderColor = '#e5e7eb'}>
-                {formData.image ? (
-                  <img 
-                    src={formData.image} 
-                    alt="Preview" 
+                  {formData.image ? (
+                    <img 
+                      src={formData.image} 
+                      alt="Preview"
                       style={{
                         width: '100%',
                         height: '100%',
                         objectFit: 'cover',
                       }}
-                    onError={(e) => (e.currentTarget.style.display = 'none')}
-                  />
-                ) : (
+                      onError={(e) => (e.currentTarget.style.display = 'none')}
+                    />
+                  ) : (
                     <div style={{
                       position: 'absolute',
                       inset: 0,
@@ -194,15 +194,15 @@ export default function EditMenuItemModal({ isOpen, onClose, item, onSave }: Edi
                       <span style={{ fontSize: '0.75rem', fontWeight: 500 }}>
                         Paste image URL below
                       </span>
-                  </div>
-                )}
-              </div>
+                    </div>
+                  )}
+                </div>
 
-              <input
-                type="text"
-                value={formData.image || ''}
-                onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                placeholder="https://..."
+                <input
+                  type="text"
+                  value={formData.image || ''}
+                  onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                  placeholder="https://..."
                   style={{
                     width: '100%',
                     padding: '0.625rem 1rem',
@@ -221,8 +221,8 @@ export default function EditMenuItemModal({ isOpen, onClose, item, onSave }: Edi
                     e.currentTarget.style.borderColor = '#e5e7eb';
                     e.currentTarget.style.boxShadow = 'none';
                   }}
-              />
-            </div>
+                />
+              </div>
 
               {/* Dish Name */}
               <div>
