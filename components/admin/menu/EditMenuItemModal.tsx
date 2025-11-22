@@ -86,12 +86,12 @@ export default function EditMenuItemModal({ isOpen, onClose, item, onSave }: Edi
       <div style={{
         backgroundColor: '#ffffff',
         width: '100%',
-        maxWidth: '420px',
-        borderRadius: '1.5rem',
+        maxWidth: '720px',
+        borderRadius: '1rem',
         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
         display: 'flex',
         flexDirection: 'column',
-        maxHeight: '90vh',
+        maxHeight: '85vh',
         overflow: 'hidden',
       }}>
         {/* Header */}
@@ -139,59 +139,61 @@ export default function EditMenuItemModal({ isOpen, onClose, item, onSave }: Edi
         }}>
           <form onSubmit={handleSubmit} style={{
             padding: '1.5rem',
-            display: 'flex',
-            flexDirection: 'column',
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
             gap: '1.5rem',
           }}>
             
+            {/* LEFT COLUMN - Image & Basic Info */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             {/* Image Preview & Input */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <label style={{
-                display: 'block',
-                fontSize: '0.875rem',
-                fontWeight: 600,
-                color: '#374151',
-              }}>
-                Food Photography
-              </label>
-              
-              <div style={{
-                position: 'relative',
-                width: '100%',
-                aspectRatio: '4 / 3',
-                backgroundColor: '#f9fafb',
-                borderRadius: '1rem',
-                border: '2px dashed #e5e7eb',
-                overflow: 'hidden',
-                transition: 'border-color 0.2s',
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.borderColor = '#fed7aa'}
-              onMouseLeave={(e) => e.currentTarget.style.borderColor = '#e5e7eb'}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <label style={{
+                  display: 'block',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  color: '#374151',
+                }}>
+                  Food Photography
+                </label>
+                
+                <div style={{
+                  position: 'relative',
+                  width: '100%',
+                  aspectRatio: '4 / 3',
+                  backgroundColor: '#f9fafb',
+                  borderRadius: '1rem',
+                  border: '2px dashed #e5e7eb',
+                  overflow: 'hidden',
+                  transition: 'border-color 0.2s',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.borderColor = '#fed7aa'}
+                onMouseLeave={(e) => e.currentTarget.style.borderColor = '#e5e7eb'}>
                 {formData.image ? (
                   <img 
                     src={formData.image} 
-                    alt="Preview"
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                    }}
+                    alt="Preview" 
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                      }}
                     onError={(e) => (e.currentTarget.style.display = 'none')}
                   />
                 ) : (
-                  <div style={{
-                    position: 'absolute',
-                    inset: 0,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#9ca3af',
-                  }}>
-                    <Upload size={32} style={{ marginBottom: '0.5rem', opacity: 0.5 }} />
-                    <span style={{ fontSize: '0.75rem', fontWeight: 500 }}>
-                      Paste image URL below
-                    </span>
+                    <div style={{
+                      position: 'absolute',
+                      inset: 0,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#9ca3af',
+                    }}>
+                      <Upload size={32} style={{ marginBottom: '0.5rem', opacity: 0.5 }} />
+                      <span style={{ fontSize: '0.75rem', fontWeight: 500 }}>
+                        Paste image URL below
+                      </span>
                   </div>
                 )}
               </div>
@@ -201,29 +203,28 @@ export default function EditMenuItemModal({ isOpen, onClose, item, onSave }: Edi
                 value={formData.image || ''}
                 onChange={(e) => setFormData({ ...formData, image: e.target.value })}
                 placeholder="https://..."
-                style={{
-                  width: '100%',
-                  padding: '0.625rem 1rem',
-                  backgroundColor: '#f9fafb',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '0.75rem',
-                  fontSize: '0.875rem',
-                  outline: 'none',
-                  transition: 'all 0.2s',
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = '#ea580c';
-                  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(234, 88, 12, 0.1)';
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = '#e5e7eb';
-                  e.currentTarget.style.boxShadow = 'none';
-                }}
+                  style={{
+                    width: '100%',
+                    padding: '0.625rem 1rem',
+                    backgroundColor: '#f9fafb',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '0.75rem',
+                    fontSize: '0.875rem',
+                    outline: 'none',
+                    transition: 'all 0.2s',
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = '#ea580c';
+                    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(234, 88, 12, 0.1)';
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = '#e5e7eb';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
               />
             </div>
 
-            {/* Basic Info */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {/* Dish Name */}
               <div>
                 <label style={{
                   display: 'block',
@@ -262,6 +263,7 @@ export default function EditMenuItemModal({ isOpen, onClose, item, onSave }: Edi
                 />
               </div>
 
+              {/* Price & Category */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div>
                   <label style={{
@@ -373,6 +375,7 @@ export default function EditMenuItemModal({ isOpen, onClose, item, onSave }: Edi
                 </div>
               </div>
 
+              {/* Description */}
               <div>
                 <label style={{
                   display: 'block',
@@ -412,219 +415,223 @@ export default function EditMenuItemModal({ isOpen, onClose, item, onSave }: Edi
               </div>
             </div>
 
-            <div style={{ height: '1px', backgroundColor: '#f3f4f6', margin: '1rem 0' }}></div>
-
-            {/* Availability Toggle */}
-            <div style={{
-              padding: '1rem',
-              borderRadius: '0.75rem',
-              border: formData.isAvailable ? '1px solid #bbf7d0' : '1px solid #fecaca',
-              backgroundColor: formData.isAvailable ? '#f0fdf4' : '#fef2f2',
-              transition: 'all 0.2s',
-            }}>
+            {/* RIGHT COLUMN - Preferences & Settings */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              
+              {/* Availability Toggle */}
               <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
+                padding: '1rem',
+                borderRadius: '0.75rem',
+                border: formData.isAvailable ? '1px solid #bbf7d0' : '1px solid #fecaca',
+                backgroundColor: formData.isAvailable ? '#f0fdf4' : '#fef2f2',
+                transition: 'all 0.2s',
               }}>
-                <div>
-                  <h4 style={{
-                    fontSize: '0.875rem',
-                    fontWeight: 700,
-                    color: formData.isAvailable ? '#166534' : '#991b1b',
-                    margin: 0,
-                  }}>
-                    {formData.isAvailable ? 'In Stock' : 'Out of Stock'}
-                  </h4>
-                  <p style={{
-                    fontSize: '0.75rem',
-                    marginTop: '0.125rem',
-                    color: formData.isAvailable ? '#16a34a' : '#dc2626',
-                    margin: 0,
-                  }}>
-                    {formData.isAvailable 
-                      ? 'Available for orders' 
-                      : 'Temporarily unavailable'}
-                  </p>
-                </div>
-                <label style={{
-                  position: 'relative',
-                  display: 'inline-flex',
+                <div style={{
+                  display: 'flex',
                   alignItems: 'center',
-                  cursor: 'pointer',
+                  justifyContent: 'space-between',
                 }}>
-                  <input 
-                    type="checkbox"
-                    style={{
-                      position: 'absolute',
-                      opacity: 0,
-                      width: 0,
-                      height: 0,
-                    }}
-                    checked={formData.isAvailable}
-                    onChange={(e) => setFormData({ ...formData, isAvailable: e.target.checked })}
-                  />
-                  <div style={{
-                    width: '44px',
-                    height: '24px',
-                    backgroundColor: formData.isAvailable ? '#16a34a' : '#d1d5db',
-                    borderRadius: '9999px',
-                    position: 'relative',
-                    transition: 'background-color 0.2s',
-                  }}>
-                    <div style={{
-                      position: 'absolute',
-                      top: '2px',
-                      left: formData.isAvailable ? '22px' : '2px',
-                      width: '20px',
-                      height: '20px',
-                      backgroundColor: '#ffffff',
-                      borderRadius: '50%',
-                      transition: 'left 0.2s',
-                      boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
-                    }} />
-                  </div>
-                </label>
-              </div>
-            </div>
-
-            {/* Preferences */}
-            <div>
-              <label style={{
-                display: 'block',
-                fontSize: '0.875rem',
-                fontWeight: 600,
-                color: '#374151',
-                marginBottom: '0.75rem',
-              }}>
-                Dietary Tags
-              </label>
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: '0.75rem',
-              }}>
-                {[
-                  { key: 'isVegetarian', label: 'Vegetarian', icon: '🥬' },
-                  { key: 'isVegan', label: 'Vegan', icon: '🌱' },
-                  { key: 'isGlutenFree', label: 'Gluten-Free', icon: '🌾' },
-                  { key: 'isDairyFree', label: 'Dairy-Free', icon: '🥛' },
-                ].map(({ key, label, icon }) => (
-                  <label 
-                    key={key}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.75rem',
-                      padding: '0.75rem',
-                      borderRadius: '0.75rem',
-                      border: (formData as any)[key] ? '1px solid #fed7aa' : '1px solid #e5e7eb',
-                      backgroundColor: (formData as any)[key] ? '#fff7ed' : '#ffffff',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                      boxShadow: (formData as any)[key] ? '0 0 0 1px #fed7aa' : 'none',
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!(formData as any)[key]) {
-                        e.currentTarget.style.borderColor = '#fed7aa';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!(formData as any)[key]) {
-                        e.currentTarget.style.borderColor = '#e5e7eb';
-                      }
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={(formData as any)[key]}
-                      onChange={(e) => setFormData({ ...formData, [key]: e.target.checked })}
-                      style={{
-                        width: '16px',
-                        height: '16px',
-                        accentColor: '#ea580c',
-                        cursor: 'pointer',
-                      }}
-                    />
-                    <span style={{
+                  <div>
+                    <h4 style={{
                       fontSize: '0.875rem',
-                      fontWeight: 500,
-                      color: '#374151',
+                      fontWeight: 700,
+                      color: formData.isAvailable ? '#166534' : '#991b1b',
+                      margin: 0,
                     }}>
-                      <span style={{ marginRight: '0.5rem' }}>{icon}</span>
-                      {label}
-                    </span>
+                      {formData.isAvailable ? 'In Stock' : 'Out of Stock'}
+                    </h4>
+                    <p style={{
+                      fontSize: '0.75rem',
+                      marginTop: '0.125rem',
+                      color: formData.isAvailable ? '#16a34a' : '#dc2626',
+                      margin: 0,
+                    }}>
+                      {formData.isAvailable 
+                        ? 'Available for orders' 
+                        : 'Temporarily unavailable'}
+                    </p>
+                  </div>
+                  <label style={{
+                    position: 'relative',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    cursor: 'pointer',
+                  }}>
+                    <input 
+                      type="checkbox"
+                      style={{
+                        position: 'absolute',
+                        opacity: 0,
+                        width: 0,
+                        height: 0,
+                      }}
+                      checked={formData.isAvailable}
+                      onChange={(e) => setFormData({ ...formData, isAvailable: e.target.checked })}
+                    />
+                    <div style={{
+                      width: '44px',
+                      height: '24px',
+                      backgroundColor: formData.isAvailable ? '#16a34a' : '#d1d5db',
+                      borderRadius: '9999px',
+                      position: 'relative',
+                      transition: 'background-color 0.2s',
+                    }}>
+                      <div style={{
+                        position: 'absolute',
+                        top: '2px',
+                        left: formData.isAvailable ? '22px' : '2px',
+                        width: '20px',
+                        height: '20px',
+                        backgroundColor: '#ffffff',
+                        borderRadius: '50%',
+                        transition: 'left 0.2s',
+                        boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+                      }} />
+                    </div>
                   </label>
-                ))}
+                </div>
               </div>
-            </div>
 
-            {/* Spicy Level */}
-            <div>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: '0.75rem',
-              }}>
+              {/* Dietary Tags */}
+              <div>
                 <label style={{
+                  display: 'block',
                   fontSize: '0.875rem',
                   fontWeight: 600,
                   color: '#374151',
+                  marginBottom: '0.75rem',
                 }}>
-                  Spiciness
+                  Dietary Tags
                 </label>
-                <span style={{
-                  fontSize: '0.875rem',
-                  fontWeight: 700,
-                  color: '#ea580c',
-                  backgroundColor: '#fff7ed',
-                  padding: '0.25rem 0.75rem',
-                  borderRadius: '9999px',
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '0.75rem',
                 }}>
-                  {formData.spicyLevel === 0 ? 'None' : ['Mild', 'Medium', 'Hot'][formData.spicyLevel - 1]}
-                  {formData.spicyLevel > 0 && (
-                    <span style={{
-                      marginLeft: '0.25rem',
-                      fontSize: '0.75rem',
-                    }}>
-                      {'🌶️'.repeat(formData.spicyLevel)}
-                    </span>
-                  )}
-                </span>
+                  {[
+                    { key: 'isVegetarian', label: 'Vegetarian', icon: '🥬' },
+                    { key: 'isVegan', label: 'Vegan', icon: '🌱' },
+                    { key: 'isGlutenFree', label: 'Gluten-Free', icon: '🌾' },
+                    { key: 'isDairyFree', label: 'Dairy-Free', icon: '🥛' },
+                  ].map(({ key, label, icon }) => (
+                    <label 
+                      key={key}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        padding: '0.75rem',
+                        borderRadius: '0.75rem',
+                        border: (formData as any)[key] ? '1px solid #fed7aa' : '1px solid #e5e7eb',
+                        backgroundColor: (formData as any)[key] ? '#fff7ed' : '#ffffff',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        boxShadow: (formData as any)[key] ? '0 0 0 1px #fed7aa' : 'none',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!(formData as any)[key]) {
+                          e.currentTarget.style.borderColor = '#fed7aa';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!(formData as any)[key]) {
+                          e.currentTarget.style.borderColor = '#e5e7eb';
+                        }
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={(formData as any)[key]}
+                        onChange={(e) => setFormData({ ...formData, [key]: e.target.checked })}
+                        style={{
+                          width: '16px',
+                          height: '16px',
+                          accentColor: '#ea580c',
+                          cursor: 'pointer',
+                        }}
+                      />
+                      <span style={{
+                        fontSize: '0.875rem',
+                        fontWeight: 500,
+                        color: '#374151',
+                      }}>
+                        <span style={{ marginRight: '0.5rem' }}>{icon}</span>
+                        {label}
+                      </span>
+                    </label>
+                  ))}
+                </div>
               </div>
-              <input
-                type="range"
-                min="0"
-                max="3"
-                step="1"
-                value={formData.spicyLevel}
-                onChange={(e) => setFormData({ ...formData, spicyLevel: parseInt(e.target.value) })}
-                style={{
-                  width: '100%',
-                  height: '8px',
-                  backgroundColor: '#e5e7eb',
-                  borderRadius: '0.5rem',
-                  appearance: 'none',
-                  cursor: 'pointer',
-                  accentColor: '#ea580c',
-                }}
-              />
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                fontSize: '0.75rem',
-                color: '#9ca3af',
-                marginTop: '0.5rem',
-                fontWeight: 500,
-              }}>
-                <span>None</span>
-                <span>Mild</span>
-                <span>Medium</span>
-                <span>Hot</span>
-              </div>
-            </div>
 
+              {/* Spicy Level */}
+              <div>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '0.75rem',
+                }}>
+                  <label style={{
+                    fontSize: '0.875rem',
+                    fontWeight: 600,
+                    color: '#374151',
+                  }}>
+                    Spiciness
+                  </label>
+                  <span style={{
+                    fontSize: '0.875rem',
+                    fontWeight: 700,
+                    color: '#ea580c',
+                    backgroundColor: '#fff7ed',
+                    padding: '0.25rem 0.75rem',
+                    borderRadius: '9999px',
+                  }}>
+                    {formData.spicyLevel === 0 ? 'None' : ['Mild', 'Medium', 'Hot'][formData.spicyLevel - 1]}
+                    {formData.spicyLevel > 0 && (
+                      <span style={{
+                        marginLeft: '0.25rem',
+                        fontSize: '0.75rem',
+                      }}>
+                        {'🌶️'.repeat(formData.spicyLevel)}
+                      </span>
+                    )}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="3"
+                  step="1"
+                  value={formData.spicyLevel}
+                  onChange={(e) => setFormData({ ...formData, spicyLevel: parseInt(e.target.value) })}
+                  style={{
+                    width: '100%',
+                    height: '8px',
+                    backgroundColor: '#e5e7eb',
+                    borderRadius: '0.5rem',
+                    appearance: 'none',
+                    cursor: 'pointer',
+                    accentColor: '#ea580c',
+                  }}
+                />
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  fontSize: '0.75rem',
+                  color: '#9ca3af',
+                  marginTop: '0.5rem',
+                  fontWeight: 500,
+                }}>
+                  <span>None</span>
+                  <span>Mild</span>
+                  <span>Medium</span>
+                  <span>Hot</span>
+                </div>
+              </div>
+
+            </div>
+          </form>
+            </div>
           </form>
         </div>
 
