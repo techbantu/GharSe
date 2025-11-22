@@ -631,8 +631,6 @@ export default function EditMenuItemModal({ isOpen, onClose, item, onSave }: Edi
 
             </div>
           </form>
-            </div>
-          </form>
         </div>
 
         {/* Footer */}
