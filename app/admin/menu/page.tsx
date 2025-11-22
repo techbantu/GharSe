@@ -392,79 +392,171 @@ export default function MenuPage() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+          gap: '1.5rem',
+        }}>
           {filteredItems.map((item) => (
             <div
               key={item.id}
-              className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col group hover:shadow-md transition-shadow"
+              style={{
+                backgroundColor: '#ffffff',
+                borderRadius: '0.75rem',
+                border: '1px solid #e5e7eb',
+                boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
+                transition: 'box-shadow 0.2s',
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)'}
+              onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 1px 2px 0 rgba(0, 0, 0, 0.05)'}
             >
               {/* Image Section */}
-              <div className="h-32 md:h-48 w-full bg-gray-100 relative shrink-0">
+              <div style={{
+                height: '200px',
+                width: '100%',
+                backgroundColor: '#f3f4f6',
+                position: 'relative',
+                flexShrink: 0,
+              }}>
                 {item.image ? (
                   <img 
                     src={item.image} 
-                    alt={item.name} 
-                    className="w-full h-full object-cover"
+                    alt={item.name}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                    }}
                     onError={(e) => {
                       e.currentTarget.style.display = 'none';
-                      e.currentTarget.parentElement!.querySelector('.placeholder')!.removeAttribute('hidden');
+                      const placeholder = e.currentTarget.parentElement!.querySelector('.placeholder') as HTMLElement;
+                      if (placeholder) placeholder.style.display = 'flex';
                     }}
                   />
                 ) : null}
                 <div 
-                  className="placeholder" 
-                  hidden={!!item.image}
+                  className="placeholder"
                   style={{ 
+                    display: item.image ? 'none' : 'flex',
                     width: '100%', 
-                    height: '100%', 
-                    display: 'flex', 
+                    height: '100%',
                     alignItems: 'center', 
                     justifyContent: 'center',
                     color: '#9ca3af'
                   }}
                 >
-                  <ImageIcon size={24} />
+                  <ImageIcon size={32} />
                 </div>
                 
                 {/* Stock Badge - Top Left */}
-                <div className="absolute top-2 left-2">
-                  <span className={`
-                    px-2 py-1 rounded-lg text-[10px] md:text-xs font-bold shadow-sm backdrop-blur-sm
-                    ${item.isAvailable 
-                      ? 'bg-white/90 text-green-700 border border-green-100' 
-                      : 'bg-red-50 text-red-700 border border-red-100'}
-                  `}>
+                <div style={{ position: 'absolute', top: '0.5rem', left: '0.5rem' }}>
+                  <span style={{
+                    display: 'inline-block',
+                    padding: '0.375rem 0.625rem',
+                    borderRadius: '0.5rem',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    backgroundColor: item.isAvailable ? 'rgba(255, 255, 255, 0.9)' : '#fef2f2',
+                    color: item.isAvailable ? '#15803d' : '#dc2626',
+                    border: item.isAvailable ? '1px solid #bbf7d0' : '1px solid #fecaca',
+                    backdropFilter: 'blur(4px)',
+                  }}>
                     {item.isAvailable ? 'In Stock' : 'Out of Stock'}
                   </span>
                 </div>
                 
-                {/* Dietary Grid - Top Right (Tidy 2x2 Grid) */}
-                <div className="absolute top-2 right-2 grid grid-cols-2 gap-1">
-                   {/* 2x2 Grid container for dietary icons */}
+                {/* Dietary Grid - Top Right (2x2 Grid) */}
+                <div style={{
+                  position: 'absolute',
+                  top: '0.5rem',
+                  right: '0.5rem',
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(2, 1fr)',
+                  gap: '0.25rem',
+                }}>
                    {item.isVegetarian && (
-                     <div className="w-6 h-6 bg-white/90 backdrop-blur-sm rounded-md flex items-center justify-center shadow-sm" title="Vegetarian">
-                       <Leaf size={14} className="text-green-600" />
+                     <div style={{
+                       width: '28px',
+                       height: '28px',
+                       backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                       backdropFilter: 'blur(4px)',
+                       borderRadius: '0.375rem',
+                       display: 'flex',
+                       alignItems: 'center',
+                       justifyContent: 'center',
+                       boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+                     }} title="Vegetarian">
+                       <Leaf size={16} style={{ color: '#16a34a' }} />
                      </div>
                    )}
                    {item.isVegan && (
-                     <div className="w-6 h-6 bg-white/90 backdrop-blur-sm rounded-md flex items-center justify-center shadow-sm" title="Vegan">
-                       <Sprout size={14} className="text-emerald-600" />
+                     <div style={{
+                       width: '28px',
+                       height: '28px',
+                       backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                       backdropFilter: 'blur(4px)',
+                       borderRadius: '0.375rem',
+                       display: 'flex',
+                       alignItems: 'center',
+                       justifyContent: 'center',
+                       boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+                     }} title="Vegan">
+                       <Sprout size={16} style={{ color: '#059669' }} />
                      </div>
                    )}
                    {item.isGlutenFree && (
-                     <div className="w-6 h-6 bg-white/90 backdrop-blur-sm rounded-md flex items-center justify-center shadow-sm" title="Gluten Free">
-                       <WheatOff size={14} className="text-amber-600" />
+                     <div style={{
+                       width: '28px',
+                       height: '28px',
+                       backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                       backdropFilter: 'blur(4px)',
+                       borderRadius: '0.375rem',
+                       display: 'flex',
+                       alignItems: 'center',
+                       justifyContent: 'center',
+                       boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+                     }} title="Gluten Free">
+                       <WheatOff size={16} style={{ color: '#d97706' }} />
                      </div>
                    )}
                    {item.isDairyFree && (
-                     <div className="w-6 h-6 bg-white/90 backdrop-blur-sm rounded-md flex items-center justify-center shadow-sm" title="Dairy Free">
-                       <MilkOff size={14} className="text-blue-500" />
+                     <div style={{
+                       width: '28px',
+                       height: '28px',
+                       backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                       backdropFilter: 'blur(4px)',
+                       borderRadius: '0.375rem',
+                       display: 'flex',
+                       alignItems: 'center',
+                       justifyContent: 'center',
+                       boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+                     }} title="Dairy Free">
+                       <MilkOff size={16} style={{ color: '#3b82f6' }} />
                      </div>
                    )}
-                   {/* Spicy Level - If simple level, maybe just one chili? Or text? User said "Indian customers read chili count instinctively" so I'll use text 🌶️ inside the box */}
                    {item.spicyLevel > 0 && (
-                     <div className="w-6 h-6 bg-white/90 backdrop-blur-sm rounded-md flex items-center justify-center shadow-sm col-span-2 md:col-span-1" title={`Spicy Level: ${item.spicyLevel}`}>
-                       <span className="text-[10px] md:text-xs flex gap-px items-center justify-center">
+                     <div style={{
+                       width: item.isDairyFree || item.isGlutenFree ? '28px' : '60px',
+                       height: '28px',
+                       gridColumn: (item.isDairyFree || item.isGlutenFree) ? 'auto' : 'span 2',
+                       backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                       backdropFilter: 'blur(4px)',
+                       borderRadius: '0.375rem',
+                       display: 'flex',
+                       alignItems: 'center',
+                       justifyContent: 'center',
+                       boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+                     }} title={`Spicy Level: ${item.spicyLevel}`}>
+                       <span style={{
+                         fontSize: '0.75rem',
+                         display: 'flex',
+                         gap: '1px',
+                         alignItems: 'center',
+                         justifyContent: 'center'
+                       }}>
                          {'🌶️'.repeat(Math.min(item.spicyLevel, 3))}
                        </span>
                      </div>
@@ -472,36 +564,111 @@ export default function MenuPage() {
                 </div>
               </div>
 
-              <div className="p-3 md:p-4 flex flex-col flex-1">
-                <div className="mb-auto">
-                  <div className="w-full">
-                    <h3 className="text-sm md:text-base font-bold text-gray-900 truncate leading-tight" title={item.name}>
+              <div style={{
+                padding: '1rem',
+                display: 'flex',
+                flexDirection: 'column',
+                flex: 1,
+              }}>
+                <div style={{ marginBottom: 'auto' }}>
+                  <div style={{ width: '100%' }}>
+                    <h3 style={{
+                      fontSize: '0.9375rem',
+                      fontWeight: 700,
+                      color: '#111827',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      lineHeight: 1.3,
+                      marginBottom: '0.25rem'
+                    }} title={item.name}>
                       {item.name}
                     </h3>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1 truncate">{item.category}</p>
+                  <p style={{
+                    fontSize: '0.75rem',
+                    color: '#6b7280',
+                    marginTop: '0.25rem',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis'
+                  }}>
+                    {item.category}
+                  </p>
 
-                  <p className="hidden md:block text-xs text-gray-600 mt-2 line-clamp-2 h-8">
+                  <p style={{
+                    fontSize: '0.8125rem',
+                    color: '#4b5563',
+                    marginTop: '0.5rem',
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                    lineHeight: '1.4',
+                    height: '2.2rem',
+                  }}>
                     {item.description}
                   </p>
-                  <p className="text-sm md:text-lg font-bold text-orange-600 mt-2">
+                  <p style={{
+                    fontSize: '1.125rem',
+                    fontWeight: 700,
+                    color: '#ea580c',
+                    marginTop: '0.5rem'
+                  }}>
                     ₹{item.price.toLocaleString('en-IN')}
                   </p>
                 </div>
 
-                <div className="flex gap-2 mt-3">
+                <div style={{
+                  display: 'flex',
+                  gap: '0.5rem',
+                  marginTop: '0.75rem'
+                }}>
                   <button
                     onClick={() => handleEdit(item)}
-                    className="flex-1 h-8 bg-orange-50 text-orange-700 border border-orange-200 rounded-lg text-xs font-semibold hover:bg-orange-100 transition-colors flex items-center justify-center gap-1.5 shrink-0"
+                    style={{
+                      flex: 1,
+                      height: '36px',
+                      backgroundColor: '#fff7ed',
+                      color: '#c2410c',
+                      border: '1px solid #fed7aa',
+                      borderRadius: '0.5rem',
+                      fontSize: '0.8125rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.375rem',
+                      transition: 'background-color 0.2s',
+                      flexShrink: 0,
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#ffedd5'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#fff7ed'}
                   >
-                    <Edit size={14} className="shrink-0" />
+                    <Edit size={14} style={{ flexShrink: 0 }} />
                     Edit
                   </button>
                   <button
                     onClick={() => handleDelete(item.id, item.name)}
-                    className="h-8 w-8 bg-red-50 text-red-600 border border-red-100 rounded-lg hover:bg-red-100 transition-colors flex items-center justify-center shrink-0"
+                    style={{
+                      height: '36px',
+                      width: '36px',
+                      backgroundColor: '#fef2f2',
+                      color: '#dc2626',
+                      border: '1px solid #fecaca',
+                      borderRadius: '0.5rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'background-color 0.2s',
+                      flexShrink: 0,
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fee2e2'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#fef2f2'}
                   >
-                    <Trash2 size={14} className="shrink-0" />
+                    <Trash2 size={14} style={{ flexShrink: 0 }} />
                   </button>
                 </div>
               </div>
