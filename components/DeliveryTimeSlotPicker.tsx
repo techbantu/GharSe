@@ -194,16 +194,40 @@ export const DeliveryTimeSlotPicker: React.FC<DeliveryTimeSlotPickerProps> = ({
   };
   
   return (
-    <div className={`space-y-6 ${className}`}>
+    <div className={`${className}`} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       {/* Info Banner */}
-      <div className="flex items-start gap-3 p-4 bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-xl">
-        <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
-        <div>
-          <h4 className="font-semibold text-orange-900 mb-1">
+      <div style={{
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: '0.75rem',
+        padding: '1rem',
+        background: 'linear-gradient(to right, #fff7ed, #fef3c7)',
+        border: '1px solid #fed7aa',
+        borderRadius: '0.75rem',
+      }}>
+        <AlertCircle style={{ 
+          width: '20px', 
+          height: '20px', 
+          color: '#ea580c', 
+          flexShrink: 0, 
+          marginTop: '2px' 
+        }} />
+        <div style={{ flex: 1 }}>
+          <h4 style={{
+            fontWeight: 600,
+            color: '#7c2d12',
+            marginBottom: '0.25rem',
+            fontSize: '0.9375rem',
+            lineHeight: '1.4'
+          }}>
             🏠 Home-Cooked with Love
           </h4>
-          <p className="text-sm text-orange-800">
-            We need at least <span className="font-bold">{formatLeadTime()}</span> to prepare your fresh home-cooked meal.
+          <p style={{
+            fontSize: '0.875rem',
+            color: '#9a3412',
+            lineHeight: '1.5'
+          }}>
+            We need at least <span style={{ fontWeight: 700 }}>{formatLeadTime()}</span> to prepare your fresh home-cooked meal.
             This includes <strong>{Math.floor(prepTime / 60)}h prep time</strong> + <strong>{deliveryTime}min delivery</strong>.
           </p>
         </div>
@@ -211,12 +235,24 @@ export const DeliveryTimeSlotPicker: React.FC<DeliveryTimeSlotPickerProps> = ({
       
       {/* Date Selection */}
       <div>
-        <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
-          <Calendar className="w-4 h-4" />
+        <label style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          fontSize: '0.875rem',
+          fontWeight: 600,
+          color: '#374151',
+          marginBottom: '0.75rem'
+        }}>
+          <Calendar style={{ width: '16px', height: '16px' }} />
           Choose Delivery Date
         </label>
         
-        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: '0.5rem'
+        }}>
           {availableDates.slice(0, 12).map((date) => {
             const slotsAvailable = generateSlotsForDate(date).length;
             const isSelected = selectedDate && format(date, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd');
@@ -227,31 +263,62 @@ export const DeliveryTimeSlotPicker: React.FC<DeliveryTimeSlotPickerProps> = ({
                 key={format(date, 'yyyy-MM-dd')}
                 onClick={() => handleDateSelect(date)}
                 disabled={slotsAvailable === 0}
-                className={`
-                  relative px-3 py-3 rounded-xl border-2 transition-all
-                  ${
-                    isSelected
-                      ? 'border-orange-500 bg-orange-50 shadow-md scale-105'
-                      : slotsAvailable === 0
-                      ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
-                      : 'border-gray-200 bg-white hover:border-orange-300 hover:shadow-sm'
+                style={{
+                  position: 'relative',
+                  padding: '0.75rem',
+                  borderRadius: '0.75rem',
+                  border: `2px solid ${isSelected ? '#f97316' : slotsAvailable === 0 ? '#e5e7eb' : '#e5e7eb'}`,
+                  background: isSelected ? '#fff7ed' : slotsAvailable === 0 ? '#f9fafb' : 'white',
+                  cursor: slotsAvailable === 0 ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.2s',
+                  boxShadow: isSelected ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' : 'none',
+                  transform: isSelected ? 'scale(1.05)' : 'scale(1)',
+                }}
+                onMouseEnter={(e) => {
+                  if (!isSelected && slotsAvailable > 0) {
+                    e.currentTarget.style.borderColor = '#fed7aa';
+                    e.currentTarget.style.boxShadow = '0 1px 2px 0 rgba(0, 0, 0, 0.05)';
                   }
-                `}
+                }}
+                onMouseLeave={(e) => {
+                  if (!isSelected && slotsAvailable > 0) {
+                    e.currentTarget.style.borderColor = '#e5e7eb';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }
+                }}
               >
-                <div className="flex flex-col items-center gap-1">
-                  <div className={`text-xs font-medium ${isSelected ? 'text-orange-700' : 'text-gray-500'}`}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
+                  <div style={{
+                    fontSize: '0.75rem',
+                    fontWeight: 500,
+                    color: isSelected ? '#c2410c' : '#6b7280'
+                  }}>
                     {format(date, 'EEE')}
                   </div>
-                  <div className={`text-lg font-bold ${isSelected ? 'text-orange-600' : 'text-gray-900'}`}>
+                  <div style={{
+                    fontSize: '1.125rem',
+                    fontWeight: 700,
+                    color: isSelected ? '#ea580c' : '#111827'
+                  }}>
                     {format(date, 'd')}
                   </div>
-                  <div className={`text-xs ${isSelected ? 'text-orange-600' : 'text-gray-500'}`}>
+                  <div style={{
+                    fontSize: '0.75rem',
+                    color: isSelected ? '#ea580c' : '#6b7280'
+                  }}>
                     {displayLabel}
                   </div>
                 </div>
                 
                 {isSelected && (
-                  <CheckCircle2 className="absolute top-1 right-1 w-4 h-4 text-orange-600" />
+                  <CheckCircle2 style={{
+                    position: 'absolute',
+                    top: '4px',
+                    right: '4px',
+                    width: '16px',
+                    height: '16px',
+                    color: '#ea580c'
+                  }} />
                 )}
               </button>
             );
@@ -262,21 +329,42 @@ export const DeliveryTimeSlotPicker: React.FC<DeliveryTimeSlotPickerProps> = ({
       {/* Time Slot Selection */}
       {selectedDate && (
         <div>
-          <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
-            <Clock className="w-4 h-4" />
+          <label style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            fontSize: '0.875rem',
+            fontWeight: 600,
+            color: '#374151',
+            marginBottom: '0.75rem'
+          }}>
+            <Clock style={{ width: '16px', height: '16px' }} />
             Choose Delivery Time ({availableTimeSlots.length} slots available)
           </label>
           
           {availableTimeSlots.length === 0 ? (
-            <div className="p-6 bg-gray-50 border border-gray-200 rounded-xl text-center">
-              <p className="text-gray-600">
+            <div style={{
+              padding: '1.5rem',
+              background: '#f9fafb',
+              border: '1px solid #e5e7eb',
+              borderRadius: '0.75rem',
+              textAlign: 'center'
+            }}>
+              <p style={{ color: '#4b5563', fontSize: '0.9375rem', lineHeight: '1.5' }}>
                 No available time slots for this date.
                 <br />
                 Please select a different date.
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[400px] overflow-y-auto">
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(2, 1fr)',
+              gap: '0.5rem',
+              maxHeight: '400px',
+              overflowY: 'auto',
+              paddingRight: '4px'
+            }}>
               {availableTimeSlots.map((slot) => {
                 const isSelected = selectedSlot?.id === slot.id;
                 
@@ -284,26 +372,57 @@ export const DeliveryTimeSlotPicker: React.FC<DeliveryTimeSlotPickerProps> = ({
                   <button
                     key={slot.id}
                     onClick={() => handleSlotSelect(slot)}
-                    className={`
-                      relative px-4 py-3 rounded-xl border-2 transition-all text-left
-                      ${
-                        isSelected
-                          ? 'border-orange-500 bg-orange-50 shadow-md scale-105'
-                          : 'border-gray-200 bg-white hover:border-orange-300 hover:shadow-sm'
+                    style={{
+                      position: 'relative',
+                      padding: '0.875rem',
+                      borderRadius: '0.75rem',
+                      border: `2px solid ${isSelected ? '#f97316' : '#e5e7eb'}`,
+                      background: isSelected ? '#fff7ed' : 'white',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      textAlign: 'left',
+                      boxShadow: isSelected ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' : 'none',
+                      transform: isSelected ? 'scale(1.05)' : 'scale(1)',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isSelected) {
+                        e.currentTarget.style.borderColor = '#fed7aa';
+                        e.currentTarget.style.boxShadow = '0 1px 2px 0 rgba(0, 0, 0, 0.05)';
                       }
-                    `}
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isSelected) {
+                        e.currentTarget.style.borderColor = '#e5e7eb';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }
+                    }}
                   >
-                    <div className="flex flex-col gap-1">
-                      <div className={`font-bold ${isSelected ? 'text-orange-600' : 'text-gray-900'}`}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                      <div style={{
+                        fontWeight: 700,
+                        fontSize: '0.9375rem',
+                        color: isSelected ? '#ea580c' : '#111827',
+                        lineHeight: '1.3'
+                      }}>
                         {slot.label}
                       </div>
-                      <div className={`text-xs ${isSelected ? 'text-orange-600' : 'text-gray-500'}`}>
+                      <div style={{
+                        fontSize: '0.75rem',
+                        color: isSelected ? '#ea580c' : '#6b7280'
+                      }}>
                         {slot.sublabel}
                       </div>
                     </div>
                     
                     {isSelected && (
-                      <CheckCircle2 className="absolute top-2 right-2 w-5 h-5 text-orange-600" />
+                      <CheckCircle2 style={{
+                        position: 'absolute',
+                        top: '8px',
+                        right: '8px',
+                        width: '20px',
+                        height: '20px',
+                        color: '#ea580c'
+                      }} />
                     )}
                   </button>
                 );
@@ -315,19 +434,45 @@ export const DeliveryTimeSlotPicker: React.FC<DeliveryTimeSlotPickerProps> = ({
       
       {/* Selection Summary */}
       {selectedSlot && (
-        <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl">
-          <CheckCircle2 className="w-6 h-6 text-green-600 flex-shrink-0" />
-          <div className="flex-1">
-            <h4 className="font-semibold text-green-900">
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.75rem',
+          padding: '1rem',
+          background: 'linear-gradient(to right, #f0fdf4, #d1fae5)',
+          border: '1px solid #86efac',
+          borderRadius: '0.75rem'
+        }}>
+          <CheckCircle2 style={{
+            width: '24px',
+            height: '24px',
+            color: '#16a34a',
+            flexShrink: 0
+          }} />
+          <div style={{ flex: 1 }}>
+            <h4 style={{
+              fontWeight: 600,
+              color: '#14532d',
+              fontSize: '0.9375rem',
+              marginBottom: '0.25rem'
+            }}>
               Delivery Scheduled
             </h4>
-            <p className="text-sm text-green-800">
+            <p style={{
+              fontSize: '0.875rem',
+              color: '#166534',
+              lineHeight: '1.5'
+            }}>
               {format(selectedSlot.startTime, 'EEEE, MMMM d')} between{' '}
               <strong>{format(selectedSlot.startTime, 'h:mm a')}</strong> -{' '}
               <strong>{format(selectedSlot.endTime, 'h:mm a')}</strong>
             </p>
           </div>
-          <ChevronRight className="w-5 h-5 text-green-600" />
+          <ChevronRight style={{
+            width: '20px',
+            height: '20px',
+            color: '#16a34a'
+          }} />
         </div>
       )}
     </div>
