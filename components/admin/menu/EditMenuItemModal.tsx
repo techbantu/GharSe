@@ -72,43 +72,126 @@ export default function EditMenuItemModal({ isOpen, onClose, item, onSave }: Edi
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div 
-        className="bg-white w-full max-w-[420px] rounded-3xl shadow-2xl flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200 overflow-hidden"
-      >
+    <div style={{
+      position: 'fixed',
+      inset: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.6)',
+      backdropFilter: 'blur(8px)',
+      zIndex: 9999,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '1rem',
+    }}>
+      <div style={{
+        backgroundColor: '#ffffff',
+        width: '100%',
+        maxWidth: '420px',
+        borderRadius: '1.5rem',
+        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+        display: 'flex',
+        flexDirection: 'column',
+        maxHeight: '90vh',
+        overflow: 'hidden',
+      }}>
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-white sticky top-0 z-10">
-          <h2 className="text-lg font-bold text-gray-900">
+        <div style={{
+          padding: '1rem 1.5rem',
+          borderBottom: '1px solid #f3f4f6',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          backgroundColor: '#ffffff',
+          position: 'sticky',
+          top: 0,
+          zIndex: 10,
+        }}>
+          <h2 style={{
+            fontSize: '1.125rem',
+            fontWeight: 700,
+            color: '#111827',
+            margin: 0,
+          }}>
             {item ? 'Edit Dish' : 'Add New Dish'}
           </h2>
           <button
             onClick={onClose}
-            className="p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors"
+            style={{
+              padding: '0.5rem',
+              color: '#6b7280',
+              backgroundColor: 'transparent',
+              border: 'none',
+              borderRadius: '9999px',
+              cursor: 'pointer',
+              transition: 'background-color 0.2s',
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
           >
             <X size={20} />
           </button>
         </div>
 
         {/* Scrollable Content */}
-        <div className="overflow-y-auto flex-1">
-          <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <div style={{
+          overflowY: 'auto',
+          flex: 1,
+        }}>
+          <form onSubmit={handleSubmit} style={{
+            padding: '1.5rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1.5rem',
+          }}>
             
             {/* Image Preview & Input */}
-            <div className="space-y-3">
-              <label className="block text-sm font-semibold text-gray-700">Food Photography</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <label style={{
+                display: 'block',
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                color: '#374151',
+              }}>
+                Food Photography
+              </label>
               
-              <div className="relative w-full aspect-4/3 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 overflow-hidden group transition-all hover:border-orange-300">
+              <div style={{
+                position: 'relative',
+                width: '100%',
+                aspectRatio: '4 / 3',
+                backgroundColor: '#f9fafb',
+                borderRadius: '1rem',
+                border: '2px dashed #e5e7eb',
+                overflow: 'hidden',
+                transition: 'border-color 0.2s',
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.borderColor = '#fed7aa'}
+              onMouseLeave={(e) => e.currentTarget.style.borderColor = '#e5e7eb'}>
                 {formData.image ? (
                   <img 
                     src={formData.image} 
-                    alt="Preview" 
-                    className="w-full h-full object-cover"
+                    alt="Preview"
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                    }}
                     onError={(e) => (e.currentTarget.style.display = 'none')}
                   />
                 ) : (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400">
-                    <Upload size={32} className="mb-2 opacity-50" />
-                    <span className="text-xs font-medium">Paste image URL below</span>
+                  <div style={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#9ca3af',
+                  }}>
+                    <Upload size={32} style={{ marginBottom: '0.5rem', opacity: 0.5 }} />
+                    <span style={{ fontSize: '0.75rem', fontWeight: 500 }}>
+                      Paste image URL below
+                    </span>
                   </div>
                 )}
               </div>
@@ -118,46 +201,156 @@ export default function EditMenuItemModal({ isOpen, onClose, item, onSave }: Edi
                 value={formData.image || ''}
                 onChange={(e) => setFormData({ ...formData, image: e.target.value })}
                 placeholder="https://..."
-                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all"
+                style={{
+                  width: '100%',
+                  padding: '0.625rem 1rem',
+                  backgroundColor: '#f9fafb',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '0.75rem',
+                  fontSize: '0.875rem',
+                  outline: 'none',
+                  transition: 'all 0.2s',
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = '#ea580c';
+                  e.currentTarget.style.boxShadow = '0 0 0 3px rgba(234, 88, 12, 0.1)';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = '#e5e7eb';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
               />
             </div>
 
             {/* Basic Info */}
-            <div className="space-y-4">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Dish Name</label>
+                <label style={{
+                  display: 'block',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  color: '#374151',
+                  marginBottom: '0.375rem',
+                }}>
+                  Dish Name
+                </label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all"
                   placeholder="e.g. Butter Chicken"
                   required
+                  style={{
+                    width: '100%',
+                    padding: '0.625rem 1rem',
+                    backgroundColor: '#f9fafb',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '0.75rem',
+                    fontSize: '0.875rem',
+                    fontWeight: 500,
+                    outline: 'none',
+                    transition: 'all 0.2s',
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = '#ea580c';
+                    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(234, 88, 12, 0.1)';
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = '#e5e7eb';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Price (₹)</label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-bold">₹</span>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '0.875rem',
+                    fontWeight: 600,
+                    color: '#374151',
+                    marginBottom: '0.375rem',
+                  }}>
+                    Price (₹)
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <span style={{
+                      position: 'absolute',
+                      left: '1rem',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      color: '#6b7280',
+                      fontSize: '0.875rem',
+                      fontWeight: 700,
+                    }}>
+                      ₹
+                    </span>
                     <input
                       type="number"
                       value={formData.price}
                       onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) })}
-                      className="w-full pl-8 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all"
                       required
                       min="0"
+                      style={{
+                        width: '100%',
+                        paddingLeft: '2rem',
+                        paddingRight: '1rem',
+                        paddingTop: '0.625rem',
+                        paddingBottom: '0.625rem',
+                        backgroundColor: '#f9fafb',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '0.75rem',
+                        fontSize: '0.875rem',
+                        fontWeight: 700,
+                        color: '#111827',
+                        outline: 'none',
+                        transition: 'all 0.2s',
+                      }}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = '#ea580c';
+                        e.currentTarget.style.boxShadow = '0 0 0 3px rgba(234, 88, 12, 0.1)';
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = '#e5e7eb';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Category</label>
-                  <div className="relative">
+                  <label style={{
+                    display: 'block',
+                    fontSize: '0.875rem',
+                    fontWeight: 600,
+                    color: '#374151',
+                    marginBottom: '0.375rem',
+                  }}>
+                    Category
+                  </label>
+                  <div style={{ position: 'relative' }}>
                     <select
                       value={formData.category}
                       onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                      className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all"
+                      style={{
+                        width: '100%',
+                        padding: '0.625rem 1rem',
+                        backgroundColor: '#f9fafb',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '0.75rem',
+                        fontSize: '0.875rem',
+                        appearance: 'none',
+                        outline: 'none',
+                        transition: 'all 0.2s',
+                        cursor: 'pointer',
+                      }}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = '#ea580c';
+                        e.currentTarget.style.boxShadow = '0 0 0 3px rgba(234, 88, 12, 0.1)';
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = '#e5e7eb';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
                     >
                       <option value="Appetizers">Appetizers</option>
                       <option value="Main Course">Main Course</option>
@@ -166,7 +359,14 @@ export default function EditMenuItemModal({ isOpen, onClose, item, onSave }: Edi
                       <option value="Desserts">Desserts</option>
                       <option value="Beverages">Beverages</option>
                     </select>
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
+                    <div style={{
+                      position: 'absolute',
+                      right: '0.75rem',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      pointerEvents: 'none',
+                      color: '#6b7280',
+                    }}>
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
                     </div>
                   </div>
@@ -174,55 +374,136 @@ export default function EditMenuItemModal({ isOpen, onClose, item, onSave }: Edi
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Description</label>
+                <label style={{
+                  display: 'block',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  color: '#374151',
+                  marginBottom: '0.375rem',
+                }}>
+                  Description
+                </label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all resize-none h-24"
                   placeholder="Describe the flavors and ingredients..."
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem 1rem',
+                    backgroundColor: '#f9fafb',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '0.75rem',
+                    fontSize: '0.875rem',
+                    outline: 'none',
+                    transition: 'all 0.2s',
+                    resize: 'none',
+                    height: '96px',
+                    fontFamily: 'inherit',
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = '#ea580c';
+                    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(234, 88, 12, 0.1)';
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = '#e5e7eb';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
                 />
               </div>
             </div>
 
-            <div className="h-px bg-gray-100 my-4"></div>
+            <div style={{ height: '1px', backgroundColor: '#f3f4f6', margin: '1rem 0' }}></div>
 
             {/* Availability Toggle */}
-            <div className={`p-4 rounded-xl border transition-colors ${
-              formData.isAvailable 
-                ? 'bg-green-50 border-green-200' 
-                : 'bg-red-50 border-red-200'
-            }`}>
-              <div className="flex items-center justify-between">
+            <div style={{
+              padding: '1rem',
+              borderRadius: '0.75rem',
+              border: formData.isAvailable ? '1px solid #bbf7d0' : '1px solid #fecaca',
+              backgroundColor: formData.isAvailable ? '#f0fdf4' : '#fef2f2',
+              transition: 'all 0.2s',
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}>
                 <div>
-                  <h4 className={`text-sm font-bold ${
-                    formData.isAvailable ? 'text-green-800' : 'text-red-800'
-                  }`}>
+                  <h4 style={{
+                    fontSize: '0.875rem',
+                    fontWeight: 700,
+                    color: formData.isAvailable ? '#166534' : '#991b1b',
+                    margin: 0,
+                  }}>
                     {formData.isAvailable ? 'In Stock' : 'Out of Stock'}
                   </h4>
-                  <p className={`text-xs mt-0.5 ${
-                    formData.isAvailable ? 'text-green-600' : 'text-red-600'
-                  }`}>
+                  <p style={{
+                    fontSize: '0.75rem',
+                    marginTop: '0.125rem',
+                    color: formData.isAvailable ? '#16a34a' : '#dc2626',
+                    margin: 0,
+                  }}>
                     {formData.isAvailable 
                       ? 'Available for orders' 
                       : 'Temporarily unavailable'}
                   </p>
                 </div>
-                <label className="relative inline-flex items-center cursor-pointer">
+                <label style={{
+                  position: 'relative',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  cursor: 'pointer',
+                }}>
                   <input 
-                    type="checkbox" 
-                    className="sr-only peer"
+                    type="checkbox"
+                    style={{
+                      position: 'absolute',
+                      opacity: 0,
+                      width: 0,
+                      height: 0,
+                    }}
                     checked={formData.isAvailable}
                     onChange={(e) => setFormData({ ...formData, isAvailable: e.target.checked })}
                   />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                  <div style={{
+                    width: '44px',
+                    height: '24px',
+                    backgroundColor: formData.isAvailable ? '#16a34a' : '#d1d5db',
+                    borderRadius: '9999px',
+                    position: 'relative',
+                    transition: 'background-color 0.2s',
+                  }}>
+                    <div style={{
+                      position: 'absolute',
+                      top: '2px',
+                      left: formData.isAvailable ? '22px' : '2px',
+                      width: '20px',
+                      height: '20px',
+                      backgroundColor: '#ffffff',
+                      borderRadius: '50%',
+                      transition: 'left 0.2s',
+                      boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+                    }} />
+                  </div>
                 </label>
               </div>
             </div>
 
             {/* Preferences */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-3">Dietary Tags</label>
-              <div className="grid grid-cols-2 gap-3">
+              <label style={{
+                display: 'block',
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                color: '#374151',
+                marginBottom: '0.75rem',
+              }}>
+                Dietary Tags
+              </label>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '0.75rem',
+              }}>
                 {[
                   { key: 'isVegetarian', label: 'Vegetarian', icon: '🥬' },
                   { key: 'isVegan', label: 'Vegan', icon: '🌱' },
@@ -231,22 +512,46 @@ export default function EditMenuItemModal({ isOpen, onClose, item, onSave }: Edi
                 ].map(({ key, label, icon }) => (
                   <label 
                     key={key}
-                    className={`
-                      flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all
-                      ${(formData as any)[key] 
-                        ? 'bg-orange-50 border-orange-200 ring-1 ring-orange-200' 
-                        : 'bg-white border-gray-200 hover:border-orange-200'
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.75rem',
+                      padding: '0.75rem',
+                      borderRadius: '0.75rem',
+                      border: (formData as any)[key] ? '1px solid #fed7aa' : '1px solid #e5e7eb',
+                      backgroundColor: (formData as any)[key] ? '#fff7ed' : '#ffffff',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      boxShadow: (formData as any)[key] ? '0 0 0 1px #fed7aa' : 'none',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!(formData as any)[key]) {
+                        e.currentTarget.style.borderColor = '#fed7aa';
                       }
-                    `}
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!(formData as any)[key]) {
+                        e.currentTarget.style.borderColor = '#e5e7eb';
+                      }
+                    }}
                   >
                     <input
                       type="checkbox"
                       checked={(formData as any)[key]}
                       onChange={(e) => setFormData({ ...formData, [key]: e.target.checked })}
-                      className="w-4 h-4 text-orange-500 border-gray-300 rounded focus:ring-orange-500 accent-orange-600"
+                      style={{
+                        width: '16px',
+                        height: '16px',
+                        accentColor: '#ea580c',
+                        cursor: 'pointer',
+                      }}
                     />
-                    <span className="text-sm font-medium text-gray-700">
-                      <span className="mr-2">{icon}</span>
+                    <span style={{
+                      fontSize: '0.875rem',
+                      fontWeight: 500,
+                      color: '#374151',
+                    }}>
+                      <span style={{ marginRight: '0.5rem' }}>{icon}</span>
                       {label}
                     </span>
                   </label>
@@ -256,13 +561,36 @@ export default function EditMenuItemModal({ isOpen, onClose, item, onSave }: Edi
 
             {/* Spicy Level */}
             <div>
-              <div className="flex items-center justify-between mb-3">
-                <label className="text-sm font-semibold text-gray-700">Spiciness</label>
-                <span className="text-sm font-bold text-orange-600 bg-orange-50 px-3 py-1 rounded-full">
-                  {['Mild', 'Medium', 'Hot', 'Extra Hot'][formData.spicyLevel] || 'No Spice'}
-                  <span className="ml-1 text-xs">
-                    {'🌶️'.repeat(formData.spicyLevel)}
-                  </span>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '0.75rem',
+              }}>
+                <label style={{
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  color: '#374151',
+                }}>
+                  Spiciness
+                </label>
+                <span style={{
+                  fontSize: '0.875rem',
+                  fontWeight: 700,
+                  color: '#ea580c',
+                  backgroundColor: '#fff7ed',
+                  padding: '0.25rem 0.75rem',
+                  borderRadius: '9999px',
+                }}>
+                  {formData.spicyLevel === 0 ? 'None' : ['Mild', 'Medium', 'Hot'][formData.spicyLevel - 1]}
+                  {formData.spicyLevel > 0 && (
+                    <span style={{
+                      marginLeft: '0.25rem',
+                      fontSize: '0.75rem',
+                    }}>
+                      {'🌶️'.repeat(formData.spicyLevel)}
+                    </span>
+                  )}
                 </span>
               </div>
               <input
@@ -272,9 +600,24 @@ export default function EditMenuItemModal({ isOpen, onClose, item, onSave }: Edi
                 step="1"
                 value={formData.spicyLevel}
                 onChange={(e) => setFormData({ ...formData, spicyLevel: parseInt(e.target.value) })}
-                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-orange-600"
+                style={{
+                  width: '100%',
+                  height: '8px',
+                  backgroundColor: '#e5e7eb',
+                  borderRadius: '0.5rem',
+                  appearance: 'none',
+                  cursor: 'pointer',
+                  accentColor: '#ea580c',
+                }}
               />
-              <div className="flex justify-between text-xs text-gray-400 mt-2 font-medium">
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                fontSize: '0.75rem',
+                color: '#9ca3af',
+                marginTop: '0.5rem',
+                fontWeight: 500,
+              }}>
                 <span>None</span>
                 <span>Mild</span>
                 <span>Medium</span>
@@ -286,18 +629,59 @@ export default function EditMenuItemModal({ isOpen, onClose, item, onSave }: Edi
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-100 bg-gray-50 flex gap-3">
+        <div style={{
+          padding: '1rem',
+          borderTop: '1px solid #f3f4f6',
+          backgroundColor: '#f9fafb',
+          display: 'flex',
+          gap: '0.75rem',
+        }}>
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 px-4 py-3 bg-white text-gray-700 border border-gray-200 rounded-xl text-sm font-bold hover:bg-gray-50 transition-colors"
+            style={{
+              flex: 1,
+              padding: '0.75rem 1rem',
+              backgroundColor: '#ffffff',
+              color: '#374151',
+              border: '1px solid #e5e7eb',
+              borderRadius: '0.75rem',
+              fontSize: '0.875rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              transition: 'background-color 0.2s',
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f9fafb'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ffffff'}
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
             disabled={isSaving}
-            className="flex-1 px-4 py-3 bg-orange-600 text-white rounded-xl text-sm font-bold hover:bg-orange-700 transition-colors shadow-lg shadow-orange-200 flex items-center justify-center gap-2"
+            style={{
+              flex: 1,
+              padding: '0.75rem 1rem',
+              backgroundColor: isSaving ? '#9ca3af' : '#ea580c',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '0.75rem',
+              fontSize: '0.875rem',
+              fontWeight: 700,
+              cursor: isSaving ? 'not-allowed' : 'pointer',
+              transition: 'background-color 0.2s',
+              boxShadow: '0 4px 6px -1px rgba(234, 88, 12, 0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem',
+            }}
+            onMouseEnter={(e) => {
+              if (!isSaving) e.currentTarget.style.backgroundColor = '#c2410c';
+            }}
+            onMouseLeave={(e) => {
+              if (!isSaving) e.currentTarget.style.backgroundColor = '#ea580c';
+            }}
           >
             {isSaving ? (
               'Saving...'

@@ -32,7 +32,7 @@ export default function KitchenPage() {
         const token = localStorage.getItem('adminToken');
         if (!token) return;
 
-        const response = await fetch('/api/orders', {
+        const response = await fetch('/api/orders?includePendingConfirmation=true', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
 

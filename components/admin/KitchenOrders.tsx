@@ -54,7 +54,7 @@ const KitchenOrders: React.FC<KitchenOrdersProps> = ({
       setLoading(true);
       setError(null);
 
-      const response = await fetch('/api/orders?status=pending,confirmed,preparing');
+      const response = await fetch('/api/orders?status=pending-confirmation,pending,confirmed,preparing&includePendingConfirmation=true');
       
       if (!response.ok) {
         throw new Error(`Failed to fetch orders: ${response.statusText}`);
