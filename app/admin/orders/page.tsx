@@ -335,13 +335,15 @@ export default function OrdersPage() {
   useEffect(() => {
     if (orders.length > prevOrderCountRef.current && prevOrderCountRef.current > 0) {
       // New order detected - play sound
+      console.log(`🔔 NEW ORDER ALERT! Order count: ${prevOrderCountRef.current} → ${orders.length}`);
       try {
         const audio = new Audio('/sounds/notification.mp3');
-        audio.volume = 0.7; // Set volume to 70%
-        audio.play().catch(err => console.log('Could not play sound:', err));
-        console.log('🔔 New order notification sound played');
+        audio.volume = 1.0; // Set volume to 100% for maximum audibility
+        audio.play()
+          .then(() => console.log('✅ Notification sound played successfully'))
+          .catch(err => console.log('❌ Could not play sound:', err));
       } catch (err) {
-        console.log('Sound playback error:', err);
+        console.log('❌ Sound playback error:', err);
       }
     }
     prevOrderCountRef.current = orders.length;

@@ -2477,6 +2477,106 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
               </div>
             </div>
             
+            {/* Scheduled Delivery Time - Show if scheduled */}
+            {formData.scheduledDeliveryAt && formData.scheduledWindowStart && formData.scheduledWindowEnd && (
+              <div style={{
+                width: '100%',
+                maxWidth: '480px',
+                padding: '20px',
+                background: 'linear-gradient(135deg, #F0FDF4, #DCFCE7)',
+                borderRadius: '16px',
+                border: '2px solid #86EFAC',
+                marginBottom: '8px',
+                boxShadow: '0 4px 12px rgba(34, 197, 94, 0.15)'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  marginBottom: '12px'
+                }}>
+                  <Calendar style={{ width: '20px', height: '20px', color: '#16a34a' }} />
+                  <p style={{
+                    fontSize: '0.875rem',
+                    color: '#14532d',
+                    fontWeight: 600,
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em'
+                  }}>
+                    Scheduled Delivery
+                  </p>
+                </div>
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px'
+                }}>
+                  <div style={{
+                    padding: '12px',
+                    background: 'white',
+                    borderRadius: '10px',
+                    border: '1px solid #86EFAC'
+                  }}>
+                    <p style={{
+                      fontSize: '0.75rem',
+                      color: '#16a34a',
+                      fontWeight: 600,
+                      marginBottom: '4px'
+                    }}>
+                      📅 Delivery Date
+                    </p>
+                    <p style={{
+                      fontSize: '0.9375rem',
+                      fontWeight: 700,
+                      color: '#14532d'
+                    }}>
+                      {format(new Date(formData.scheduledWindowStart), 'EEEE, MMMM d, yyyy')}
+                    </p>
+                  </div>
+                  <div style={{
+                    padding: '12px',
+                    background: 'white',
+                    borderRadius: '10px',
+                    border: '1px solid #86EFAC'
+                  }}>
+                    <p style={{
+                      fontSize: '0.75rem',
+                      color: '#16a34a',
+                      fontWeight: 600,
+                      marginBottom: '4px'
+                    }}>
+                      🕐 Delivery Time Window
+                    </p>
+                    <p style={{
+                      fontSize: '0.9375rem',
+                      fontWeight: 700,
+                      color: '#14532d'
+                    }}>
+                      {format(new Date(formData.scheduledWindowStart), 'h:mm a')} - {format(new Date(formData.scheduledWindowEnd), 'h:mm a')}
+                    </p>
+                  </div>
+                  <div style={{
+                    padding: '12px',
+                    background: 'rgba(34, 197, 94, 0.1)',
+                    borderRadius: '10px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    <Clock style={{ width: '16px', height: '16px', color: '#16a34a', flexShrink: 0 }} />
+                    <p style={{
+                      fontSize: '0.8125rem',
+                      color: '#14532d',
+                      lineHeight: '1.4'
+                    }}>
+                      <strong>{Math.floor(formData.prepTime / 60)}h {formData.prepTime % 60}m</strong> prep time + <strong>{formData.deliveryTime}min</strong> delivery
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             {/* What Happens Next Info */}
             <div style={{
               width: '100%',

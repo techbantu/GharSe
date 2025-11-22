@@ -585,31 +585,77 @@ async function createOrderLogic(body: unknown): Promise<Result<{
         });
       }
       
-      // DO NOT SEND CONFIRMATION YET - Order needs chef approval first!
-      // Notifications will be sent when chef clicks "Confirm Order" in Kitchen Display
-      // This is handled by /api/orders/[id]/status when status changes to CONFIRMED
+      // SEND "ORDER RECEIVED" EMAIL TO CUSTOMER IMMEDIATELY
+      // This confirms the order was placed and is awaiting chef approval
+      // Full confirmation email will be sent when chef confirms
+      logger.info('Sending "Order Received" notification to customer', {
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        customerEmail: data.customer.email.substring(0, 3) + '***',
+      });
       
-      logger.info('Order created - awaiting chef confirmation (no notifications sent yet)', {
+      try {
+        // Create order object for notification
+        const notificationOrder = {
+          ...order,
+          customer: data.customer,
+          delivery: data.delivery,
+          estimatedReadyTime: order.estimatedDelivery || new Date(),
+          deliveryAddress: data.delivery?.address ? {
+            street: data.delivery.address.street,
+            city: data.delivery.address.city,
+            zipCode: data.delivery.address.zipCode,
+            state: data.delivery.address.state,
+            country: 'India',
+          } : undefined,
+          items: order.items.map(item => ({
+            id: item.id,
+            menuItem: item.menuItem,
+            quantity: item.quantity,
+            price: item.price,
+            subtotal: item.subtotal,
+            specialInstructions: item.specialInstructions,
+          })),
+          contactPreference: ['email'] as any, // Only send email, not SMS for initial receipt
+          notifications: [],
+        };
+        
+        // Send order placement acknowledgment
+        notificationResult = await notificationManager.sendOrderConfirmation(
+          notificationOrder as any, 
+          { via: ['email'] } // Only email for initial receipt
+        );
+        
+        logger.info('Order received notification sent', {
+          orderId: order.id,
+          emailSuccess: notificationResult.email?.success,
+        });
+      } catch (notifError) {
+        logger.error('Failed to send order received notification', {
+          orderId: order.id,
+          error: notifError instanceof Error ? notifError.message : String(notifError),
+        });
+        // Don't fail the order if notification fails - order is still created
+        notificationResult = {
+          email: { 
+            success: false, 
+            error: notifError instanceof Error ? notifError.message : 'Failed to send email'
+          },
+          sms: { 
+            success: false, 
+            skipped: true
+          },
+          overall: false,
+        };
+      }
+      
+      logger.info('Order created - sent "Order Received" email, awaiting chef confirmation', {
         orderId: order.id,
         orderNumber: order.orderNumber,
         status: 'PENDING_CONFIRMATION',
-        note: 'Notifications will be sent when chef confirms the order'
+        emailSent: notificationResult.email?.success,
+        note: 'Full confirmation will be sent when chef confirms the order'
       });
-      
-      // Set notification result to indicate no notifications sent yet
-      notificationResult = {
-        email: { 
-          success: false, 
-          skipped: true,
-          error: 'Awaiting chef confirmation - no email sent yet'
-        },
-        sms: { 
-          success: false, 
-          skipped: true,
-          error: 'Awaiting chef confirmation - no SMS sent yet'
-        },
-        overall: false,
-      };
       
       // Mark first-order discount as used (async, don't block response)
       if (firstOrderDiscountApplied && data.customerId) {
