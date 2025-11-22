@@ -11,7 +11,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { X, User, Mail, Phone, MapPin, CreditCard, CheckCircle, Clock, TruckIcon, XCircle, AlertCircle, Heart } from 'lucide-react';
+import { X, User, Mail, Phone, MapPin, CreditCard, CheckCircle, Clock, TruckIcon, XCircle, AlertCircle, Heart, Hourglass } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/context/ToastContext';
 import { useRouter } from 'next/navigation';
@@ -2368,9 +2368,14 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                 padding: '12px',
                 background: '#FEF3C7',
                 borderRadius: '8px',
-                border: '1px solid #FCD34D'
+                border: '1px solid #FCD34D',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                justifyContent: 'center'
               }}>
-                ⏳ Awaiting Kitchen Confirmation
+                <Hourglass style={{ width: '20px', height: '20px' }} />
+                Awaiting Kitchen Confirmation
               </p>
               <p style={{
                 fontSize: '0.875rem',
