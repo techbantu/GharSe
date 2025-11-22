@@ -87,14 +87,18 @@ export default function MenuPage() {
       const url = isNew ? '/api/menu' : `/api/menu/${itemData.id}`;
       const method = isNew ? 'POST' : 'PUT';
 
+      console.log('Saving menu item:', { url, method, itemData });
+
       const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(itemData),
       });
 
+      const data = await response.json();
+      console.log('Save response:', { status: response.status, data });
+
       if (response.ok) {
-        const data = await response.json();
         if (data.success) {
           fetchMenu(); // Refresh list
           setIsModalOpen(false);
@@ -102,11 +106,11 @@ export default function MenuPage() {
           alert(data.error || 'Failed to save item');
         }
       } else {
-        alert('Failed to save item');
+        alert(data.error || `Failed to save item (${response.status})`);
       }
     } catch (error) {
       console.error('Error saving item:', error);
-      alert('An error occurred while saving');
+      alert('An error occurred while saving. Please check console for details.');
     }
   };
 

@@ -37,35 +37,50 @@ export async function PUT(
     const id = params.id;
     const body = await request.json();
     
-    console.log(`[Menu API] Updating item ${id}:`, body.name);
+    console.log(`[Menu API] Updating item ${id}:`, JSON.stringify(body, null, 2));
+
+    // Validate required fields
+    if (!body.name || !body.price || !body.category) {
+      return NextResponse.json(
+        { success: false, error: 'Missing required fields: name, price, or category' },
+        { status: 400 }
+      );
+    }
 
     const updatedItem = await prisma.menuItem.update({
       where: { id },
       data: {
         name: body.name,
-        description: body.description,
-        price: parseFloat(body.price),
+        description: body.description || '',
+        price: parseFloat(body.price) || 0,
         category: body.category,
-        image: body.image,
-        isVegetarian: body.isVegetarian,
-        isVegan: body.isVegan,
-        isGlutenFree: body.isGlutenFree,
-        isDairyFree: body.isDairyFree,
-        spicyLevel: parseInt(body.spicyLevel),
-        preparationTime: parseInt(body.preparationTime),
-        isAvailable: body.isAvailable,
+        image: body.image || '',
+        isVegetarian: Boolean(body.isVegetarian),
+        isVegan: Boolean(body.isVegan),
+        isGlutenFree: Boolean(body.isGlutenFree),
+        isDairyFree: Boolean(body.isDairyFree),
+        spicyLevel: parseInt(body.spicyLevel) || 0,
+        preparationTime: parseInt(body.preparationTime) || 30,
+        isAvailable: Boolean(body.isAvailable),
       },
     });
+
+    console.log(`[Menu API] Successfully updated item ${id}`);
 
     return NextResponse.json({
       success: true,
       item: updatedItem,
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('[Menu API] Update error:', error);
+    console.error('[Menu API] Error details:', {
+      message: error.message,
+      code: error.code,
+      meta: error.meta
+    });
     return NextResponse.json(
-      { success: false, error: 'Failed to update item' },
+      { success: false, error: error.message || 'Failed to update item' },
       { status: 500 }
     );
   }
