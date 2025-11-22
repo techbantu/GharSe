@@ -233,6 +233,15 @@ model Order {
   // Estimated times
   estimatedPrepTime Int       @default(30) // minutes
   estimatedDelivery DateTime?
+  
+  // Scheduled Delivery (NEW! - for pre-order system)
+  isScheduledOrder     Boolean   @default(false) // True if customer selected future delivery
+  scheduledDeliveryAt  DateTime? // Customer's chosen delivery time
+  scheduledWindowStart DateTime? // Start of delivery window (e.g., 2:00 PM)
+  scheduledWindowEnd   DateTime? // End of delivery window (e.g., 2:30 PM)
+  minimumLeadTime      Int       @default(165) // Minimum minutes ahead (2h 45min = 165 min)
+  prepTime             Int       @default(120) // Prep time in minutes (2 hours default)
+  deliveryTime         Int       @default(45)  // Delivery time in minutes (45 min default)
 
   // Receipt
   receipt Receipt?

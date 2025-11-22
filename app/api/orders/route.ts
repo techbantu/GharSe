@@ -81,6 +81,14 @@ const CreateOrderSchema = z.object({
     deliveryInstructions: z.string().optional(),
   }).optional(),
   specialInstructions: z.string().optional(),
+  // Scheduled delivery fields (NEW! - for pre-order system)
+  isScheduledOrder: z.boolean().default(true), // Always true for home-cooked food
+  scheduledDeliveryAt: z.string().datetime().optional(), // ISO datetime string
+  scheduledWindowStart: z.string().datetime().optional(), // ISO datetime string
+  scheduledWindowEnd: z.string().datetime().optional(), // ISO datetime string
+  prepTime: z.number().int().positive().default(120), // Minutes (2 hours)
+  deliveryTime: z.number().int().positive().default(45), // Minutes
+  minimumLeadTime: z.number().int().positive().default(165), // Minutes (2h 45min)
 });
 
 /**
@@ -308,6 +316,14 @@ async function createOrderLogic(body: unknown): Promise<Result<{
             estimatedDelivery: estimatedReadyTime,
             gracePeriodExpiresAt, // Grace period expiry timestamp
             modificationCount: 0, // No modifications yet
+            // Scheduled delivery fields (NEW! - for pre-order system)
+            isScheduledOrder: data.isScheduledOrder,
+            scheduledDeliveryAt: data.scheduledDeliveryAt ? new Date(data.scheduledDeliveryAt) : null,
+            scheduledWindowStart: data.scheduledWindowStart ? new Date(data.scheduledWindowStart) : null,
+            scheduledWindowEnd: data.scheduledWindowEnd ? new Date(data.scheduledWindowEnd) : null,
+            prepTime: data.prepTime,
+            deliveryTime: data.deliveryTime,
+            minimumLeadTime: data.minimumLeadTime,
             items: {
               create: data.items.map((item: any) => ({
                 menuItemId: item.menuItem.id,

@@ -18,6 +18,7 @@ import { useRouter } from 'next/navigation';
 import { useActiveOrder } from '@/context/ActiveOrderContext';
 import CancelOrderModal from '@/components/admin/CancelOrderModal';
 import PendingOrderModification from '@/components/PendingOrderModification';
+import DeliveryTimeSlotPicker from '@/components/DeliveryTimeSlotPicker';
 import { Order, CustomerInfo, Address } from '@/types';
 import { restaurantInfo } from '@/data/menuData';
 import { retryWithBackoff } from '@/utils/retry';
@@ -73,6 +74,13 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
     paymentMethodDetails: '', // Specific gateway: "paytm", "form-b", "google-pay", "phonepe", etc.
     tip: 0, // Tip amount
     scheduledTime: '',
+    // Scheduled delivery fields (NEW!)
+    scheduledDeliveryAt: null as Date | null,
+    scheduledWindowStart: null as Date | null,
+    scheduledWindowEnd: null as Date | null,
+    prepTime: 120, // 2 hours default
+    deliveryTime: 45, // 45 minutes default
+    minimumLeadTime: 165, // 2h 45min total
   });
   
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -227,7 +235,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
     let firstErrorField: string | undefined = undefined;
     
     // Define validation order (top to bottom of form)
-    const validationOrder = ['name', 'email', 'phone', 'street', 'city', 'state', 'zipCode', 'paymentMethod'];
+    const validationOrder = ['name', 'email', 'phone', 'street', 'city', 'state', 'zipCode', 'scheduledDeliveryAt', 'paymentMethod'];
     
     if (!formData.name.trim()) {
       newErrors.name = 'Name is required';
@@ -274,6 +282,27 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
     if (!formData.paymentMethod) {
       newErrors.paymentMethod = 'Please select a payment method';
       if (!firstErrorField) firstErrorField = 'paymentMethod';
+    }
+    
+    // Scheduled delivery validation (CRITICAL for home-cooked food!)
+    if (!formData.scheduledDeliveryAt) {
+      newErrors.scheduledDeliveryAt = 'Please select a delivery time';
+      if (!firstErrorField) firstErrorField = 'scheduledDeliveryAt';
+    } else {
+      // Validate that the selected time is in the future and meets minimum lead time
+      const now = new Date();
+      const selectedTime = new Date(formData.scheduledDeliveryAt);
+      const minimumAllowedTime = new Date(now.getTime() + formData.minimumLeadTime * 60000);
+      
+      if (selectedTime <= now) {
+        newErrors.scheduledDeliveryAt = 'Delivery time must be in the future';
+        if (!firstErrorField) firstErrorField = 'scheduledDeliveryAt';
+      } else if (selectedTime < minimumAllowedTime) {
+        const hoursNeeded = Math.floor(formData.minimumLeadTime / 60);
+        const minutesNeeded = formData.minimumLeadTime % 60;
+        newErrors.scheduledDeliveryAt = `Please schedule at least ${hoursNeeded}h ${minutesNeeded}m ahead for home-cooked food`;
+        if (!firstErrorField) firstErrorField = 'scheduledDeliveryAt';
+      }
     }
     
     if (formData.orderType === 'delivery') {
@@ -389,6 +418,14 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
           deliveryInstructions: formData.deliveryInstructions,
         } : undefined,
         specialInstructions: formData.specialInstructions || undefined,
+        // Scheduled delivery information (NEW!)
+        isScheduledOrder: true, // Always true now - all orders are scheduled
+        scheduledDeliveryAt: formData.scheduledDeliveryAt?.toISOString(),
+        scheduledWindowStart: formData.scheduledWindowStart?.toISOString(),
+        scheduledWindowEnd: formData.scheduledWindowEnd?.toISOString(),
+        prepTime: formData.prepTime,
+        deliveryTime: formData.deliveryTime,
+        minimumLeadTime: formData.minimumLeadTime,
       };
       
       // API call with retry logic
@@ -651,6 +688,13 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
       paymentMethodDetails: '',
       tip: 0,
       scheduledTime: '',
+      // Reset scheduled delivery fields
+      scheduledDeliveryAt: null,
+      scheduledWindowStart: null,
+      scheduledWindowEnd: null,
+      prepTime: 120,
+      deliveryTime: 45,
+      minimumLeadTime: 165,
     });
     
     console.log('[CheckoutModal] Full reset complete');
@@ -1623,6 +1667,60 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                         />
                         {errors.zipCode && <p style={{ color: '#EF4444', fontSize: '0.8125rem', marginTop: '6px', marginBottom: 0, fontWeight: 600 }}>{errors.zipCode}</p>}
                       </div>
+                    </div>
+                    
+                    {/* Delivery Time Slot Picker - NEW! */}
+                    <div>
+                      <h3 style={{
+                        fontSize: '1.125rem',
+                        fontWeight: 700,
+                        color: '#1F2937',
+                        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif',
+                        letterSpacing: '-0.01em',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        marginBottom: '16px'
+                      }}>
+                        <Clock size={20} strokeWidth={2.5} style={{ color: '#f97316' }} />
+                        Schedule Delivery Time
+                      </h3>
+                      
+                      <DeliveryTimeSlotPicker
+                        prepTime={formData.prepTime}
+                        deliveryTime={formData.deliveryTime}
+                        minimumLeadTime={formData.minimumLeadTime}
+                        onSelectSlot={(slot) => {
+                          setFormData(prev => ({
+                            ...prev,
+                            scheduledDeliveryAt: slot.scheduledDeliveryAt,
+                            scheduledWindowStart: slot.scheduledWindowStart,
+                            scheduledWindowEnd: slot.scheduledWindowEnd,
+                            prepTime: slot.prepTime,
+                            deliveryTime: slot.deliveryTime,
+                            minimumLeadTime: slot.minimumLeadTime,
+                          }));
+                          
+                          // Clear any scheduling errors
+                          setErrors(prev => {
+                            const newErrors = { ...prev };
+                            delete newErrors.scheduledDeliveryAt;
+                            return newErrors;
+                          });
+                        }}
+                      />
+                      
+                      {errors.scheduledDeliveryAt && (
+                        <p style={{ 
+                          color: '#EF4444', 
+                          fontSize: '0.8125rem', 
+                          marginTop: '8px', 
+                          marginBottom: 0, 
+                          fontWeight: 600 
+                        }}>
+                          {errors.scheduledDeliveryAt}
+                        </p>
+                      )}
                     </div>
                     
                     <div>
