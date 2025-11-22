@@ -261,6 +261,7 @@ export const DeliveryTimeSlotPicker: React.FC<DeliveryTimeSlotPickerProps> = ({
             return (
               <button
                 key={format(date, 'yyyy-MM-dd')}
+                type="button"
                 onClick={() => handleDateSelect(date)}
                 disabled={slotsAvailable === 0}
                 style={{
@@ -371,6 +372,7 @@ export const DeliveryTimeSlotPicker: React.FC<DeliveryTimeSlotPickerProps> = ({
                 return (
                   <button
                     key={slot.id}
+                    type="button"
                     onClick={() => handleSlotSelect(slot)}
                     style={{
                       position: 'relative',
