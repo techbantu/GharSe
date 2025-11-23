@@ -618,7 +618,6 @@ async function createOrderLogic(body: unknown): Promise<Result<{
             id: item.id,
             menuItem: item.menuItem,
             quantity: item.quantity,
-            price: item.price,
             subtotal: item.subtotal,
             specialInstructions: item.specialInstructions,
           })),
