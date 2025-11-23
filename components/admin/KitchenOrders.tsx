@@ -39,6 +39,7 @@ import {
 } from 'lucide-react';
 import { Order, OrderStatus } from '@/types';
 import { format } from 'date-fns';
+import { formatForUser, useUserRegion, convertUTCToLocal } from '@/lib/timezone-service';
 
 interface KitchenOrdersProps {
   autoRefresh?: boolean;
@@ -61,6 +62,7 @@ const KitchenOrders: React.FC<KitchenOrdersProps> = ({
   const prevOrderCountRef = useRef(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const region = useUserRegion(); // Get restaurant timezone configuration
 
   // Fetch orders from API
   const fetchOrders = async () => {
@@ -279,7 +281,7 @@ const KitchenOrders: React.FC<KitchenOrdersProps> = ({
     
     // Check when the order was marked as ready (use updatedAt as proxy)
     const markedReadyAt = new Date(o.updatedAt || o.createdAt);
-    const now = new Date();
+    const now = new Date(); // Local system time (chef's browser)
     const minutesSinceReady = Math.floor((now.getTime() - markedReadyAt.getTime()) / 60000);
     
     // Only show if less than 60 minutes old
@@ -322,29 +324,28 @@ const KitchenOrders: React.FC<KitchenOrdersProps> = ({
     const isScheduled = order.scheduledDeliveryAt || order.scheduledWindowStart;
     
     if (isScheduled) {
-      const scheduledDelivery = order.scheduledDeliveryAt || order.scheduledWindowStart;
+      const scheduledDeliveryStr = order.scheduledDeliveryAt || order.scheduledWindowStart;
+      if (!scheduledDeliveryStr) return null;
+
+      // FIX: Use consistent Date object from string (UTC)
+      const scheduledDelivery = new Date(scheduledDeliveryStr);
       const prepTime = order.prepTime || order.estimatedPrepTime || 120; // Default 2 hours
       const deliveryDuration = order.deliveryDuration || 45; // Default 45 min
       
-      // If no scheduled delivery time, return null
-      if (!scheduledDelivery) {
-        return null;
-      }
-      
       // Calculate when cooking must START (delivery time - prep time - delivery duration)
       const mustStartCookingBy = new Date(
-        new Date(scheduledDelivery).getTime() - (prepTime + deliveryDuration) * 60000
+        scheduledDelivery.getTime() - (prepTime + deliveryDuration) * 60000
       );
       
       // Calculate when food must be READY (delivery time - delivery duration)
       const mustBeReadyBy = new Date(
-        new Date(scheduledDelivery).getTime() - deliveryDuration * 60000
+        scheduledDelivery.getTime() - deliveryDuration * 60000
       );
       
       const now = new Date();
       const minutesUntilStart = Math.floor((mustStartCookingBy.getTime() - now.getTime()) / 60000);
       const minutesUntilReady = Math.floor((mustBeReadyBy.getTime() - now.getTime()) / 60000);
-      const minutesUntilDelivery = Math.floor((new Date(scheduledDelivery).getTime() - now.getTime()) / 60000);
+      const minutesUntilDelivery = Math.floor((scheduledDelivery.getTime() - now.getTime()) / 60000);
       
       // Urgency based on start time, not delivery time
       let color = '#10b981'; // Green - plenty of time
@@ -363,7 +364,7 @@ const KitchenOrders: React.FC<KitchenOrdersProps> = ({
       
       return {
         isScheduled: true,
-        scheduledDeliveryTime: new Date(scheduledDelivery),
+        scheduledDeliveryTime: scheduledDelivery,
         mustStartCookingBy,
         mustBeReadyBy,
         minutesUntilStart,
@@ -371,11 +372,11 @@ const KitchenOrders: React.FC<KitchenOrdersProps> = ({
         minutesUntilDelivery,
         color,
         urgency,
-        // Display formats
-        deliveryDateDisplay: format(new Date(scheduledDelivery), 'EEE, MMM d'), // "Sun, Nov 23"
-        deliveryTimeDisplay: format(new Date(scheduledDelivery), 'h:mm a'), // "12:00 PM"
-        startCookingDisplay: format(mustStartCookingBy, 'h:mm a'),
-        readyByDisplay: format(mustBeReadyBy, 'h:mm a'),
+        // Display formats - FIX: Use formatForUser to ensure Restaurant Timezone (IST)
+        deliveryDateDisplay: formatForUser(scheduledDelivery, 'EEE, MMM d'), // "Sun, Nov 23"
+        deliveryTimeDisplay: formatForUser(scheduledDelivery, 'h:mm a'), // "12:00 PM"
+        startCookingDisplay: formatForUser(mustStartCookingBy, 'h:mm a'),
+        readyByDisplay: formatForUser(mustBeReadyBy, 'h:mm a'),
         countdownText: minutesUntilStart < 0 
           ? `START NOW! (${Math.abs(minutesUntilStart)} min overdue)` 
           : minutesUntilStart === 0 
@@ -411,7 +412,7 @@ const KitchenOrders: React.FC<KitchenOrdersProps> = ({
         minutesLeft,
         color,
         urgency,
-        displayTime: format(readyByTime, 'h:mm a'),
+        displayTime: formatForUser(readyByTime, 'h:mm a'),
         countdownText: minutesLeft < 0 
           ? `${Math.abs(minutesLeft)} min overdue` 
           : minutesLeft === 0 

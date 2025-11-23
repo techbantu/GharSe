@@ -458,6 +458,16 @@ export function formatForUser(utcDate: Date, formatString: string = 'PPpp'): str
 }
 
 /**
+ * Server-side date formatter (Requires explicit region ID, defaults to India)
+ * Use this for emails and server-rendered components
+ */
+export function formatForRegion(utcDate: Date | string, regionId: string = 'IN', formatString: string = 'PPpp'): string {
+  const region = REGIONS[regionId] || REGIONS['IN'];
+  const dateObj = typeof utcDate === 'string' ? new Date(utcDate) : utcDate;
+  return formatLocalTime(dateObj, region, formatString);
+}
+
+/**
  * Checks if restaurant is currently open for user
  */
 export function isOpenForUser(): boolean {
