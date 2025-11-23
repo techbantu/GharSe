@@ -136,9 +136,6 @@ export async function logAuditEvent(entry: AuditLogEntry): Promise<void> {
     // Serialize details
     const detailsJson = JSON.stringify(entry.details);
     
-    // Encrypt sensitive information
-    const { encrypted, iv, authTag } = encrypt(detailsJson);
-    
     // Store in database
     await prisma.auditLog.create({
       data: {
@@ -192,29 +189,20 @@ export async function queryAuditLogs(filters: {
     take: filters.limit || 100,
   });
   
-  // Decrypt details
-  return logs.map(log => {
-    const decryptedDetails = decrypt(
-      log.detailsEncrypted,
-      log.encryptionIv,
-      log.encryptionAuthTag
-    );
-    
-    return {
-      id: log.id,
-      eventType: log.eventType as AuditEventType,
-      riskLevel: log.riskLevel as RiskLevel,
-      userId: log.userId || undefined,
-      userEmail: log.userEmail || undefined,
-      userRole: log.userRole || undefined,
-      ip: log.ip,
-      userAgent: log.userAgent || undefined,
-      details: JSON.parse(decryptedDetails),
-      timestamp: log.createdAt,
-      sessionId: log.sessionId || undefined,
-      hash: log.hash,
-    };
-  });
+  // Return logs with parsed details
+  return logs.map(log => ({
+    id: log.id,
+    eventType: log.action as AuditEventType,
+    riskLevel: RiskLevel.LOW, // Default risk level since not stored
+    userId: log.userId || undefined,
+    userEmail: undefined, // Not stored in current schema
+    userRole: log.entityType,
+    ip: log.ipAddress || '',
+    userAgent: log.userAgent || undefined,
+    details: typeof log.details === 'object' ? log.details as Record<string, any> : {},
+    timestamp: log.createdAt,
+    sessionId: log.sessionId || undefined,
+  }));
 }
 
 /**
