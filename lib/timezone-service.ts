@@ -307,11 +307,16 @@ export function generateTimeSlots(
   const slotDuration = regionConfig.deliveryWindowMinutes;
 
   // Generate slots from open to close time
+  // FIX: Generate timestamps in the target timezone, not server timezone
+  const dateStr = format(date, 'yyyy-MM-dd');
+
   for (let hour = openTime.hour; hour < closeTime.hour; hour++) {
     for (let minute = 0; minute < 60; minute += slotDuration) {
-      const slotStart = new Date(dateStart);
-      slotStart.setHours(hour, minute, 0, 0);
-
+      // Construct time string (e.g., "2025-11-23 10:00")
+      const timeStr = `${dateStr} ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+      
+      // Convert to absolute UTC timestamp representing that local time
+      const slotStart = fromZonedTime(timeStr, regionConfig.timezone);
       const slotEnd = addMinutes(slotStart, slotDuration);
 
       // Skip slots that are too soon (before minimum lead time)
@@ -319,7 +324,8 @@ export function generateTimeSlots(
         continue;
       }
 
-      const slotId = `${format(slotStart, 'yyyy-MM-dd')}-${hour}-${minute}`;
+      // FIX: Use consistent padded format yyyy-MM-dd-HH-mm and anchor to logical date (not UTC date)
+      const slotId = `${dateStr}-${hour.toString().padStart(2, '0')}-${minute.toString().padStart(2, '0')}`;
       
       // Check real-time availability (if provided)
       const bookedCount = bookedSlotsMap?.get(slotId) || 0;

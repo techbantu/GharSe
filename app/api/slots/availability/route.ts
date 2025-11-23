@@ -21,7 +21,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { REGIONS } from '@/lib/timezone-service';
-import { format, parseISO, startOfDay, endOfDay } from 'date-fns';
+import { format, parseISO } from 'date-fns';
+import { fromZonedTime, toZonedTime } from 'date-fns-tz';
 
 // ===== CONFIGURATION =====
 
@@ -75,9 +76,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Query database for booked slots on this date
-    const dayStart = startOfDay(targetDate);
-    const dayEnd = endOfDay(targetDate);
+    // Query database for booked slots on this date (Region-Aware)
+    // Convert YYYY-MM-DD 00:00 in Region -> UTC
+    const dateStr = format(targetDate, 'yyyy-MM-dd');
+    const dayStart = fromZonedTime(`${dateStr} 00:00:00`, region.timezone);
+    const dayEnd = fromZonedTime(`${dateStr} 23:59:59`, region.timezone);
 
     const bookedOrders = await prisma.order.findMany({
       where: {
@@ -102,8 +105,10 @@ export async function GET(request: NextRequest) {
     for (const order of bookedOrders) {
       if (!order.scheduledWindowStart) continue;
 
-      // Generate slot ID (format: "YYYY-MM-DD-HH-MM")
-      const slotId = format(order.scheduledWindowStart, 'yyyy-MM-dd-HH-mm');
+      // FIX: Generate ID based on Region Time, not Server/UTC Time
+      // 12:30 UTC -> 18:00 IST -> ID: ...-18-00
+      const regionDate = toZonedTime(order.scheduledWindowStart, region.timezone);
+      const slotId = format(regionDate, 'yyyy-MM-dd-HH-mm');
       slotCountMap.set(slotId, (slotCountMap.get(slotId) || 0) + 1);
     }
 
@@ -116,13 +121,15 @@ export async function GET(request: NextRequest) {
 
     for (let hour = openTime.hour; hour < closeTime.hour; hour++) {
       for (let minute = 0; minute < 60; minute += slotDuration) {
-        const slotStart = new Date(dayStart);
-        slotStart.setHours(hour, minute, 0, 0);
+        // FIX: Generate timestamps in the target timezone
+        const timeStr = `${dateStr} ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+        const slotStart = fromZonedTime(timeStr, region.timezone);
 
         const slotEnd = new Date(slotStart);
         slotEnd.setMinutes(slotEnd.getMinutes() + slotDuration);
 
-        const slotId = format(slotStart, 'yyyy-MM-dd-HH-mm');
+        // FIX: Use consistent ID format matched to Region Time
+        const slotId = `${dateStr}-${hour.toString().padStart(2, '0')}-${minute.toString().padStart(2, '0')}`;
         const bookedCount = slotCountMap.get(slotId) || 0;
         const availableSlots = MAX_SLOTS_PER_WINDOW - bookedCount;
 
@@ -191,7 +198,12 @@ export async function POST(request: NextRequest) {
     // Parse slot ID back to date/time
     // Format: "2025-11-23-14-30" → Nov 23, 2:30 PM
     const [year, month, day, hour, minute] = slotId.split('-').map(Number);
-    const slotStart = new Date(year, month - 1, day, hour, minute);
+    
+    // FIX: Construct date in the target region's timezone
+    // If we use new Date(), it uses server time (UTC), causing a 5.5h shift for India
+    const region = REGIONS[regionId] || REGIONS['IN'];
+    const timeString = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+    const slotStart = fromZonedTime(timeString, region.timezone);
 
     // Check current availability
     const bookedOrders = await prisma.order.count({
