@@ -106,22 +106,8 @@ export async function recordAttackAttempt(
     console.error(`🚫 IP ${ip} auto-blacklisted due to critical threat level`);
   }
   
-  // Persist to database
-  await prisma.ipThreat.upsert({
-    where: { ip },
-    update: {
-      threatLevel: threatData.threatLevel,
-      totalAttempts: threatData.totalAttempts,
-      lastSeen: threatData.lastSeen,
-      isBlacklisted: threatData.isBlacklisted,
-      attacks: {
-        create: {
-          attackType,
-          details: JSON.stringify(details),
-          timestamp: now,
-        },
-      },
-    },
+  // Store in memory cache only (no database table in schema)
+  ipCache.set(ip, threatData);
     create: {
       ip,
       threatLevel: threatData.threatLevel,
