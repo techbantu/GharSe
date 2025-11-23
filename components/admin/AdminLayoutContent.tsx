@@ -23,8 +23,11 @@ const AdminLayoutContent: React.FC<AdminLayoutContentProps> = ({ children }) => 
 
   useEffect(() => {
     const checkAuth = async () => {
-      // Skip check on login page (though layout shouldn't be used there usually)
-      if (pathname === '/admin/login') {
+      // Skip auth check on public admin pages (login, forgot-password, reset-password)
+      const publicPages = ['/admin/login', '/admin/forgot-password', '/admin/reset-password'];
+      const isPublicPage = publicPages.some(page => pathname?.startsWith(page));
+      
+      if (isPublicPage) {
         setIsLoading(false);
         return;
       }
@@ -119,9 +122,20 @@ const AdminLayoutContent: React.FC<AdminLayoutContentProps> = ({ children }) => 
   }
 
   // Don't render admin UI if not authenticated (will redirect)
-  if (!isAuthenticated && pathname !== '/admin/login') {
+  // Allow rendering for public pages (login, forgot-password, reset-password)
+  const publicPages = ['/admin/login', '/admin/forgot-password', '/admin/reset-password'];
+  const isPublicPage = publicPages.some(page => pathname?.startsWith(page));
+  
+  if (!isAuthenticated && !isPublicPage) {
     return null;
   }
+
+  // For public pages (login, forgot-password, reset-password), render children without admin UI
+  if (isPublicPage) {
+    return <>{children}</>;
+  }
+
+  // Render full admin UI for authenticated pages
 
   return (
     <div style={{ 

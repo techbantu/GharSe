@@ -8,6 +8,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Lock, Mail, Eye, EyeOff, ChefHat } from 'lucide-react';
 import Logo from '@/components/Logo';
 
@@ -345,7 +346,7 @@ export default function AdminLoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="bantusailaja@gmail.com"
+                placeholder="admin@example.com"
                 required
                   style={{
                     width: '100%',
@@ -464,6 +465,31 @@ export default function AdminLoginPage() {
               </div>
             </div>
 
+            {/* Forgot Password Link */}
+            <div style={{ marginBottom: '1.5rem', textAlign: 'right' }}>
+              <Link
+                href="/admin/forgot-password"
+                style={{
+                  color: '#F97316',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                  transition: 'color 0.2s ease',
+                  cursor: 'pointer'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = '#EA580C';
+                  e.currentTarget.style.textDecoration = 'underline';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = '#F97316';
+                  e.currentTarget.style.textDecoration = 'none';
+                }}
+              >
+                Forgot password?
+              </Link>
+            </div>
+
             {/* Login Button */}
             <button
               type="submit"
@@ -545,86 +571,6 @@ export default function AdminLoginPage() {
               )}
             </button>
           </form>
-
-          {/* Login Credentials Info Card */}
-          <div style={{
-            marginTop: '2.5rem',
-            padding: '1.5rem',
-            background: 'linear-gradient(135deg, rgba(239, 246, 255, 0.8) 0%, rgba(219, 234, 254, 0.9) 100%)',
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
-            border: '1.5px solid rgba(191, 219, 254, 0.6)',
-            borderRadius: '1.25rem',
-            position: 'relative',
-            overflow: 'hidden',
-            boxShadow: '0 8px 16px rgba(59, 130, 246, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.5)'
-          }}>
-            {/* Decorative Corner with gradient */}
-            <div style={{
-              position: 'absolute',
-              top: 0,
-              right: 0,
-              width: '120px',
-              height: '120px',
-              background: 'radial-gradient(circle at top right, rgba(59, 130, 246, 0.15), transparent 70%)',
-              borderRadius: '0 1.25rem 0 1.25rem'
-            }} />
-            
-            {/* Subtle pattern overlay */}
-            <div style={{
-              position: 'absolute',
-              inset: 0,
-              opacity: 0.05,
-              backgroundImage: 'radial-gradient(circle at 1px 1px, #3B82F6 1px, transparent 0)',
-              backgroundSize: '20px 20px',
-              pointerEvents: 'none'
-            }} />
-            
-            {/* Forgot Password Link */}
-            <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
-              <button
-                type="button"
-                onClick={() => router.push('/admin/forgot-password')}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#F97316',
-                  fontSize: '0.875rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  textDecoration: 'none',
-                  transition: 'color 0.2s'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.color = '#EA580C'}
-                onMouseLeave={(e) => e.currentTarget.style.color = '#F97316'}
-              >
-                🔑 Forgot Password?
-              </button>
-            </div>
-
-            {/* Security Note */}
-            <div style={{
-              marginTop: '1.5rem',
-              padding: '1rem',
-              background: 'linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%)',
-              borderRadius: '0.75rem',
-              border: '1px solid #FCD34D',
-            }}>
-              <p style={{
-                margin: 0,
-                fontSize: '0.75rem',
-                color: '#92400E',
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: '0.5rem'
-              }}>
-                <span style={{ fontSize: '0.875rem' }}>🔒</span>
-                <span>
-                  <strong>First time?</strong> Contact the restaurant owner to receive your admin credentials via email.
-                </span>
-              </p>
-            </div>
-          </div>
         </div>
 
         {/* Back to Website Link */}

@@ -65,6 +65,16 @@ export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetai
 
   // Calculate pricing breakdown
   const calculatePricing = () => {
+    // Safety check for order.items
+    if (!order || !order.items || !Array.isArray(order.items)) {
+      return {
+        subtotal: 0,
+        taxAmount: 0,
+        deliveryFee: 0,
+        total: 0
+      };
+    }
+
     const subtotal = order.items.reduce((sum, item) => {
       return sum + (Number(item.menuItem?.price || 0) * Number(item.quantity || 0));
     }, 0);
@@ -79,10 +89,10 @@ export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetai
     const total = subtotal + taxAmount + deliveryFee;
     
     return {
-      subtotal,
-      taxAmount,
-      deliveryFee,
-      total
+      subtotal: subtotal || 0,
+      taxAmount: taxAmount || 0,
+      deliveryFee: deliveryFee || 0,
+      total: total || 0
     };
   };
 
@@ -550,20 +560,20 @@ export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetai
             <div style={{ fontSize: '0.8125rem', display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', color: '#4b5563' }}>
                 <span>Subtotal</span>
-                <span style={{ fontWeight: 500 }}>₹{pricing.subtotal.toFixed(2)}</span>
+                <span style={{ fontWeight: 500 }}>₹{(pricing.subtotal ?? 0).toFixed(2)}</span>
               </div>
               
               <div style={{ display: 'flex', justifyContent: 'space-between', color: '#4b5563' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                   GST (5%)
                 </span>
-                <span style={{ fontWeight: 500 }}>₹{pricing.taxAmount.toFixed(2)}</span>
+                <span style={{ fontWeight: 500 }}>₹{(pricing.taxAmount ?? 0).toFixed(2)}</span>
               </div>
               
-              {pricing.deliveryFee > 0 && (
+              {(pricing.deliveryFee ?? 0) > 0 && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', color: '#4b5563' }}>
                   <span>Delivery Fee</span>
-                  <span style={{ fontWeight: 500 }}>₹{pricing.deliveryFee.toFixed(2)}</span>
+                  <span style={{ fontWeight: 500 }}>₹{(pricing.deliveryFee ?? 0).toFixed(2)}</span>
                 </div>
               )}
               
@@ -581,7 +591,7 @@ export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetai
                 color: '#ea580c'
               }}>
                 <span>Total Amount</span>
-                <span>₹{pricing.total.toFixed(2)}</span>
+                <span>₹{(pricing.total ?? 0).toFixed(2)}</span>
               </div>
             </div>
           </div>

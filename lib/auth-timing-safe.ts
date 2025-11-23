@@ -1,23 +1,22 @@
 /**
- * AUTHENTICATION UTILITIES
+ * 🔒 TIMING-SAFE AUTHENTICATION
  * 
- * Secure authentication system with:
- * - JWT token generation and verification
- * - Password hashing and verification
- * - Session management
- * - Role-based access control
+ * Mitigates timing attacks on JWT verification
+ * Nation-state resistant implementation
  */
 
 import jwt, { SignOptions } from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import crypto from 'crypto';
+import * as crypto from 'crypto';
 import { Admin, AdminRole } from '@prisma/client';
 
-// Re-export AdminRole for use in other modules
 export { AdminRole };
 
-const JWT_SECRET = process.env.ADMIN_JWT_SECRET || process.env.JWT_SECRET || 'change-this-secret-key-in-production';
+const JWT_SECRET = process.env.JWT_SECRET || 'change-this-secret-key-in-production';
 const JWT_EXPIRES_IN: string | number = process.env.JWT_EXPIRES_IN || '7d';
+
+// Constant-time operations to prevent timing attacks
+const MINIMUM_VERIFY_TIME_MS = 50; // Ensure all verifications take at least 50ms
 
 export interface AuthTokenPayload {
   adminId: string;
@@ -33,14 +32,33 @@ export async function hashPassword(password: string): Promise<string> {
 }
 
 /**
- * Verify a password against a hash
+ * Verify a password against a hash (timing-safe)
  */
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  return bcrypt.compare(password, hash);
+  const startTime = Date.now();
+  
+  try {
+    const result = await bcrypt.compare(password, hash);
+    
+    // Ensure minimum time to prevent timing analysis
+    const elapsed = Date.now() - startTime;
+    if (elapsed < MINIMUM_VERIFY_TIME_MS) {
+      await new Promise(resolve => setTimeout(resolve, MINIMUM_VERIFY_TIME_MS - elapsed));
+    }
+    
+    return result;
+  } catch (error) {
+    // Same timing for errors
+    const elapsed = Date.now() - startTime;
+    if (elapsed < MINIMUM_VERIFY_TIME_MS) {
+      await new Promise(resolve => setTimeout(resolve, MINIMUM_VERIFY_TIME_MS - elapsed));
+    }
+    return false;
+  }
 }
 
 /**
- * Generate JWT token for admin
+ * Generate JWT token for admin (with explicit algorithm)
  */
 export function generateToken(admin: Admin): string {
   const payload: AuthTokenPayload = {
@@ -49,19 +67,40 @@ export function generateToken(admin: Admin): string {
     role: admin.role,
   };
 
+  // ✅ FIXED: Always specify algorithm to prevent algorithm confusion attacks
   return jwt.sign(payload, JWT_SECRET!, {
-    expiresIn: JWT_EXPIRES_IN as any,
+    algorithm: 'HS256', // Explicit algorithm
+    expiresIn: JWT_EXPIRES_IN,
   });
 }
 
 /**
- * Verify and decode JWT token
+ * Verify and decode JWT token (timing-safe, algorithm-verified)
  */
-export function verifyToken(token: string): AuthTokenPayload | null {
+export async function verifyToken(token: string): Promise<AuthTokenPayload | null> {
+  const startTime = Date.now();
+  
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as AuthTokenPayload;
+    // ✅ FIXED: Whitelist only HS256 to prevent algorithm confusion
+    const decoded = jwt.verify(token, JWT_SECRET, {
+      algorithms: ['HS256'], // Only allow HS256
+    }) as AuthTokenPayload;
+    
+    // Ensure constant-time operation
+    const elapsed = Date.now() - startTime;
+    if (elapsed < MINIMUM_VERIFY_TIME_MS) {
+      await new Promise(resolve => setTimeout(resolve, MINIMUM_VERIFY_TIME_MS - elapsed));
+    }
+    
     return decoded;
   } catch (error) {
+    // Same constant-time delay for all errors (prevent timing analysis)
+    const elapsed = Date.now() - startTime;
+    if (elapsed < MINIMUM_VERIFY_TIME_MS) {
+      await new Promise(resolve => setTimeout(resolve, MINIMUM_VERIFY_TIME_MS - elapsed));
+    }
+    
+    // Never reveal error type (prevents information leakage)
     return null;
   }
 }

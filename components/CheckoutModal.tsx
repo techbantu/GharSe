@@ -1751,9 +1751,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                       </h3>
                       
                       <DeliveryTimeSlotPicker
-                        prepTime={formData.prepTime}
-                        deliveryTime={formData.deliveryTime}
-                        minimumLeadTime={formData.minimumLeadTime}
                         onSelectSlot={(slot) => {
                           setFormData(prev => ({
                             ...prev,

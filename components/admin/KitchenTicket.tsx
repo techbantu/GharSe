@@ -66,12 +66,12 @@ export default function KitchenTicket({ order, onStatusChange, isUrgent }: Kitch
     if (order.status === 'delivered' || order.status === 'picked-up') return '#10b981'; // Green
     
     if (timeMetrics.isScheduled) {
-      if (timeMetrics.minutesUntilStart < 0) return '#ef4444'; // Red - should have started!
-      if (timeMetrics.minutesUntilStart <= 15) return '#f59e0b'; // Orange - start soon!
+      if (timeMetrics.minutesUntilStart && timeMetrics.minutesUntilStart < 0) return '#ef4444'; // Red - should have started!
+      if (timeMetrics.minutesUntilStart && timeMetrics.minutesUntilStart <= 15) return '#f59e0b'; // Orange - start soon!
       return '#3b82f6'; // Blue - scheduled
     } else {
-      if (timeMetrics.minutesElapsed > 30) return '#ef4444'; // Red - URGENT!
-      if (timeMetrics.minutesElapsed > 20) return '#f59e0b'; // Orange - Warning
+      if (timeMetrics.minutesElapsed && timeMetrics.minutesElapsed > 30) return '#ef4444'; // Red - URGENT!
+      if (timeMetrics.minutesElapsed && timeMetrics.minutesElapsed > 20) return '#f59e0b'; // Orange - Warning
       return '#3b82f6'; // Blue - Normal
     }
   };
@@ -118,8 +118,8 @@ export default function KitchenTicket({ order, onStatusChange, isUrgent }: Kitch
         >
           <AlertCircle size={16} />
           {timeMetrics.isScheduled 
-            ? `START NOW! (${Math.abs(timeMetrics.minutesUntilStart)} min overdue)` 
-            : `URGENT! ${timeMetrics.minutesElapsed} MINUTES ELAPSED`
+            ? `START NOW! (${Math.abs(timeMetrics.minutesUntilStart ?? 0)} min overdue)` 
+            : `URGENT! ${timeMetrics.minutesElapsed ?? 0} MINUTES ELAPSED`
           }
         </div>
       )}
@@ -160,14 +160,14 @@ export default function KitchenTicket({ order, onStatusChange, isUrgent }: Kitch
                     color: '#667eea',
                     marginBottom: '0.25rem'
                   }}>
-                    {format(timeMetrics.scheduledDelivery, 'EEE, MMM d')}
+                    {timeMetrics.scheduledDelivery && format(timeMetrics.scheduledDelivery, 'EEE, MMM d')}
                   </div>
                   <div style={{ 
                     fontSize: '1rem', 
                     fontWeight: 700, 
                     color: '#764ba2'
                   }}>
-                    🕐 {format(timeMetrics.scheduledDelivery, 'h:mm a')}
+                    🕐 {timeMetrics.scheduledDelivery && format(timeMetrics.scheduledDelivery, 'h:mm a')}
                   </div>
                   <div style={{ 
                     fontSize: '0.75rem', 
@@ -175,11 +175,11 @@ export default function KitchenTicket({ order, onStatusChange, isUrgent }: Kitch
                     marginTop: '0.5rem',
                     fontWeight: 600
                   }}>
-                    Start in {timeMetrics.minutesUntilStart < 0 
-                      ? `NOW! (${Math.abs(timeMetrics.minutesUntilStart)}m late)` 
-                      : timeMetrics.minutesUntilStart < 60
-                        ? `${timeMetrics.minutesUntilStart} min`
-                        : `${Math.floor(timeMetrics.minutesUntilStart / 60)}h ${timeMetrics.minutesUntilStart % 60}m`
+                    Start in {(timeMetrics.minutesUntilStart ?? 0) < 0 
+                      ? `NOW! (${Math.abs(timeMetrics.minutesUntilStart ?? 0)}m late)` 
+                      : (timeMetrics.minutesUntilStart ?? 0) < 60
+                        ? `${timeMetrics.minutesUntilStart ?? 0} min`
+                        : `${Math.floor((timeMetrics.minutesUntilStart ?? 0) / 60)}h ${(timeMetrics.minutesUntilStart ?? 0) % 60}m`
                     }
                   </div>
                 </>
@@ -190,7 +190,7 @@ export default function KitchenTicket({ order, onStatusChange, isUrgent }: Kitch
                     <span style={{ fontWeight: 600 }}>{format(orderTime, 'h:mm a')}</span>
                   </div>
                   <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.25rem' }}>
-                    {timeMetrics.minutesElapsed} min ago
+                    {timeMetrics.minutesElapsed ?? 0} min ago
                   </div>
                 </>
               )}

@@ -10,7 +10,7 @@
  * 6. Encrypted audit logging
  */
 
-import crypto from 'crypto';
+import * as crypto from 'crypto';
 
 export interface BruteForceConfig {
   maxAttempts: number; // Max failed attempts before lockout
@@ -105,17 +105,17 @@ export async function recordFailedAttempt(
     
     console.warn(`⚠️  LOCKOUT: ${identifier} locked until ${new Date(lockoutUntil).toISOString()}`);
     
+    // Check if should be blacklisted
+    if (attempts.length >= config.blacklistThreshold) {
+      addToBlacklist(identifier, `${attempts.length} failed attempts`);
+    }
+    
     return {
       isLocked: true,
       remainingAttempts: 0,
       lockoutUntil,
       delay,
     };
-  }
-  
-  // Check if should be blacklisted
-  if (attempts.length >= config.blacklistThreshold) {
-    addToBlacklist(identifier, `${attempts.length} failed attempts`);
   }
   
   return {

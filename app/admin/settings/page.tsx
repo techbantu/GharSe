@@ -103,11 +103,38 @@ export default function SettingsPage() {
   };
 
   const handleUpdateSecurity = async (data: { currentPass: string; newPass: string }) => {
-    // TODO: API Call
-    console.log('Updating security:', data);
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    alert('Password updated successfully');
+    try {
+      // Call change password API (token sent automatically via httpOnly cookie)
+      const response = await fetch('/api/admin/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', // Important: send cookies with request
+        body: JSON.stringify({
+          currentPassword: data.currentPass,
+          newPassword: data.newPass,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to change password');
+      }
+
+      // Success!
+      alert('✅ Password changed successfully! Please login again with your new password.');
+      
+      // Clear token cookie and redirect to login
+      document.cookie = 'admin_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      window.location.href = '/admin/login';
+      
+    } catch (error: any) {
+      console.error('Password change error:', error);
+      alert(error.message || 'Failed to change password');
+      throw error; // Re-throw to let modal handle loading state
+    }
   };
 
   const handleUpdatePayment = async (data: { bankName: string; accountNumber: string; ifsc: string; upiId: string }) => {

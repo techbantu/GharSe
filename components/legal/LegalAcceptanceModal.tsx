@@ -28,7 +28,16 @@ export default function LegalAcceptanceModal() {
     foodSafety: false,
   });
 
+  // Check if current page is admin dashboard
   useEffect(() => {
+    const isAdminPage = typeof window !== 'undefined' && window.location.pathname.startsWith('/admin');
+    if (isAdminPage) {
+      // Don't show legal modal on admin pages
+      setIsVisible(false);
+      setIsLoading(false);
+      return;
+    }
+    
     checkAcceptanceStatus();
   }, [user?.id]);
 

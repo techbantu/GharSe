@@ -82,7 +82,7 @@ const generateOrderConfirmationHTML = (order: Order): string => {
       <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; padding: 18px; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);">
         <p style="margin: 0 0 8px 0; color: #ffffff; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; opacity: 0.95;">📅 Scheduled Delivery</p>
         <p style="margin: 0; color: #ffffff; font-size: 32px; font-weight: 900; line-height: 1;">
-          ${new Date(order.scheduledDeliveryAt || order.scheduledWindowStart).toLocaleTimeString('en-IN', {
+          ${new Date(order.scheduledDeliveryAt || order.scheduledWindowStart || Date.now()).toLocaleTimeString('en-IN', {
             hour: '2-digit',
             minute: '2-digit',
             hour12: true,
@@ -94,7 +94,7 @@ const generateOrderConfirmationHTML = (order: Order): string => {
           })}` : ''}
         </p>
         <p style="margin: 10px 0 0 0; color: #ffffff; font-size: 16px; font-weight: 600;">
-          ${new Date(order.scheduledDeliveryAt || order.scheduledWindowStart).toLocaleDateString('en-IN', {
+          ${new Date(order.scheduledDeliveryAt || order.scheduledWindowStart || Date.now()).toLocaleDateString('en-IN', {
             weekday: 'long',
             year: 'numeric',
             month: 'long',

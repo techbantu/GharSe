@@ -17,7 +17,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { ToastProvider } from "@/context/ToastContext";
 import { CartProvider } from "@/context/CartContext";
 import { ActiveOrderProvider } from "@/context/ActiveOrderContext";
-import CacheBuster from "@/components/CacheBuster";
+// import CacheBuster from "@/components/CacheBuster"; // Temporarily disabled due to HMR issues
 import LegalAcceptanceModal from "@/components/legal/LegalAcceptanceModal";
 import CookieConsentBanner from "@/components/legal/CookieConsentBanner";
 import { restaurantInfo } from "@/data/menuData";
@@ -291,7 +291,7 @@ export default function RootLayout({
         <meta name="rating" content="General" />
       </head>
       <body className={`${inter.variable} antialiased`} suppressHydrationWarning>
-        <CacheBuster />
+        {/* <CacheBuster /> Temporarily disabled due to HMR issues */}
         <ToastProvider>
           <AuthProvider>
             <ActiveOrderProvider>

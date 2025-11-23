@@ -1,17 +1,8 @@
 'use client';
 
-/**
- * ADMIN FORGOT PASSWORD PAGE
- * 
- * Features:
- * - Email-based password reset
- * - Sends reset link to admin email
- * - Secure token generation
- */
-
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Mail, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
+import { Mail, ArrowLeft, CheckCircle } from 'lucide-react';
 import Logo from '@/components/Logo';
 
 export default function AdminForgotPasswordPage() {
@@ -35,110 +26,17 @@ export default function AdminForgotPasswordPage() {
 
       const data = await response.json();
 
-      if (response.ok) {
-        setSuccess(true);
-      } else {
-        setError(data.error || 'Failed to send reset email');
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to send reset email');
       }
-    } catch (error) {
-      console.error('Forgot password error:', error);
-      setError('Something went wrong. Please try again.');
+
+      setSuccess(true);
+    } catch (err: any) {
+      setError(err.message || 'Something went wrong');
     } finally {
       setLoading(false);
     }
   };
-
-  if (success) {
-    return (
-      <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        padding: '1rem',
-      }}>
-        <div style={{
-          background: 'white',
-          borderRadius: '1.5rem',
-          padding: '3rem',
-          maxWidth: '500px',
-          width: '100%',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-          textAlign: 'center',
-        }}>
-          <div style={{
-            width: '80px',
-            height: '80px',
-            background: 'linear-gradient(135deg, #10b981, #059669)',
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            margin: '0 auto 1.5rem',
-          }}>
-            <CheckCircle size={40} style={{ color: 'white' }} />
-          </div>
-
-          <h1 style={{
-            fontSize: '1.75rem',
-            fontWeight: 800,
-            color: '#111827',
-            marginBottom: '1rem',
-          }}>
-            Check Your Email! 📧
-          </h1>
-
-          <p style={{
-            fontSize: '1rem',
-            color: '#6B7280',
-            marginBottom: '1.5rem',
-            lineHeight: 1.6,
-          }}>
-            We've sent a password reset link to:
-            <br />
-            <strong style={{ color: '#111827' }}>{email}</strong>
-          </p>
-
-          <div style={{
-            background: '#FEF3C7',
-            border: '1px solid #FCD34D',
-            borderRadius: '0.75rem',
-            padding: '1rem',
-            marginBottom: '1.5rem',
-          }}>
-            <p style={{
-              fontSize: '0.875rem',
-              color: '#92400E',
-              margin: 0,
-              lineHeight: 1.5,
-            }}>
-              💡 <strong>Tip:</strong> The link expires in 1 hour. 
-              Check your spam folder if you don't see it.
-            </p>
-          </div>
-
-          <button
-            onClick={() => router.push('/admin/login')}
-            style={{
-              width: '100%',
-              padding: '0.875rem',
-              background: 'linear-gradient(to right, #F97316, #EA580C)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '0.75rem',
-              fontSize: '1rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-            }}
-          >
-            Back to Login
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div style={{
@@ -146,185 +44,289 @@ export default function AdminForgotPasswordPage() {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      padding: '1rem',
+      background: 'linear-gradient(135deg, #FFF5F0 0%, #FFF0E6 50%, #FFE8D6 100%)',
+      padding: '1rem'
     }}>
-      <style>{`
-        @keyframes slideUp {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
-
       <div style={{
-        background: 'white',
-        borderRadius: '1.5rem',
+        backgroundColor: '#ffffff',
+        borderRadius: '2rem',
         padding: '3rem',
-        maxWidth: '500px',
+        maxWidth: '28rem',
         width: '100%',
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-        animation: 'slideUp 0.3s ease-out',
+        boxShadow: '0 25px 50px -12px rgba(249, 115, 22, 0.25)'
       }}>
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <div style={{ display: 'inline-block' }}>
-            <Logo />
-          </div>
+          <Logo size={60} />
         </div>
 
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <h1 style={{
-            fontSize: '1.875rem',
+            fontSize: '2rem',
             fontWeight: 800,
-            color: '#111827',
-            marginBottom: '0.5rem',
+            background: 'linear-gradient(135deg, #F97316 0%, #EA580C 50%, #DC2626 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            marginBottom: '0.5rem'
           }}>
-            Reset Password 🔑
+            Forgot Password
           </h1>
           <p style={{
             fontSize: '0.9375rem',
             color: '#6B7280',
-            lineHeight: 1.5,
+            lineHeight: 1.6
           }}>
-            Enter your admin email and we'll send you a reset link
+            {success 
+              ? "Check your email for reset instructions" 
+              : "Enter your email to receive a password reset link"}
           </p>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '1.5rem' }}>
-            <label style={{
-              display: 'block',
-              fontSize: '0.875rem',
-              fontWeight: 600,
-              color: '#374151',
-              marginBottom: '0.5rem',
-            }}>
-              Email Address
-            </label>
-            <div style={{ position: 'relative' }}>
-              <Mail style={{
-                position: 'absolute',
-                left: '1rem',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: '#9CA3AF',
-              }} size={20} />
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="bantusailaja@gmail.com"
-                required
-                style={{
-                  width: '100%',
-                  paddingLeft: '3rem',
-                  paddingRight: '1rem',
-                  paddingTop: '0.875rem',
-                  paddingBottom: '0.875rem',
-                  border: '2px solid #E5E7EB',
-                  borderRadius: '0.75rem',
-                  fontSize: '1rem',
-                  outline: 'none',
-                  transition: 'border-color 0.2s',
-                }}
-                onFocus={(e) => e.currentTarget.style.borderColor = '#F97316'}
-                onBlur={(e) => e.currentTarget.style.borderColor = '#E5E7EB'}
-              />
-            </div>
-          </div>
-
-          {/* Error Message */}
-          {error && (
+        {success ? (
+          // Success State
+          <div style={{ textAlign: 'center' }}>
             <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.875rem',
-              background: '#FEE2E2',
-              border: '1px solid #FECACA',
-              borderRadius: '0.75rem',
-              marginBottom: '1.5rem',
-            }}>
-              <AlertCircle size={20} style={{ color: '#DC2626', flexShrink: 0 }} />
-              <p style={{
-                fontSize: '0.875rem',
-                color: '#DC2626',
-                margin: 0,
-              }}>
-                {error}
-              </p>
-            </div>
-          )}
-
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              width: '100%',
-              padding: '0.875rem',
-              background: loading
-                ? '#D1D5DB'
-                : 'linear-gradient(to right, #F97316, #EA580C)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '0.75rem',
-              fontSize: '1rem',
-              fontWeight: 600,
-              cursor: loading ? 'not-allowed' : 'pointer',
-              boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-              marginBottom: '1rem',
-            }}
-          >
-            {loading ? 'Sending...' : 'Send Reset Link'}
-          </button>
-
-          {/* Back to Login */}
-          <button
-            type="button"
-            onClick={() => router.push('/admin/login')}
-            style={{
-              width: '100%',
-              padding: '0.875rem',
-              background: 'transparent',
-              color: '#6B7280',
-              border: '2px solid #E5E7EB',
-              borderRadius: '0.75rem',
-              fontSize: '0.9375rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'flex',
+              display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '0.5rem',
-            }}
-          >
-            <ArrowLeft size={18} />
-            Back to Login
-          </button>
-        </form>
+              width: '80px',
+              height: '80px',
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #10B981, #059669)',
+              marginBottom: '1.5rem',
+              boxShadow: '0 10px 30px rgba(16, 185, 129, 0.3)'
+            }}>
+              <CheckCircle size={40} style={{ color: '#ffffff' }} />
+            </div>
+            
+            <h3 style={{
+              fontSize: '1.25rem',
+              fontWeight: 700,
+              color: '#111827',
+              marginBottom: '1rem'
+            }}>
+              Email Sent!
+            </h3>
+            
+            <p style={{
+              fontSize: '0.9375rem',
+              color: '#6B7280',
+              lineHeight: 1.6,
+              marginBottom: '2rem'
+            }}>
+              If an admin account exists with <strong>{email}</strong>, you will receive a password reset link within a few minutes.
+            </p>
 
-        {/* Help Note */}
-        <div style={{
-          marginTop: '2rem',
-          padding: '1rem',
-          background: '#F3F4F6',
-          borderRadius: '0.75rem',
-        }}>
-          <p style={{
-            fontSize: '0.8125rem',
-            color: '#6B7280',
-            margin: 0,
-            lineHeight: 1.5,
-          }}>
-            💡 <strong>First time admin?</strong> Contact the restaurant owner 
-            to get your credentials set up.
-          </p>
-        </div>
+            <div style={{
+              background: '#FEF3C7',
+              borderLeft: '4px solid #F59E0B',
+              padding: '1rem',
+              borderRadius: '0.5rem',
+              marginBottom: '2rem',
+              textAlign: 'left'
+            }}>
+              <p style={{
+                fontSize: '0.875rem',
+                color: '#92400E',
+                margin: 0
+              }}>
+                <strong>⏰ Link expires in 1 hour</strong><br />
+                Check your spam folder if you don't see it in a few minutes.
+              </p>
+            </div>
+
+            <button
+              onClick={() => router.push('/admin/login')}
+              style={{
+                width: '100%',
+                padding: '1rem',
+                background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '1rem',
+                fontSize: '1rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                boxShadow: '0 4px 12px rgba(249, 115, 22, 0.25)'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 8px 20px rgba(249, 115, 22, 0.35)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(249, 115, 22, 0.25)';
+              }}
+            >
+              Back to Login
+            </button>
+          </div>
+        ) : (
+          // Form State
+          <>
+            {error && (
+              <div style={{
+                background: '#FEE2E2',
+                borderLeft: '4px solid #EF4444',
+                padding: '1rem',
+                borderRadius: '0.5rem',
+                marginBottom: '1.5rem'
+              }}>
+                <p style={{
+                  fontSize: '0.875rem',
+                  color: '#991B1B',
+                  margin: 0
+                }}>
+                  {error}
+                </p>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit}>
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={{
+                  display: 'block',
+                  fontSize: '0.875rem',
+                  fontWeight: 700,
+                  color: '#374151',
+                  marginBottom: '0.5rem'
+                }}>
+                  Admin Email Address
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <Mail size={20} style={{
+                    position: 'absolute',
+                    left: '1rem',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    color: '#9CA3AF',
+                    zIndex: 1
+                  }} />
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="admin@gharse.app"
+                    required
+                    style={{
+                      width: '100%',
+                      paddingLeft: '3.25rem',
+                      paddingRight: '1rem',
+                      paddingTop: '1rem',
+                      paddingBottom: '1rem',
+                      border: '2px solid #E5E7EB',
+                      borderRadius: '1rem',
+                      fontSize: '0.9375rem',
+                      color: '#111827',
+                      backgroundColor: '#FAFAFA',
+                      transition: 'all 0.3s ease',
+                      outline: 'none'
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = '#F97316';
+                      e.currentTarget.style.backgroundColor = '#ffffff';
+                      e.currentTarget.style.boxShadow = '0 0 0 4px rgba(249, 115, 22, 0.12)';
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = '#E5E7EB';
+                      e.currentTarget.style.backgroundColor = '#FAFAFA';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                style={{
+                  width: '100%',
+                  padding: '1rem',
+                  background: loading
+                    ? 'linear-gradient(135deg, #FCA5A5, #F87171)'
+                    : 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '1rem',
+                  fontSize: '1rem',
+                  fontWeight: 700,
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.3s ease',
+                  opacity: loading ? 0.7 : 1,
+                  boxShadow: '0 4px 12px rgba(249, 115, 22, 0.25)',
+                  marginBottom: '1rem'
+                }}
+                onMouseEnter={(e) => {
+                  if (!loading) {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 8px 20px rgba(249, 115, 22, 0.35)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(249, 115, 22, 0.25)';
+                }}
+              >
+                {loading ? (
+                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                    <div style={{
+                      width: '20px',
+                      height: '20px',
+                      border: '3px solid #ffffff40',
+                      borderTop: '3px solid #ffffff',
+                      borderRadius: '50%',
+                      animation: 'spin 0.8s linear infinite'
+                    }} />
+                    Sending Email...
+                  </span>
+                ) : 'Send Reset Link'}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => router.push('/admin/login')}
+                style={{
+                  width: '100%',
+                  padding: '1rem',
+                  background: 'transparent',
+                  color: '#6B7280',
+                  border: '2px solid #E5E7EB',
+                  borderRadius: '1rem',
+                  fontSize: '1rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = '#D1D5DB';
+                  e.currentTarget.style.backgroundColor = '#F9FAFB';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = '#E5E7EB';
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+              >
+                <ArrowLeft size={20} />
+                Back to Login
+              </button>
+            </form>
+          </>
+        )}
       </div>
+
+      {/* Spinning animation */}
+      <style jsx>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }
-

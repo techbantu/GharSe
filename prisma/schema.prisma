@@ -387,6 +387,11 @@ model Admin {
   passwordResetToken   String?
   passwordResetExpires DateTime?
 
+  // Password reset fields (for forgot password flow)
+  resetToken           String?   @unique
+  resetTokenExpires    DateTime?
+  resetTokenCreatedAt  DateTime?
+
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   lastLoginAt DateTime?
@@ -394,6 +399,7 @@ model Admin {
   @@index([email])
   @@index([emailVerificationToken])
   @@index([passwordResetToken])
+  @@index([resetToken])
 }
 
 enum AdminRole {

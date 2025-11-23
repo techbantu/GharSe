@@ -9,7 +9,7 @@
  * - Redacts secrets in error messages
  */
 
-import crypto from 'crypto';
+import * as crypto from 'crypto';
 
 /**
  * Secret validation error

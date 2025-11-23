@@ -4,8 +4,7 @@
  * AUTO-CREATE ADMIN USER
  * 
  * Automatically creates admin user if it doesn't exist
- * Email: admin@bantuskitchen.com
- * Password: Sailaja@2025
+ * Password loaded from .env: ADMIN_DEFAULT_PASSWORD
  */
 
 const { PrismaClient } = require('@prisma/client');
@@ -56,7 +55,7 @@ async function createAdminUser() {
         email: ADMIN_EMAIL,
         name: ADMIN_NAME,
         passwordHash,
-        role: 'ADMIN',
+        role: 'OWNER', // Using OWNER role for full access (matches enum AdminRole)
         emailVerified: true, // Auto-verify for admin
         isActive: true,
       },

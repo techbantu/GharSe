@@ -20,7 +20,11 @@ async function main() {
 
   // 1. Create Admin User
   console.log('👤 Creating admin user...');
-  const passwordHash = await bcrypt.hash(process.env.ADMIN_DEFAULT_PASSWORD || 'Sailaja@2025', 10);
+  // SECURITY: Never use fallback password in production
+  if (!process.env.ADMIN_DEFAULT_PASSWORD) {
+    throw new Error('ADMIN_DEFAULT_PASSWORD must be set in .env file!');
+  }
+  const passwordHash = await bcrypt.hash(process.env.ADMIN_DEFAULT_PASSWORD, 10);
   
   const admin = await prisma.admin.upsert({
     where: { email: process.env.ADMIN_DEFAULT_EMAIL || 'bantusailaja@gmail.com' },
