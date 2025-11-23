@@ -379,7 +379,7 @@ export async function getOrderStatus(params: z.infer<typeof aiChatFunctions.getO
         total: `₹${order.total.toFixed(2)}`,
         itemCount: order.items.length,
         items: order.items.map(item => ({
-          name: item.menuItem.name,
+          name: item.menuItem?.name || 'Unknown Item',
           quantity: item.quantity,
           price: `₹${item.price.toFixed(2)}`,
         })),
