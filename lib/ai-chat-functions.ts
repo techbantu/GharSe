@@ -975,8 +975,8 @@ export async function suggestCartCompletions(params: z.infer<typeof aiChatFuncti
 
     relatedOrders.forEach(order => {
       order.items.forEach(orderItem => {
-        // Skip items already in cart
-        if (cartItemIds.has(orderItem.menuItemId)) return;
+        // Skip items already in cart or items without menuItemId
+        if (!orderItem.menuItemId || cartItemIds.has(orderItem.menuItemId)) return;
 
         if (!itemFrequency[orderItem.menuItemId]) {
           itemFrequency[orderItem.menuItemId] = {
