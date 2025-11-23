@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Printer, Phone, MapPin, CreditCard, Clock, CheckCircle, User, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, Printer, Phone, MapPin, CreditCard, Clock, CheckCircle, User, ChevronDown, ChevronUp, Banknote } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface OrderItem {
@@ -236,6 +236,29 @@ export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetai
       default:
         return null;
     }
+  };
+
+  // Helper to get payment method text and icon
+  const renderPaymentInfo = (method?: string) => {
+    const m = method?.toLowerCase() || 'cash';
+    if (m === 'cash' || m === 'cash-on-delivery') {
+      return (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Banknote size={14} color="#16a34a" style={{ flexShrink: 0 }} />
+          <p style={{ fontSize: '0.75rem', fontWeight: 600, color: '#111827', margin: 0, lineHeight: '1' }}>
+            Cash in Hand
+          </p>
+        </div>
+      );
+    }
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <CreditCard size={14} color="#6b7280" style={{ flexShrink: 0 }} />
+        <p style={{ fontSize: '0.75rem', fontWeight: 600, color: '#111827', margin: 0, lineHeight: '1' }}>
+          Card (Coming Soon)
+        </p>
+      </div>
+    );
   };
 
   return (
@@ -554,7 +577,7 @@ export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetai
                 display: 'flex', 
                 justifyContent: 'space-between', 
                 fontWeight: 700,
-                fontSize: '1rem',
+                fontSize: '1rem', 
                 color: '#ea580c'
               }}>
                 <span>Total Amount</span>
@@ -573,14 +596,7 @@ export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetai
             justifyContent: 'space-between',
             backgroundColor: '#f9fafb'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <CreditCard size={14} color="#4b5563" />
-              <div>
-                <p style={{ fontSize: '0.75rem', fontWeight: 600, color: '#111827' }}>
-                  {order.paymentMethod || 'Cash on Delivery'}
-                </p>
-              </div>
-            </div>
+            {renderPaymentInfo(order.paymentMethod)}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
               <CheckCircle size={14} color="#16a34a" />
               <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#16a34a' }}>

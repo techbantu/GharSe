@@ -93,9 +93,9 @@ export const DeliveryTimeSlotPicker: React.FC<DeliveryTimeSlotPickerProps> = ({
     const slots: DeliveryTimeSlot[] = [];
     const selectedDateStart = startOfDay(selectedDate);
     
-    // Operating hours: 9 AM to 9 PM
-    const startHour = 9;
-    const endHour = 21;
+    // Operating hours: 12 PM to 11 PM (Kitchen opens 10 AM -> First delivery 12 PM)
+    const startHour = 12;
+    const endHour = 23;
     
     // Generate 30-minute slots
     for (let hour = startHour; hour < endHour; hour++) {
@@ -166,7 +166,7 @@ export const DeliveryTimeSlotPicker: React.FC<DeliveryTimeSlotPickerProps> = ({
     const slots: DeliveryTimeSlot[] = [];
     const dateStart = startOfDay(date);
     
-    for (let hour = 9; hour < 21; hour++) {
+    for (let hour = 12; hour < 23; hour++) {
       for (let minute = 0; minute < 60; minute += 30) {
         const slotStart = new Date(dateStart);
         slotStart.setHours(hour, minute, 0, 0);
@@ -273,7 +273,7 @@ export const DeliveryTimeSlotPicker: React.FC<DeliveryTimeSlotPickerProps> = ({
                   cursor: slotsAvailable === 0 ? 'not-allowed' : 'pointer',
                   transition: 'all 0.2s',
                   boxShadow: isSelected ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' : 'none',
-                  transform: isSelected ? 'scale(1.05)' : 'scale(1)',
+                  overflow: 'hidden',
                 }}
                 onMouseEnter={(e) => {
                   if (!isSelected && slotsAvailable > 0) {
@@ -384,7 +384,7 @@ export const DeliveryTimeSlotPicker: React.FC<DeliveryTimeSlotPickerProps> = ({
                       transition: 'all 0.2s',
                       textAlign: 'left',
                       boxShadow: isSelected ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' : 'none',
-                      transform: isSelected ? 'scale(1.05)' : 'scale(1)',
+                      overflow: 'hidden',
                     }}
                     onMouseEnter={(e) => {
                       if (!isSelected) {

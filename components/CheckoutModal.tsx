@@ -11,7 +11,23 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { X, User, Mail, Phone, MapPin, CreditCard, CheckCircle, Clock, TruckIcon, XCircle, AlertCircle, Heart, Hourglass } from 'lucide-react';
+import { 
+  X, 
+  User, 
+  Mail, 
+  Phone, 
+  MapPin, 
+  CreditCard, 
+  CheckCircle, 
+  Clock, 
+  TruckIcon, 
+  XCircle, 
+  AlertCircle, 
+  Heart, 
+  Hourglass, 
+  Calendar 
+} from 'lucide-react';
+import { format } from 'date-fns';
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/context/ToastContext';
 import { useRouter } from 'next/navigation';
@@ -118,6 +134,54 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
       setTimeRemaining(null);
     }
   }, [isOpen]);
+  
+  // Poll order status when in confirmation step
+  useEffect(() => {
+    let statusPollInterval: NodeJS.Timeout | null = null;
+    
+    // Only poll if we're in confirmation step and have an orderId
+    if (step === 'confirmation' && orderId) {
+      const pollOrderStatus = async () => {
+        try {
+          const response = await fetch(`/api/orders/${orderId}`, {
+            credentials: 'include',
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.order) {
+              const newStatus = data.order.status;
+              console.log('[CheckoutModal] Polled order status:', newStatus);
+              
+              // Update status if changed
+              if (newStatus !== orderStatus) {
+                setOrderStatus(newStatus);
+                console.log('[CheckoutModal] Order status updated to:', newStatus);
+              }
+              
+              // Update the current order
+              setCurrentOrder(data.order);
+            }
+          }
+        } catch (error) {
+          console.error('[CheckoutModal] Error polling order status:', error);
+        }
+      };
+      
+      // Poll immediately on mount
+      pollOrderStatus();
+      
+      // Then poll every 5 seconds
+      statusPollInterval = setInterval(pollOrderStatus, 5000);
+    }
+    
+    // Cleanup
+    return () => {
+      if (statusPollInterval) {
+        clearInterval(statusPollInterval);
+      }
+    };
+  }, [step, orderId, orderStatus]);
   
   // Handle input changes with character filtering
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -2359,32 +2423,125 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
               }}>
                 Thank you for your order, <span style={{ fontWeight: 700, color: '#1F2937' }}>{formData.name}</span>!
               </p>
-              <p style={{
-                fontSize: '0.9375rem',
-                color: '#F59E0B',
-                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif',
-                fontWeight: 600,
-                marginTop: '8px',
-                padding: '12px',
-                background: '#FEF3C7',
-                borderRadius: '8px',
-                border: '1px solid #FCD34D',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                justifyContent: 'center'
-              }}>
-                <Hourglass style={{ width: '20px', height: '20px' }} />
-                Awaiting Kitchen Confirmation
-              </p>
-              <p style={{
-                fontSize: '0.875rem',
-                color: '#6B7280',
-                marginTop: '8px',
-                lineHeight: '1.5'
-              }}>
-                Your order has been sent to our kitchen. You'll receive a confirmation once our chef reviews and accepts it.
-              </p>
+              
+              {/* Status Banner - Conditional based on order status */}
+              {orderStatus === 'PENDING_CONFIRMATION' || orderStatus === 'pending' ? (
+                <>
+                  <p style={{
+                    fontSize: '0.9375rem',
+                    color: '#F59E0B',
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif',
+                    fontWeight: 600,
+                    marginTop: '8px',
+                    padding: '12px',
+                    background: '#FEF3C7',
+                    borderRadius: '8px',
+                    border: '1px solid #FCD34D',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    justifyContent: 'center'
+                  }}>
+                    <Hourglass style={{ width: '20px', height: '20px' }} />
+                    Awaiting Kitchen Confirmation
+                  </p>
+                  <p style={{
+                    fontSize: '0.875rem',
+                    color: '#6B7280',
+                    marginTop: '8px',
+                    lineHeight: '1.5'
+                  }}>
+                    Your order has been sent to our kitchen. You'll receive a confirmation once our chef reviews and accepts it.
+                  </p>
+                </>
+              ) : orderStatus === 'confirmed' || orderStatus === 'CONFIRMED' ? (
+                <>
+                  <p style={{
+                    fontSize: '0.9375rem',
+                    color: '#10B981',
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif',
+                    fontWeight: 600,
+                    marginTop: '8px',
+                    padding: '12px',
+                    background: '#D1FAE5',
+                    borderRadius: '8px',
+                    border: '1px solid #6EE7B7',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    justifyContent: 'center'
+                  }}>
+                    <CheckCircle style={{ width: '20px', height: '20px' }} />
+                    Order Confirmed by Kitchen!
+                  </p>
+                  <p style={{
+                    fontSize: '0.875rem',
+                    color: '#6B7280',
+                    marginTop: '8px',
+                    lineHeight: '1.5'
+                  }}>
+                    Great news! Our chef has confirmed your order and is preparing your delicious meal.
+                  </p>
+                </>
+              ) : orderStatus === 'preparing' || orderStatus === 'PREPARING' ? (
+                <>
+                  <p style={{
+                    fontSize: '0.9375rem',
+                    color: '#F97316',
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif',
+                    fontWeight: 600,
+                    marginTop: '8px',
+                    padding: '12px',
+                    background: '#FFEDD5',
+                    borderRadius: '8px',
+                    border: '1px solid #FDBA74',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    justifyContent: 'center'
+                  }}>
+                    <Clock style={{ width: '20px', height: '20px' }} />
+                    Kitchen is Preparing Your Order
+                  </p>
+                  <p style={{
+                    fontSize: '0.875rem',
+                    color: '#6B7280',
+                    marginTop: '8px',
+                    lineHeight: '1.5'
+                  }}>
+                    Your fresh home-cooked meal is being prepared with love by our chef.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p style={{
+                    fontSize: '0.9375rem',
+                    color: '#10B981',
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif',
+                    fontWeight: 600,
+                    marginTop: '8px',
+                    padding: '12px',
+                    background: '#D1FAE5',
+                    borderRadius: '8px',
+                    border: '1px solid #6EE7B7',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    justifyContent: 'center'
+                  }}>
+                    <CheckCircle style={{ width: '20px', height: '20px' }} />
+                    Order is in Progress!
+                  </p>
+                  <p style={{
+                    fontSize: '0.875rem',
+                    color: '#6B7280',
+                    marginTop: '8px',
+                    lineHeight: '1.5'
+                  }}>
+                    Your order is being processed. Check your email/SMS for updates.
+                  </p>
+                </>
+              )}
             </div>
             
             {/* Order ID Card - Premium Design */}

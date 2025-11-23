@@ -4,10 +4,10 @@ import { logger } from '@/utils/logger';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = params.id;
+    const { id } = await params;
     logger.info(`[Menu API] Fetching item ${id}`);
 
     const menuItem = await prisma.menuItem.findUnique({ where: { id } });
@@ -31,13 +31,13 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = params.id;
+    const { id } = await params;
     const body = await request.json();
     
-    console.log(`[Menu API] Updating item ${id}:`, JSON.stringify(body, null, 2));
+    logger.info(`[Menu API] Updating item ${id}`, { item: body });
 
     // Validate required fields
     if (!body.name || !body.price || !body.category) {
@@ -65,7 +65,7 @@ export async function PUT(
       },
     });
 
-    console.log(`[Menu API] Successfully updated item ${id}`);
+    logger.info(`[Menu API] Successfully updated item ${id}`);
 
     return NextResponse.json({
       success: true,
@@ -88,11 +88,11 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const id = params.id;
-    console.log(`[Menu API] Deleting item ${id}`);
+    const { id } = await params;
+    logger.info(`[Menu API] Deleting item ${id}`);
 
     await prisma.menuItem.delete({
       where: { id },

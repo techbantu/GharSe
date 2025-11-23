@@ -472,14 +472,16 @@ export default function MenuPage() {
                   </span>
                 </div>
                 
-                {/* Dietary Grid - Top Right (2x2 Grid) */}
+                {/* Dietary Grid - Top Right (flexible) */}
                 <div style={{
                   position: 'absolute',
                   top: '0.5rem',
                   right: '0.5rem',
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(2, 1fr)',
+                  display: 'flex',
+                  flexWrap: 'wrap',
                   gap: '0.25rem',
+                  maxWidth: '120px',
+                  justifyContent: 'flex-end'
                 }}>
                    {item.isVegetarian && (
                      <div style={{
@@ -543,24 +545,19 @@ export default function MenuPage() {
                    )}
                    {item.spicyLevel > 0 && (
                      <div style={{
-                       width: item.isDairyFree || item.isGlutenFree ? '28px' : '60px',
+                       minWidth: '28px',
                        height: '28px',
-                       gridColumn: (item.isDairyFree || item.isGlutenFree) ? 'auto' : 'span 2',
+                       padding: '0 6px',
                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
                        backdropFilter: 'blur(4px)',
                        borderRadius: '0.375rem',
                        display: 'flex',
                        alignItems: 'center',
                        justifyContent: 'center',
+                       gap: '1px',
                        boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
                      }} title={`Spicy Level: ${item.spicyLevel}`}>
-                       <span style={{
-                         fontSize: '0.75rem',
-                         display: 'flex',
-                         gap: '1px',
-                         alignItems: 'center',
-                         justifyContent: 'center'
-                       }}>
+                       <span style={{ fontSize: '12px', lineHeight: 1 }}>
                          {'🌶️'.repeat(Math.min(item.spicyLevel, 3))}
                        </span>
                      </div>

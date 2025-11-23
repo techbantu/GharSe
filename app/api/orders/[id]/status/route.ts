@@ -71,15 +71,15 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     // Send notifications for status changes
     try {
+      console.log('[Order API] Attempting to load notification manager...');
       // Import dynamically to avoid circular dependencies
       const { notificationManager } = await import('@/lib/notifications/notification-manager');
+      console.log('[Order API] Notification manager loaded successfully');
       
       // Map DB status to OrderStatus type (e.g., PREPARING -> preparing)
       const orderStatus = dbStatus.toLowerCase().replace(/_/g, '-') as any;
       
       // CRITICAL: Transform Prisma order to notification manager's expected format
-      // The notification manager expects order.customer.email and order.customer.phone
-      // Prisma order has customerEmail, customerPhone, and optional customer relation
       const transformedOrder = {
         ...updatedOrder,
         customer: {
@@ -118,55 +118,23 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         notifications: [],
       };
       
-      console.log(`[Order API] 📧 Preparing to send notifications for status: ${dbStatus} (${orderStatus})`);
-      console.log(`[Order API] Customer email: ${transformedOrder.customer.email}`);
-      console.log(`[Order API] Customer phone: ${transformedOrder.customer.phone}`);
-      console.log(`[Order API] Order number: ${transformedOrder.orderNumber}`);
+      console.log(`[Order API] 📧 Sending notifications for status: ${orderStatus}`);
       
-      // CRITICAL: Send ORDER CONFIRMATION when chef confirms (not just status update)
       let notificationResult;
       if (dbStatus === 'CONFIRMED') {
-        // Chef just confirmed the order - send FULL confirmation email + SMS
-        console.log('[Order API] 🎉 Sending ORDER CONFIRMATION (chef approved!)');
+        console.log('[Order API] 🎉 Sending ORDER CONFIRMATION');
         notificationResult = await notificationManager.sendOrderConfirmation(transformedOrder as any);
       } else {
-        // Regular status update for other statuses
+        console.log(`[Order API] 🔔 Sending STATUS UPDATE to ${orderStatus}`);
         notificationResult = await notificationManager.sendStatusUpdate(transformedOrder as any, orderStatus);
       }
       
-      console.log(`[Order API] ✅ Notification result:`, {
-        overall: notificationResult.overall,
-        email: notificationResult.email,
-        sms: notificationResult.sms,
-        orderNumber: transformedOrder.orderNumber,
-        status: orderStatus,
-      });
+      console.log(`[Order API] ✅ Notification result:`, JSON.stringify(notificationResult, null, 2));
       
-      if (!notificationResult.overall) {
-        console.warn(`[Order API] ⚠️ All notifications failed for order ${id}`, {
-          emailError: notificationResult.email?.error,
-          smsError: notificationResult.sms?.error,
-          emailSkipped: notificationResult.email?.skipped,
-          smsSkipped: notificationResult.sms?.skipped,
-        });
-      } else {
-        console.log(`[Order API] 🎉 Successfully sent notifications for order ${transformedOrder.orderNumber}`);
-      }
     } catch (notificationError) {
-      console.error('[Order API] ❌ Failed to send notifications:', {
-        error: notificationError instanceof Error ? notificationError.message : String(notificationError),
-        stack: notificationError instanceof Error ? notificationError.stack : undefined,
-        orderId: id,
-        orderNumber: updatedOrder.orderNumber,
-        status: dbStatus,
-        customerEmail: updatedOrder.customerEmail,
-        customerPhone: updatedOrder.customerPhone,
-      });
+      console.error('[Order API] ❌ Failed to send notifications:', notificationError);
       // Don't fail the request, just log the error
     }
-
-    // TODO: Emit socket event for real-time update
-    // io.emit('orderStatusUpdated', updatedOrder);
 
     return NextResponse.json({
       success: true,

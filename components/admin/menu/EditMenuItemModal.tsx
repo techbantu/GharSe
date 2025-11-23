@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Save, Trash2, Upload, AlertCircle } from 'lucide-react';
+import { X, Save, Trash2, Upload, AlertCircle, Leaf, Sprout, WheatOff, MilkOff } from 'lucide-react';
 
 interface MenuItem {
   id: string;
@@ -29,6 +29,8 @@ interface EditMenuItemModalProps {
 export default function EditMenuItemModal({ isOpen, onClose, item, onSave }: EditMenuItemModalProps) {
   const [formData, setFormData] = useState<MenuItem | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -71,8 +73,62 @@ export default function EditMenuItemModal({ isOpen, onClose, item, onSave }: Edi
     }
   };
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image size must be less than 5MB');
+      return;
+    }
+
+    setIsUploading(true);
+    
+    try {
+      const formDataUpload = new FormData();
+      formDataUpload.append('file', file);
+      
+      const response = await fetch('/api/upload-image', {
+        method: 'POST',
+        body: formDataUpload,
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        console.error('Upload error:', data);
+        throw new Error(data.error || 'Upload failed');
+      }
+
+      // Update form with new image URL
+      setFormData({ ...formData, image: data.secure_url });
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Failed to upload image: ${errorMessage}`);
+    } finally {
+      setIsUploading(false);
+      // Reset file input
+      if (e.target) e.target.value = '';
+    }
+  };
+
   return (
-    <div style={{
+    <>
+      <style>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
+      <div style={{
       position: 'fixed',
       inset: 0,
       backgroundColor: 'rgba(0, 0, 0, 0.6)',
@@ -96,8 +152,8 @@ export default function EditMenuItemModal({ isOpen, onClose, item, onSave }: Edi
       }}>
         {/* Header */}
         <div style={{
-          padding: '1rem 1.5rem',
-          borderBottom: '1px solid #f3f4f6',
+          padding: '20px 24px',
+          borderBottom: '1px solid #e5e7eb',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
@@ -112,12 +168,16 @@ export default function EditMenuItemModal({ isOpen, onClose, item, onSave }: Edi
             color: '#111827',
             margin: 0,
           }}>
-            {item ? 'Edit Dish' : 'Add New Dish'}
+            Edit Menu Item
           </h2>
           <button
             onClick={onClose}
             style={{
-              padding: '0.5rem',
+              width: '32px',
+              height: '32px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
               color: '#6b7280',
               backgroundColor: 'transparent',
               border: 'none',
@@ -146,7 +206,7 @@ export default function EditMenuItemModal({ isOpen, onClose, item, onSave }: Edi
             
             {/* LEFT COLUMN - Image & Basic Info */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-              {/* Image Preview & Input */}
+              {/* Image Preview & Upload */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 <label style={{
                   display: 'block',
@@ -157,6 +217,15 @@ export default function EditMenuItemModal({ isOpen, onClose, item, onSave }: Edi
                   Food Photography
                 </label>
                 
+                {/* Hidden file input */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  style={{ display: 'none' }}
+                />
+                
                 <div style={{
                   position: 'relative',
                   width: '100%',
@@ -166,20 +235,65 @@ export default function EditMenuItemModal({ isOpen, onClose, item, onSave }: Edi
                   border: '2px dashed #e5e7eb',
                   overflow: 'hidden',
                   transition: 'border-color 0.2s',
+                  cursor: isUploading ? 'not-allowed' : 'pointer'
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.borderColor = '#fed7aa'}
+                onClick={() => !isUploading && fileInputRef.current?.click()}
+                onMouseEnter={(e) => !isUploading && (e.currentTarget.style.borderColor = '#ea580c')}
                 onMouseLeave={(e) => e.currentTarget.style.borderColor = '#e5e7eb'}>
-                  {formData.image ? (
-                    <img 
-                      src={formData.image} 
-                      alt="Preview"
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
+                  {isUploading ? (
+                    <div style={{
+                      position: 'absolute',
+                      inset: 0,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                      color: 'white',
+                      zIndex: 10
+                    }}>
+                      <div style={{
+                        width: '40px',
+                        height: '40px',
+                        border: '4px solid rgba(255, 255, 255, 0.3)',
+                        borderTop: '4px solid white',
+                        borderRadius: '50%',
+                        animation: 'spin 1s linear infinite',
+                        marginBottom: '0.5rem'
+                      }} />
+                      <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>Uploading...</span>
+                    </div>
+                  ) : formData.image ? (
+                    <>
+                      <img 
+                        src={formData.image} 
+                        alt="Preview"
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                        }}
+                        onError={(e) => (e.currentTarget.style.display = 'none')}
+                      />
+                      <div style={{
+                        position: 'absolute',
+                        inset: 0,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                        color: 'white',
+                        transition: 'background-color 0.2s'
                       }}
-                      onError={(e) => (e.currentTarget.style.display = 'none')}
-                    />
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.7)'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.5)'}>
+                        <Upload size={32} style={{ marginBottom: '0.5rem' }} />
+                        <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>
+                          Click to change image
+                        </span>
+                      </div>
+                    </>
                   ) : (
                     <div style={{
                       position: 'absolute',
@@ -191,8 +305,11 @@ export default function EditMenuItemModal({ isOpen, onClose, item, onSave }: Edi
                       color: '#9ca3af',
                     }}>
                       <Upload size={32} style={{ marginBottom: '0.5rem', opacity: 0.5 }} />
-                      <span style={{ fontSize: '0.75rem', fontWeight: 500 }}>
-                        Paste image URL below
+                      <span style={{ fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.25rem' }}>
+                        Click to upload image
+                      </span>
+                      <span style={{ fontSize: '0.75rem' }}>
+                        PNG, JPG up to 5MB
                       </span>
                     </div>
                   )}
@@ -202,20 +319,24 @@ export default function EditMenuItemModal({ isOpen, onClose, item, onSave }: Edi
                   type="text"
                   value={formData.image || ''}
                   onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                  placeholder="https://..."
+                  placeholder="Or paste image URL here..."
+                  disabled={isUploading}
                   style={{
                     width: '100%',
-                    padding: '0.625rem 1rem',
-                    backgroundColor: '#f9fafb',
+                    padding: '10px 12px',
+                    backgroundColor: isUploading ? '#f3f4f6' : '#f9fafb',
                     border: '1px solid #e5e7eb',
                     borderRadius: '0.75rem',
                     fontSize: '0.875rem',
                     outline: 'none',
                     transition: 'all 0.2s',
+                    cursor: isUploading ? 'not-allowed' : 'text'
                   }}
                   onFocus={(e) => {
-                    e.currentTarget.style.borderColor = '#ea580c';
-                    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(234, 88, 12, 0.1)';
+                    if (!isUploading) {
+                      e.currentTarget.style.borderColor = '#ea580c';
+                      e.currentTarget.style.boxShadow = '0 0 0 3px rgba(234, 88, 12, 0.1)';
+                    }
                   }}
                   onBlur={(e) => {
                     e.currentTarget.style.borderColor = '#e5e7eb';
@@ -509,33 +630,34 @@ export default function EditMenuItemModal({ isOpen, onClose, item, onSave }: Edi
                   gap: '0.75rem',
                 }}>
                   {[
-                    { key: 'isVegetarian', label: 'Vegetarian', icon: '🥬' },
-                    { key: 'isVegan', label: 'Vegan', icon: '🌱' },
-                    { key: 'isGlutenFree', label: 'Gluten-Free', icon: '🌾' },
-                    { key: 'isDairyFree', label: 'Dairy-Free', icon: '🥛' },
-                  ].map(({ key, label, icon }) => (
+                    { key: 'isVegetarian', label: 'Vegetarian', icon: Leaf, color: '#16a34a' },
+                    { key: 'isVegan', label: 'Vegan', icon: Sprout, color: '#059669' },
+                    { key: 'isGlutenFree', label: 'Gluten-Free', icon: WheatOff, color: '#ca8a04' },
+                    { key: 'isDairyFree', label: 'Dairy-Free', icon: MilkOff, color: '#3b82f6' },
+                  ].map(({ key, label, icon: Icon, color }) => (
                     <label 
                       key={key}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
                         gap: '0.75rem',
-                        padding: '0.75rem',
-                        borderRadius: '0.75rem',
-                        border: (formData as any)[key] ? '1px solid #fed7aa' : '1px solid #e5e7eb',
+                        padding: '12px',
+                        borderRadius: '12px',
+                        border: (formData as any)[key] ? '2px solid #fed7aa' : '2px solid #e5e7eb',
                         backgroundColor: (formData as any)[key] ? '#fff7ed' : '#ffffff',
                         cursor: 'pointer',
                         transition: 'all 0.2s',
-                        boxShadow: (formData as any)[key] ? '0 0 0 1px #fed7aa' : 'none',
                       }}
                       onMouseEnter={(e) => {
                         if (!(formData as any)[key]) {
                           e.currentTarget.style.borderColor = '#fed7aa';
+                          e.currentTarget.style.backgroundColor = '#fffbf5';
                         }
                       }}
                       onMouseLeave={(e) => {
                         if (!(formData as any)[key]) {
                           e.currentTarget.style.borderColor = '#e5e7eb';
+                          e.currentTarget.style.backgroundColor = '#ffffff';
                         }
                       }}
                     >
@@ -544,18 +666,18 @@ export default function EditMenuItemModal({ isOpen, onClose, item, onSave }: Edi
                         checked={(formData as any)[key]}
                         onChange={(e) => setFormData({ ...formData, [key]: e.target.checked })}
                         style={{
-                          width: '16px',
-                          height: '16px',
+                          width: '18px',
+                          height: '18px',
                           accentColor: '#ea580c',
                           cursor: 'pointer',
                         }}
                       />
+                      <Icon size={18} style={{ color, flexShrink: 0 }} />
                       <span style={{
                         fontSize: '0.875rem',
-                        fontWeight: 500,
+                        fontWeight: 600,
                         color: '#374151',
                       }}>
-                        <span style={{ marginRight: '0.5rem' }}>{icon}</span>
                         {label}
                       </span>
                     </label>
@@ -583,15 +705,15 @@ export default function EditMenuItemModal({ isOpen, onClose, item, onSave }: Edi
                     fontWeight: 700,
                     color: '#ea580c',
                     backgroundColor: '#fff7ed',
-                    padding: '0.25rem 0.75rem',
+                    padding: '6px 12px',
                     borderRadius: '9999px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px'
                   }}>
                     {formData.spicyLevel === 0 ? 'None' : ['Mild', 'Medium', 'Hot'][formData.spicyLevel - 1]}
                     {formData.spicyLevel > 0 && (
-                      <span style={{
-                        marginLeft: '0.25rem',
-                        fontSize: '0.75rem',
-                      }}>
+                      <span style={{ fontSize: '13px', lineHeight: 1 }}>
                         {'🌶️'.repeat(formData.spicyLevel)}
                       </span>
                     )}
@@ -700,5 +822,6 @@ export default function EditMenuItemModal({ isOpen, onClose, item, onSave }: Edi
         </div>
       </div>
     </div>
+    </>
   );
 }
