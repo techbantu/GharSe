@@ -83,11 +83,11 @@ const generateOrderConfirmationHTML = (order: Order): string => {
       <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; padding: 18px; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);">
         <p style="margin: 0 0 8px 0; color: #ffffff; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; opacity: 0.95;">📅 Scheduled Delivery</p>
         <p style="margin: 0; color: #ffffff; font-size: 32px; font-weight: 900; line-height: 1;">
-          ${formatForRegion(order.scheduledDeliveryAt || order.scheduledWindowStart || Date.now(), 'IN', 'h:mm a')}
+          ${formatForRegion(order.scheduledDeliveryAt || order.scheduledWindowStart || new Date(), 'IN', 'h:mm a')}
           ${order.scheduledWindowEnd ? ` - ${formatForRegion(order.scheduledWindowEnd, 'IN', 'h:mm a')}` : ''}
         </p>
         <p style="margin: 10px 0 0 0; color: #ffffff; font-size: 16px; font-weight: 600;">
-          ${formatForRegion(order.scheduledDeliveryAt || order.scheduledWindowStart || Date.now(), 'IN', 'EEEE, MMMM d, yyyy')}
+          ${formatForRegion(order.scheduledDeliveryAt || order.scheduledWindowStart || new Date(), 'IN', 'EEEE, MMMM d, yyyy')}
         </p>
         ${order.prepTime ? `
         <p style="margin: 12px 0 0 0; color: rgba(255,255,255,0.9); font-size: 13px; background: rgba(255,255,255,0.15); padding: 8px 12px; border-radius: 6px; display: inline-block;">
