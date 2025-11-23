@@ -166,10 +166,3 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Disable Next.js body parsing (we handle it manually)
-export const config = {
-  api: {
-    bodyParser: true,
-  },
-};
-
