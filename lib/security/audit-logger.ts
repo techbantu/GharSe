@@ -143,8 +143,8 @@ export async function logAuditEvent(entry: AuditLogEntry): Promise<void> {
     await prisma.auditLog.create({
       data: {
         action: entry.eventType,
-        entityType: entry.resourceType,
-        entityId: entry.resourceId,
+        entityType: entry.userRole || 'system',
+        entityId: entry.userId || null,
         userId: entry.userId,
         sessionId: entry.sessionId,
         ipAddress: entry.ip,
