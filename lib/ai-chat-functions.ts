@@ -609,10 +609,11 @@ export async function getCustomerOrderHistory(params: z.infer<typeof aiChatFunct
     const itemCounts: Record<string, { name: string; count: number }> = {};
     orders.forEach(order => {
       order.items.forEach(item => {
-        if (!itemCounts[item.menuItem.name]) {
-          itemCounts[item.menuItem.name] = { name: item.menuItem.name, count: 0 };
+        const itemName = item.menuItem?.name || 'Unknown Item';
+        if (!itemCounts[itemName]) {
+          itemCounts[itemName] = { name: itemName, count: 0 };
         }
-        itemCounts[item.menuItem.name].count += item.quantity;
+        itemCounts[itemName].count += item.quantity;
       });
     });
 
