@@ -98,11 +98,12 @@ export async function rotateJWTSecret(): Promise<{
     
   } catch (error) {
     console.error('❌ Failed to rotate JWT secret:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return {
       success: false,
       newSecret: '',
       previousSecret: '',
-      message: `Rotation failed: ${error.message}`,
+      message: `Rotation failed: ${errorMessage}`,
     };
   }
 }
