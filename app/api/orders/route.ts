@@ -545,6 +545,13 @@ async function createOrderLogic(body: unknown): Promise<Result<{
         },
         status: dbOrder.status.toLowerCase().replace(/_/g, '-') as OrderStatus,
         orderType: data.orderType,
+        // SCHEDULED DELIVERY FIELDS
+        scheduledDeliveryAt: dbOrder.scheduledDeliveryAt || undefined,
+        scheduledWindowStart: dbOrder.scheduledWindowStart || undefined,
+        scheduledWindowEnd: dbOrder.scheduledWindowEnd || undefined,
+        prepTime: dbOrder.prepTime || undefined,
+        deliveryDuration: dbOrder.deliveryTime || undefined,
+        minimumLeadTime: dbOrder.minimumLeadTime || undefined,
         paymentMethod: dbOrder.paymentMethod || 'cash',
         paymentStatus: dbOrder.paymentStatus.toLowerCase() as any,
         specialInstructions: data.specialInstructions,
@@ -599,7 +606,7 @@ async function createOrderLogic(body: unknown): Promise<Result<{
         const notificationOrder = {
           ...order,
           customer: data.customer,
-          estimatedReadyTime: order.estimatedDelivery || new Date(),
+          estimatedReadyTime: order.estimatedReadyTime,
           deliveryAddress: data.deliveryAddress ? {
             street: data.deliveryAddress.street,
             city: data.deliveryAddress.city,
@@ -1056,6 +1063,13 @@ export async function GET(request: NextRequest) {
         },
         status: frontendStatus,
         orderType,
+        // SCHEDULED DELIVERY FIELDS
+        scheduledDeliveryAt: dbOrder.scheduledDeliveryAt || undefined,
+        scheduledWindowStart: dbOrder.scheduledWindowStart || undefined,
+        scheduledWindowEnd: dbOrder.scheduledWindowEnd || undefined,
+        prepTime: dbOrder.prepTime || undefined,
+        deliveryDuration: dbOrder.deliveryTime || undefined,
+        minimumLeadTime: dbOrder.minimumLeadTime || undefined,
         estimatedReadyTime: dbOrder.estimatedDelivery || dbOrder.createdAt,
         actualReadyTime: dbOrder.readyAt || undefined,
         deliveryTime: dbOrder.deliveredAt || undefined,
