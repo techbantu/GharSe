@@ -227,7 +227,17 @@ async function syncFailedOrders() {
   try {
     // Get failed orders from IndexedDB
     const db = await openDB('gharse-offline', 1);
-    const failedOrders = await db.getAll('failed-orders');
+    
+    // Create transaction and get object store
+    const transaction = db.transaction('failed-orders', 'readwrite');
+    const store = transaction.objectStore('failed-orders');
+    
+    // Get all failed orders using proper IndexedDB API
+    const getAllRequest = store.getAll();
+    const failedOrders = await new Promise((resolve, reject) => {
+      getAllRequest.onsuccess = () => resolve(getAllRequest.result);
+      getAllRequest.onerror = () => reject(getAllRequest.error);
+    });
     
     console.log(`[Service Worker] Syncing ${failedOrders.length} failed orders`);
     
@@ -241,8 +251,16 @@ async function syncFailedOrders() {
         });
         
         if (response.ok) {
-          // Success! Remove from failed orders
-          await db.delete('failed-orders', order.id);
+          // Success! Remove from failed orders using proper IndexedDB API
+          const deleteTransaction = db.transaction('failed-orders', 'readwrite');
+          const deleteStore = deleteTransaction.objectStore('failed-orders');
+          const deleteRequest = deleteStore.delete(order.id);
+          
+          await new Promise((resolve, reject) => {
+            deleteRequest.onsuccess = () => resolve();
+            deleteRequest.onerror = () => reject(deleteRequest.error);
+          });
+          
           console.log('[Service Worker] Successfully synced order:', order.id);
         }
       } catch (error) {

@@ -25,6 +25,7 @@ interface Chef {
   isVerified: boolean;
   serviceRadius: number;
   minOrderAmount: number;
+  createdAt?: string; // Added for sorting by newest
   _count?: {
     orders: number;
     menuItems: number;

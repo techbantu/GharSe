@@ -50,6 +50,8 @@ interface Delivery {
     name: string;
     phone: string;
     vehicleType: string;
+    currentLat?: number; // Current GPS location
+    currentLng?: number; // Current GPS location
   } | null;
   pickupLat: number;
   pickupLng: number;

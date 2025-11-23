@@ -171,7 +171,7 @@ export async function POST(request: NextRequest) {
     // Hash password
     const passwordHash = await hashPassword(password);
 
-    // Create chef record
+    // Create chef record WITH Admin account for authentication
     const chef = await prisma.chef.create({
       data: {
         name,
@@ -179,7 +179,6 @@ export async function POST(request: NextRequest) {
         slug,
         email,
         phone,
-        // Note: Chef model doesn't have password field - need to create separate auth or use Admin model
         bio,
         cuisineTypes: JSON.stringify(cuisineTypes),
         address: JSON.stringify(address),
@@ -199,9 +198,21 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Create Admin account for chef authentication (MANAGER role for chef dashboard access)
+    await prisma.admin.create({
+      data: {
+        email: email,
+        name: name,
+        phone: phone,
+        passwordHash: passwordHash,
+        role: 'MANAGER', // MANAGER role allows chef to manage their menu and orders
+        isActive: false, // Inactive until chef is approved
+        emailVerified: false,
+      },
+    });
+
     // TODO: Send email verification to chef
     // TODO: Send notification to admin about new chef registration
-    // TODO: Create admin account for chef (in Admin table with CHEF role if we add that)
 
     return NextResponse.json({
       success: true,
