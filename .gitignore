@@ -133,11 +133,24 @@ out/
 *_SUMMARY.md
 *_ASSESSMENT.md
 *_REPORT.md
+*_IMPLEMENTATION.md
+*_MANAGEMENT.md
 START_HERE*.md
 TODOS*.md
 TEST_RESULTS*.md
 *_STATUS.md
 *_CHECKLIST.md
+ADMIN_*.md
+REALTIME_*.md
+SECURITY_*.md
+FORGOT_PASSWORD*.md
+PASSWORD_*.md
+LEGAL_*.md
+DELIVERY_*.md
+CHECKOUT_*.md
+SCHEDULED_*.md
+ADVANCED_*.md
+GITGUARDIAN*.md
 
 # Keep essential public documentation
 !README.md

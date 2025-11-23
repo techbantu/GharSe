@@ -501,7 +501,7 @@ export default function AdminResetPasswordPage() {
       }}>
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <Logo size={60} />
+          <Logo variant="medium" />
         </div>
 
         {/* Header */}
