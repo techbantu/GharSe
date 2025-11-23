@@ -69,9 +69,9 @@ export function generateToken(admin: Admin): string {
 
   // ✅ FIXED: Always specify algorithm to prevent algorithm confusion attacks
   return jwt.sign(payload, JWT_SECRET!, {
-    algorithm: 'HS256', // Explicit algorithm
+    algorithm: 'HS256' as const, // Explicit algorithm with type assertion
     expiresIn: JWT_EXPIRES_IN,
-  });
+  } as jwt.SignOptions);
 }
 
 /**
