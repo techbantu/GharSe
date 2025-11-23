@@ -484,7 +484,7 @@ const KitchenOrders: React.FC<KitchenOrdersProps> = ({
               </span>
             )}
           </div>
-        ) : readyByInfo.isScheduled ? (
+        ) : readyByInfo?.isScheduled && readyByInfo ? (
           /* SCHEDULED DELIVERY - Show full date/time prominently */
           <div style={{ marginBottom: '0.75rem' }}>
             {/* Scheduled Delivery Banner */}
@@ -581,7 +581,7 @@ const KitchenOrders: React.FC<KitchenOrdersProps> = ({
               </span>
             </div>
           </div>
-        ) : (
+        ) : readyByInfo ? (
           /* ASAP orders - original display */
           <div style={{ 
             marginBottom: '0.75rem',
@@ -622,7 +622,7 @@ const KitchenOrders: React.FC<KitchenOrdersProps> = ({
               {readyByInfo.countdownText}
             </span>
           </div>
-        )}
+        ) : null}
         
         <div style={{ marginBottom: '0.75rem' }}>
           {order.items.map((item, idx) => (
@@ -845,7 +845,7 @@ const KitchenOrders: React.FC<KitchenOrdersProps> = ({
                 </h3>
                 <p style={{ fontSize: '0.875rem', color: '#6B7280' }}>
                   Customer: <span style={{ fontWeight: 600, color: '#111827' }}>
-                    {cancellingOrder.customer?.name || cancellingOrder.customerName || 'Unknown'}
+                    {cancellingOrder.customer?.name || 'Unknown'}
                   </span>
                 </p>
               </div>

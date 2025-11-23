@@ -1,27 +1,88 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Bell, Menu, Search, User, LogOut, Settings, ChevronDown, AlertCircle, CheckCircle } from 'lucide-react';
+import { Bell, Menu, Search, User, LogOut, Settings, ChevronDown, AlertCircle, CheckCircle, ShoppingBag, Clock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Logo from '@/components/Logo';
+import { playNotificationSound } from '@/utils/notification-sound';
+import { formatDistanceToNow } from 'date-fns';
 
 interface AdminHeaderProps {
   onMenuClick: () => void;
   user?: { name: string; email: string; role?: string } | null;
 }
 
+interface Notification {
+  id: string;
+  type: 'order' | 'status' | 'system';
+  title: string;
+  message: string;
+  time: Date;
+  read: boolean;
+  orderId?: string;
+  orderNumber?: string;
+}
+
 const AdminHeader: React.FC<AdminHeaderProps> = ({ onMenuClick, user }) => {
   const router = useRouter();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [notifications, setNotifications] = useState([
-    { id: 1, title: 'New Order #1234', message: 'Fresh order received from Table 5', time: '2 min ago', type: 'order', read: false },
-    { id: 2, title: 'Low Stock Alert', message: 'Chicken breast is running low', time: '1 hour ago', type: 'alert', read: false },
-    { id: 3, title: 'System Update', message: 'Menu sync completed successfully', time: '3 hours ago', type: 'system', read: true },
-  ]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const prevOrderCountRef = useRef<number>(0);
 
   const notificationRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
+
+  // Fetch real orders and generate notifications
+  const fetchNotifications = async () => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      if (!token) return;
+
+      const response = await fetch('/api/orders?status=pending,pending-confirmation,confirmed', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.orders) {
+          const orders = data.orders;
+          
+          // Check if we have new orders
+          if (orders.length > prevOrderCountRef.current && prevOrderCountRef.current > 0) {
+            console.log('🔔 NEW ORDER! Playing sound...');
+            playNotificationSound();
+            
+            // Add new order notification
+            const newOrder = orders[0]; // Most recent order
+            const newNotification: Notification = {
+              id: `order-${newOrder.id}-${Date.now()}`,
+              type: 'order',
+              title: `New Order ${newOrder.orderNumber}`,
+              message: `${newOrder.customer?.name || 'Customer'} placed ${newOrder.orderType === 'delivery' ? 'delivery' : 'pickup'} order${newOrder.scheduledDeliveryAt ? ' (scheduled)' : ' (ASAP)'}`,
+              time: new Date(newOrder.createdAt),
+              read: false,
+              orderId: newOrder.id,
+              orderNumber: newOrder.orderNumber
+            };
+            
+            setNotifications(prev => [newNotification, ...prev].slice(0, 20)); // Keep last 20
+          }
+          
+          prevOrderCountRef.current = orders.length;
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    }
+  };
+
+  // Poll for new orders every 10 seconds
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -38,15 +99,8 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({ onMenuClick, user }) => {
   }, []);
 
   const handleLogout = async () => {
-    // Simulate logout process
     try {
-      // In a real app, you'd call an API to invalidate the session
-      // await fetch('/api/auth/logout', { method: 'POST' });
-      
-      // Clear local storage if used
       localStorage.removeItem('adminToken'); 
-      
-      // Redirect to login
       router.push('/admin/login');
     } catch (error) {
       console.error('Logout failed', error);
@@ -57,6 +111,19 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({ onMenuClick, user }) => {
 
   const markAllAsRead = () => {
     setNotifications(notifications.map(n => ({ ...n, read: true })));
+  };
+
+  const handleNotificationClick = (notification: Notification) => {
+    // Mark as read
+    setNotifications(prev => 
+      prev.map(n => n.id === notification.id ? { ...n, read: true } : n)
+    );
+    
+    // Navigate to orders page if it's an order notification
+    if (notification.type === 'order' && notification.orderId) {
+      setShowNotifications(false);
+      router.push('/admin/orders');
+    }
   };
 
   return (
@@ -212,38 +279,66 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({ onMenuClick, user }) => {
               <div style={{ maxHeight: '20rem', overflowY: 'auto' }}>
                 {notifications.length === 0 ? (
                   <div style={{ padding: '1.5rem', textAlign: 'center', color: '#6b7280', fontSize: '0.875rem' }}>
-                    No notifications
+                    <Bell size={32} style={{ margin: '0 auto 0.5rem', color: '#d1d5db' }} />
+                    <p style={{ fontWeight: 500, marginBottom: '0.25rem' }}>No notifications yet</p>
+                    <p style={{ fontSize: '0.75rem' }}>You'll be notified when new orders arrive</p>
                   </div>
                 ) : (
                   notifications.map(notification => (
-                    <div key={notification.id} style={{
-                      padding: '1rem',
-                      borderBottom: '1px solid #f3f4f6',
-                      backgroundColor: notification.read ? 'white' : '#fff7ed',
-                      display: 'flex',
-                      gap: '0.75rem',
-                      cursor: 'pointer'
-                    }}
-                    className="hover:bg-gray-50 transition-colors"
+                    <div 
+                      key={notification.id} 
+                      onClick={() => handleNotificationClick(notification)}
+                      style={{
+                        padding: '1rem',
+                        borderBottom: '1px solid #f3f4f6',
+                        backgroundColor: notification.read ? 'white' : '#fff7ed',
+                        display: 'flex',
+                        gap: '0.75rem',
+                        cursor: 'pointer',
+                        transition: 'background-color 0.2s'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (notification.read) {
+                          e.currentTarget.style.backgroundColor = '#f9fafb';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = notification.read ? 'white' : '#fff7ed';
+                      }}
                     >
                       <div style={{
                         marginTop: '0.25rem',
-                        color: notification.type === 'alert' ? '#ef4444' : notification.type === 'order' ? '#ea580c' : '#3b82f6'
+                        color: notification.type === 'order' ? '#ea580c' : notification.type === 'status' ? '#10b981' : '#3b82f6',
+                        flexShrink: 0
                       }}>
-                        {notification.type === 'alert' ? <AlertCircle size={16} /> : 
-                         notification.type === 'order' ? <Bell size={16} /> : <CheckCircle size={16} />}
+                        {notification.type === 'order' ? <ShoppingBag size={18} /> : 
+                         notification.type === 'status' ? <CheckCircle size={18} /> : 
+                         <AlertCircle size={18} />}
                       </div>
-                      <div>
-                        <p style={{ fontSize: '0.875rem', fontWeight: 500, color: '#1f2937', marginBottom: '0.125rem' }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: '0.875rem', fontWeight: 600, color: '#1f2937', marginBottom: '0.25rem' }}>
                           {notification.title}
                         </p>
-                        <p style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.25rem' }}>
+                        <p style={{ fontSize: '0.75rem', color: '#6b7280', marginBottom: '0.5rem', lineHeight: '1.4' }}>
                           {notification.message}
                         </p>
-                        <p style={{ fontSize: '0.7px', color: '#9ca3af' }}>
-                          {notification.time}
-                        </p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                          <Clock size={12} style={{ color: '#9ca3af' }} />
+                          <p style={{ fontSize: '0.6875rem', color: '#9ca3af' }}>
+                            {formatDistanceToNow(notification.time, { addSuffix: true })}
+                          </p>
+                        </div>
                       </div>
+                      {!notification.read && (
+                        <div style={{
+                          width: '8px',
+                          height: '8px',
+                          borderRadius: '50%',
+                          backgroundColor: '#ea580c',
+                          marginTop: '0.5rem',
+                          flexShrink: 0
+                        }} />
+                      )}
                     </div>
                   ))
                 )}

@@ -5,6 +5,7 @@
  * 
  * Creates database tables and initial admin user
  * Run with: node scripts/setup-database.mjs
+ * ⚠️ SECURITY: Password loaded from .env only!
  */
 
 import { execSync } from 'child_process';
@@ -45,12 +46,11 @@ try {
 
   console.log('🎉 Database setup complete!\n');
   console.log('📋 Login Credentials:');
-  console.log('   Email: admin@bantuskitchen.com');
-  console.log('   Password: Sailaja@2025');
+  console.log('   Email: From your .env (ADMIN_DEFAULT_EMAIL)');
+  console.log('   Password: From your .env (ADMIN_DEFAULT_PASSWORD)');
   console.log('\n🔗 Login at: http://localhost:3000/admin/login\n');
 
 } catch (error) {
   console.error('❌ Database setup failed:', error.message);
   process.exit(1);
 }
-

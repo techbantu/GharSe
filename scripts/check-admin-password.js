@@ -1,3 +1,9 @@
+/**
+ * CHECK ADMIN PASSWORD
+ * Verifies admin password from .env
+ * ⚠️ SECURITY: No hardcoded passwords!
+ */
+
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 
@@ -5,12 +11,21 @@ const prisma = new PrismaClient();
 
 async function checkPassword() {
   try {
+    const adminEmail = process.env.ADMIN_DEFAULT_EMAIL || 'admin@bantuskitchen.com';
+    const testPassword = process.env.ADMIN_DEFAULT_PASSWORD;
+
+    if (!testPassword) {
+      console.error('❌ ADMIN_DEFAULT_PASSWORD not set in .env!');
+      process.exit(1);
+    }
+
     const admin = await prisma.admin.findUnique({
-      where: { email: 'admin@bantuskitchen.com' },
+      where: { email: adminEmail },
     });
     
     if (!admin) {
       console.log('❌ Admin not found!');
+      console.log('Run: node scripts/auto-create-admin.js');
       return;
     }
     
@@ -20,22 +35,15 @@ async function checkPassword() {
     console.log('   Role:', admin.role);
     console.log('   Email Verified:', admin.emailVerified);
     
-    // Test the password from login page
-    const testPassword = 'Sailaja@2025';
+    // Test the password from .env
     const isValid = await bcrypt.compare(testPassword, admin.passwordHash);
     
     console.log('\n🔐 Password Test:');
-    console.log('   Testing password:', testPassword);
+    console.log('   Testing password from .env');
     console.log('   Result:', isValid ? '✅ VALID' : '❌ INVALID');
     
     if (!isValid) {
-      console.log('\n⚠️  Password mismatch! Updating password...');
-      const newHash = await bcrypt.hash(testPassword, 12);
-      await prisma.admin.update({
-        where: { id: admin.id },
-        data: { passwordHash: newHash },
-      });
-      console.log('✅ Password updated successfully!');
+      console.log('\n⚠️  Password mismatch! Run: node scripts/fix-admin-login.mjs');
     }
     
   } catch (error) {

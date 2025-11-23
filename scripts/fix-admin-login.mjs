@@ -16,9 +16,15 @@ import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
-const ADMIN_EMAIL = 'admin@bantuskitchen.com';
-const ADMIN_PASSWORD = 'Sailaja@2025';
-const ADMIN_NAME = 'Sailaja Admin';
+// ⚠️ SECURITY: Never hardcode passwords!
+const ADMIN_EMAIL = process.env.ADMIN_DEFAULT_EMAIL || 'admin@bantuskitchen.com';
+const ADMIN_PASSWORD = process.env.ADMIN_DEFAULT_PASSWORD;
+const ADMIN_NAME = process.env.ADMIN_DEFAULT_NAME || 'Admin';
+
+if (!ADMIN_PASSWORD || ADMIN_PASSWORD.length < 12) {
+  console.error('❌ SECURITY ERROR: ADMIN_DEFAULT_PASSWORD must be set in .env!');
+  process.exit(1);
+}
 
 async function fixAdminLogin() {
   try {
@@ -107,7 +113,7 @@ async function fixAdminLogin() {
       console.log('\n✅ Admin login is ready!');
       console.log(`\n🌐 Login at: http://localhost:3001/admin/login`);
       console.log(`   Email: ${ADMIN_EMAIL}`);
-      console.log(`   Password: ${ADMIN_PASSWORD}\n`);
+      console.log(`   Password: [REDACTED - Check your .env file]\n`);
     } else {
       console.log('\n❌ Admin login still has issues. Please check the errors above.\n');
     }

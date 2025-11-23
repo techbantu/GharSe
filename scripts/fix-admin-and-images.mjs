@@ -73,7 +73,7 @@ async function main() {
     
     console.log('   ✅ Admin user fixed!');
     console.log('   📧 Email:', admin.email);
-    console.log('   🔑 Password:', adminPassword);
+    console.log('   🔑 Password: [REDACTED - Check your .env file]');
 
     // 2. Add Images to Menu Items
     console.log('\n📸 Adding images to menu items...');
@@ -104,7 +104,7 @@ async function main() {
     console.log('='.repeat(60));
     console.log('\n🔐 Admin Login Credentials:');
     console.log('   Email:', adminEmail);
-    console.log('   Password:', adminPassword);
+    console.log('   Password: [REDACTED]');
     console.log('\n🎯 Try logging in now at: http://localhost:3000/admin/login');
     console.log('');
 

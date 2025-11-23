@@ -28,16 +28,52 @@ interface KitchenTicketProps {
 export default function KitchenTicket({ order, onStatusChange, isUrgent }: KitchenTicketProps) {
   const orderTime = typeof order.createdAt === 'string' ? new Date(order.createdAt) : order.createdAt;
   const isDelivery = order.orderType === 'delivery';
+  const isScheduled = order.scheduledDeliveryAt || order.scheduledWindowStart;
   
-  // Calculate time elapsed
-  const minutesElapsed = Math.floor((Date.now() - orderTime.getTime()) / 60000);
+  // Calculate time metrics differently for scheduled vs ASAP orders
+  const timeMetrics = React.useMemo(() => {
+    if (isScheduled) {
+      const scheduledDelivery = order.scheduledDeliveryAt || order.scheduledWindowStart;
+      const prepTime = order.prepTime || order.estimatedPrepTime || 120;
+      const deliveryDuration = order.deliveryDuration || 45;
+      
+      const mustStartCookingBy = new Date(
+        new Date(scheduledDelivery!).getTime() - (prepTime + deliveryDuration) * 60000
+      );
+      
+      const now = new Date();
+      const minutesUntilStart = Math.floor((mustStartCookingBy.getTime() - now.getTime()) / 60000);
+      
+      return {
+        isScheduled: true,
+        scheduledDelivery: new Date(scheduledDelivery!),
+        mustStartCookingBy,
+        minutesUntilStart,
+        urgencyType: minutesUntilStart < 0 ? 'overdue' : minutesUntilStart <= 15 ? 'urgent' : 'upcoming'
+      };
+    } else {
+      const minutesElapsed = Math.floor((Date.now() - orderTime.getTime()) / 60000);
+      return {
+        isScheduled: false,
+        minutesElapsed,
+        urgencyType: minutesElapsed > 30 ? 'overdue' : minutesElapsed > 20 ? 'urgent' : 'normal'
+      };
+    }
+  }, [isScheduled, order, orderTime]);
   
-  // Determine urgency color
+  // Determine urgency color based on time metrics
   const getUrgencyColor = () => {
     if (order.status === 'delivered' || order.status === 'picked-up') return '#10b981'; // Green
-    if (minutesElapsed > 30) return '#ef4444'; // Red - URGENT!
-    if (minutesElapsed > 20) return '#f59e0b'; // Orange - Warning
-    return '#3b82f6'; // Blue - Normal
+    
+    if (timeMetrics.isScheduled) {
+      if (timeMetrics.minutesUntilStart < 0) return '#ef4444'; // Red - should have started!
+      if (timeMetrics.minutesUntilStart <= 15) return '#f59e0b'; // Orange - start soon!
+      return '#3b82f6'; // Blue - scheduled
+    } else {
+      if (timeMetrics.minutesElapsed > 30) return '#ef4444'; // Red - URGENT!
+      if (timeMetrics.minutesElapsed > 20) return '#f59e0b'; // Orange - Warning
+      return '#3b82f6'; // Blue - Normal
+    }
   };
 
   const urgencyColor = getUrgencyColor();
@@ -60,7 +96,7 @@ export default function KitchenTicket({ order, onStatusChange, isUrgent }: Kitch
       }}
     >
       {/* Urgent Banner */}
-      {minutesElapsed > 30 && (
+      {timeMetrics.urgencyType === 'overdue' && (
         <div
           style={{
             position: 'absolute',
@@ -81,11 +117,14 @@ export default function KitchenTicket({ order, onStatusChange, isUrgent }: Kitch
           }}
         >
           <AlertCircle size={16} />
-          URGENT! {minutesElapsed} MINUTES ELAPSED
+          {timeMetrics.isScheduled 
+            ? `START NOW! (${Math.abs(timeMetrics.minutesUntilStart)} min overdue)` 
+            : `URGENT! ${timeMetrics.minutesElapsed} MINUTES ELAPSED`
+          }
         </div>
       )}
 
-      <div style={{ paddingTop: minutesElapsed > 30 ? '2.5rem' : 0, flex: 1, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <div style={{ paddingTop: timeMetrics.urgencyType === 'overdue' ? '2.5rem' : 0, flex: 1, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         {/* Order Header */}
         <div
           style={{
@@ -103,13 +142,58 @@ export default function KitchenTicket({ order, onStatusChange, isUrgent }: Kitch
               </div>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#6b7280', fontSize: '0.875rem' }}>
-                <Clock size={16} />
-                <span style={{ fontWeight: 600 }}>{format(orderTime, 'h:mm a')}</span>
-              </div>
-              <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.25rem' }}>
-                {minutesElapsed} min ago
-              </div>
+              {timeMetrics.isScheduled ? (
+                <>
+                  <div style={{ 
+                    fontSize: '0.6875rem', 
+                    color: '#667eea',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    marginBottom: '0.25rem',
+                    fontWeight: 600
+                  }}>
+                    📅 Scheduled For
+                  </div>
+                  <div style={{ 
+                    fontSize: '0.875rem', 
+                    fontWeight: 700, 
+                    color: '#667eea',
+                    marginBottom: '0.25rem'
+                  }}>
+                    {format(timeMetrics.scheduledDelivery, 'EEE, MMM d')}
+                  </div>
+                  <div style={{ 
+                    fontSize: '1rem', 
+                    fontWeight: 700, 
+                    color: '#764ba2'
+                  }}>
+                    🕐 {format(timeMetrics.scheduledDelivery, 'h:mm a')}
+                  </div>
+                  <div style={{ 
+                    fontSize: '0.75rem', 
+                    color: urgencyColor, 
+                    marginTop: '0.5rem',
+                    fontWeight: 600
+                  }}>
+                    Start in {timeMetrics.minutesUntilStart < 0 
+                      ? `NOW! (${Math.abs(timeMetrics.minutesUntilStart)}m late)` 
+                      : timeMetrics.minutesUntilStart < 60
+                        ? `${timeMetrics.minutesUntilStart} min`
+                        : `${Math.floor(timeMetrics.minutesUntilStart / 60)}h ${timeMetrics.minutesUntilStart % 60}m`
+                    }
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#6b7280', fontSize: '0.875rem' }}>
+                    <Clock size={16} />
+                    <span style={{ fontWeight: 600 }}>{format(orderTime, 'h:mm a')}</span>
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.25rem' }}>
+                    {timeMetrics.minutesElapsed} min ago
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>

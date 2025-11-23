@@ -39,9 +39,9 @@ const generateOrderConfirmationHTML = (order: Order): string => {
   const itemsHTML = order.items
     .map(
       (item) => `
-    <tr style="border-bottom: 1px solid #e5e7eb;">
-      <td style="padding: 12px 0;">${item.menuItem.name} × ${item.quantity}</td>
-      <td style="padding: 12px 0; text-align: right;">₹${item.subtotal.toFixed(2)}</td>
+    <tr style="border-bottom: 1px solid #e5e7eb; background-color: #ffffff;">
+      <td style="padding: 14px 8px; color: #000000; font-size: 15px; font-weight: 600;">${item.menuItem.name} × ${item.quantity}</td>
+      <td style="padding: 14px 8px; text-align: right; color: #000000; font-size: 15px; font-weight: 600;">₹${item.subtotal.toFixed(2)}</td>
     </tr>
   `
     )
@@ -70,21 +70,56 @@ const generateOrderConfirmationHTML = (order: Order): string => {
     </div>
 
     <!-- Order Details -->
-    <div style="padding: 20px; background: linear-gradient(180deg, #ffffff 0%, #fffbf8 100%);">
-      <h2 style="color: #1f2937; font-size: 18px; margin: 0 0 12px 0; font-weight: 600;">
+    <div style="padding: 20px; background-color: #ffffff;">
+      <h2 style="color: #000000; font-size: 20px; margin: 0 0 16px 0; font-weight: 700; background-color: #f9fafb; padding: 12px; border-radius: 8px; border-left: 4px solid #FF6B35;">
         Order #${order.orderNumber}
       </h2>
       
-      <div style="background: linear-gradient(135deg, #fff5f0 0%, #ffe8dc 100%); border-radius: 8px; padding: 16px; margin-bottom: 16px; border-left: 4px solid #FF6B35; box-shadow: 0 2px 6px rgba(255, 107, 53, 0.08);">
-        <p style="margin: 0 0 6px 0; color: #f77f00; font-size: 12px; text-transform: uppercase; letter-spacing: 0.3px; font-weight: 600;">Estimated Preparation Time</p>
-        <p style="margin: 0; color: #1f2937; font-size: 28px; font-weight: 700;">
+      ${
+        order.scheduledDeliveryAt || order.scheduledWindowStart
+          ? `
+      <!-- Scheduled Delivery Info -->
+      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; padding: 18px; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);">
+        <p style="margin: 0 0 8px 0; color: #ffffff; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; opacity: 0.95;">📅 Scheduled Delivery</p>
+        <p style="margin: 0; color: #ffffff; font-size: 32px; font-weight: 900; line-height: 1;">
+          ${new Date(order.scheduledDeliveryAt || order.scheduledWindowStart).toLocaleTimeString('en-IN', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true,
+          })}
+          ${order.scheduledWindowEnd ? ` - ${new Date(order.scheduledWindowEnd).toLocaleTimeString('en-IN', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true,
+          })}` : ''}
+        </p>
+        <p style="margin: 10px 0 0 0; color: #ffffff; font-size: 16px; font-weight: 600;">
+          ${new Date(order.scheduledDeliveryAt || order.scheduledWindowStart).toLocaleDateString('en-IN', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          })}
+        </p>
+        ${order.prepTime ? `
+        <p style="margin: 12px 0 0 0; color: rgba(255,255,255,0.9); font-size: 13px; background: rgba(255,255,255,0.15); padding: 8px 12px; border-radius: 6px; display: inline-block;">
+          ⏱️ ${order.prepTime} min prep time + ${order.deliveryDuration || 45} min delivery
+        </p>
+        ` : ''}
+      </div>
+      `
+          : `
+      <!-- ASAP Order - Estimated Prep Time -->
+      <div style="background-color: #fef3c7; border-radius: 8px; padding: 18px; margin-bottom: 16px; border-left: 4px solid #f59e0b; box-shadow: 0 2px 8px rgba(245, 158, 11, 0.15);">
+        <p style="margin: 0 0 8px 0; color: #92400e; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700;">⏱️ Estimated Preparation Time</p>
+        <p style="margin: 0; color: #000000; font-size: 32px; font-weight: 900; line-height: 1;">
           ${new Date(order.estimatedReadyTime).toLocaleTimeString('en-IN', {
             hour: '2-digit',
             minute: '2-digit',
             hour12: true,
           })}
         </p>
-        <p style="margin: 8px 0 0 0; color: #6b7280; font-size: 14px;">
+        <p style="margin: 10px 0 0 0; color: #1f2937; font-size: 16px; font-weight: 600;">
           ${new Date(order.estimatedReadyTime).toLocaleDateString('en-IN', {
             weekday: 'long',
             year: 'numeric',
@@ -93,80 +128,82 @@ const generateOrderConfirmationHTML = (order: Order): string => {
           })}
         </p>
       </div>
+      `
+      }
 
       <!-- Customer Info -->
-      <div style="margin-bottom: 16px; background-color: #f9fafb; padding: 12px; border-radius: 6px;">
-        <h3 style="color: #FF6B35; font-size: 15px; margin: 0 0 8px 0; font-weight: 600;">Delivery Details</h3>
-        <p style="margin: 0 0 4px 0; color: #1f2937;"><strong>${order.customer.name}</strong></p>
-        <p style="margin: 0 0 4px 0; color: #6b7280; font-size: 14px;">${order.customer.phone}</p>
+      <div style="margin-bottom: 16px; background-color: #1f2937; padding: 16px; border-radius: 8px;">
+        <h3 style="color: #FF6B35; font-size: 16px; margin: 0 0 12px 0; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Delivery Details</h3>
+        <p style="margin: 0 0 6px 0; color: #ffffff; font-size: 16px;"><strong>${order.customer.name}</strong></p>
+        <p style="margin: 0 0 6px 0; color: #e5e7eb; font-size: 15px;">${order.customer.phone}</p>
         ${
           order.deliveryAddress
             ? `
-          <p style="margin: 8px 0 0 0; color: #6b7280; font-size: 14px; line-height: 1.5;">
-            ${order.deliveryAddress.street}<br>
+          <p style="margin: 12px 0 0 0; color: #e5e7eb; font-size: 15px; line-height: 1.6; padding: 12px; background-color: rgba(255,255,255,0.1); border-radius: 6px;">
+            📍 ${order.deliveryAddress.street}<br>
             ${order.deliveryAddress.city}, ${order.deliveryAddress.zipCode}
           </p>
         `
-            : `<p style="margin: 8px 0 0 0; color: #6b7280; font-size: 14px;">Pickup from restaurant</p>`
+            : `<p style="margin: 12px 0 0 0; color: #e5e7eb; font-size: 15px;">🏪 Pickup from restaurant</p>`
         }
       </div>
 
       <!-- Order Items -->
-      <h3 style="color: #FF6B35; font-size: 15px; margin: 0 0 10px 0; font-weight: 600;">Your Order</h3>
-      <table style="width: 100%; border-collapse: collapse; margin-bottom: 12px;">
+      <h3 style="color: #000000; background-color: #f9fafb; padding: 10px 12px; border-radius: 6px; font-size: 16px; margin: 0 0 12px 0; font-weight: 700; border-left: 4px solid #FF6B35;">🍽️ Your Order</h3>
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px;">
         <tbody>
           ${itemsHTML}
         </tbody>
       </table>
 
       <!-- Pricing Summary -->
-      <table style="width: 100%; margin-bottom: 16px; background-color: #f9fafb; border-radius: 6px; padding: 10px;">
+      <table style="width: 100%; margin-bottom: 16px; background-color: #f9fafb; border-radius: 8px; padding: 12px; border: 2px solid #e5e7eb;">
         <tbody>
           <tr>
-            <td style="padding: 6px 8px; color: #6b7280; font-size: 14px;">Subtotal</td>
-            <td style="padding: 6px 8px; text-align: right; color: #1f2937; font-weight: 500; font-size: 14px;">₹${order.pricing.subtotal.toFixed(2)}</td>
+            <td style="padding: 8px 10px; color: #000000; font-size: 15px; font-weight: 500;">Subtotal</td>
+            <td style="padding: 8px 10px; text-align: right; color: #000000; font-weight: 600; font-size: 15px;">₹${order.pricing.subtotal.toFixed(2)}</td>
           </tr>
           <tr>
-            <td style="padding: 6px 8px; color: #6b7280; font-size: 14px;">Tax</td>
-            <td style="padding: 6px 8px; text-align: right; color: #1f2937; font-weight: 500; font-size: 14px;">₹${order.pricing.tax.toFixed(2)}</td>
+            <td style="padding: 8px 10px; color: #000000; font-size: 15px; font-weight: 500;">Tax</td>
+            <td style="padding: 8px 10px; text-align: right; color: #000000; font-weight: 600; font-size: 15px;">₹${order.pricing.tax.toFixed(2)}</td>
           </tr>
           <tr>
-            <td style="padding: 6px 8px; color: #6b7280; font-size: 14px;">Delivery Fee</td>
-            <td style="padding: 6px 8px; text-align: right; color: #1f2937; font-weight: 500; font-size: 14px;">
-              ${order.pricing.deliveryFee === 0 ? '<span style="color: #10b981; font-weight: 600;">FREE</span>' : `₹${order.pricing.deliveryFee.toFixed(2)}`}
+            <td style="padding: 8px 10px; color: #000000; font-size: 15px; font-weight: 500;">Delivery Fee</td>
+            <td style="padding: 8px 10px; text-align: right; color: #000000; font-weight: 600; font-size: 15px;">
+              ${order.pricing.deliveryFee === 0 ? '<span style="color: #10b981; font-weight: 700;">FREE</span>' : `₹${order.pricing.deliveryFee.toFixed(2)}`}
             </td>
           </tr>
           ${
             order.pricing.discount && order.pricing.discount > 0
               ? `
           <tr>
-            <td style="padding: 6px 8px; color: #10b981; font-size: 14px;">Discount</td>
-            <td style="padding: 6px 8px; text-align: right; color: #10b981; font-weight: 600; font-size: 14px;">-₹${order.pricing.discount.toFixed(2)}</td>
+            <td style="padding: 8px 10px; color: #10b981; font-size: 15px; font-weight: 600;">Discount</td>
+            <td style="padding: 8px 10px; text-align: right; color: #10b981; font-weight: 700; font-size: 15px;">-₹${order.pricing.discount.toFixed(2)}</td>
           </tr>
           `
               : ''
           }
-          <tr style="border-top: 2px solid #FF6B35;">
-            <td style="padding: 10px 8px; color: #1f2937; font-weight: 700; font-size: 16px;">Total</td>
-            <td style="padding: 10px 8px; text-align: right; color: #FF6B35; font-weight: 700; font-size: 18px;">₹${order.pricing.total.toFixed(2)}</td>
+          <tr style="border-top: 3px solid #FF6B35;">
+            <td style="padding: 12px 10px; color: #000000; font-weight: 800; font-size: 18px;">Total</td>
+            <td style="padding: 12px 10px; text-align: right; color: #FF6B35; font-weight: 800; font-size: 20px;">₹${order.pricing.total.toFixed(2)}</td>
           </tr>
         </tbody>
       </table>
 
       <!-- Payment Info -->
-      <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-left: 3px solid #f59e0b; padding: 12px; border-radius: 6px; margin-bottom: 0; box-shadow: 0 1px 3px rgba(245, 158, 11, 0.08);">
-        <p style="margin: 0; color: #92400e; font-size: 14px;">
-          <strong>Payment:</strong> ${order.paymentMethod === 'cash-on-delivery' ? 'Cash on Delivery' : 'Online Payment'}
-          ${order.paymentStatus === 'completed' ? '(Paid ✓)' : order.paymentMethod === 'cash-on-delivery' ? '' : '(Pending)'}
+      <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-left: 4px solid #f59e0b; padding: 14px; border-radius: 8px; margin-bottom: 0; box-shadow: 0 2px 6px rgba(245, 158, 11, 0.15);">
+        <p style="margin: 0; color: #000000; font-size: 15px; font-weight: 600;">
+          <strong>💳 Payment:</strong> ${order.paymentMethod === 'cash-on-delivery' ? 'Cash on Delivery' : 'Online Payment'}
+          ${order.paymentStatus === 'completed' ? ' <span style="color: #10b981; font-weight: 700;">(Paid ✓)</span>' : order.paymentMethod === 'cash-on-delivery' ? '' : ' <span style="color: #ef4444;">(Pending)</span>'}
         </p>
       </div>
 
       ${
         order.specialInstructions
           ? `
-      <div style="background-color: #f3f4f6; padding: 12px; border-radius: 4px; margin-top: 12px; margin-bottom: 0;">
-        <p style="margin: 0; color: #6b7280; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Special Instructions</p>
-        <p style="margin: 8px 0 0 0; color: #1f2937; font-size: 14px;">${order.specialInstructions}</p>
+      <div style="background-color: #f3f4f6; padding: 14px; border-radius: 8px; margin-top: 16px; margin-bottom: 0; border: 2px solid #d1d5db;">
+        <p style="margin: 0; color: #000000; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700;">📝 Special Instructions</p>
+        <p style="margin: 10px 0 0 0; color: #000000; font-size: 15px; font-weight: 500;">${order.specialInstructions}</p>
       </div>
       `
           : ''
@@ -176,15 +213,15 @@ const generateOrderConfirmationHTML = (order: Order): string => {
 
     <!-- Footer -->
     <div style="background: linear-gradient(180deg, #fff9f5 0%, #ffe8dc 100%); border-top: 3px solid #FF6B35; padding: 24px 20px 20px 20px; text-align: center; margin-top: 0;">
-      <p style="margin: 0 0 16px 0; color: #1f2937; font-size: 15px; font-weight: 600;">Thank you for choosing GharSe!</p>
-      <p style="margin: 0 0 4px 0; font-size: 11px; font-weight: 600; color: #f77f00; text-transform: uppercase; letter-spacing: 0.3px;">Need Help?</p>
-      <p style="margin: 0 0 3px 0;">
-        <a href="mailto:support@gharse.app" style="color: #FF6B35; text-decoration: none; font-size: 13px; font-weight: 600;">support@gharse.app</a>
+      <p style="margin: 0 0 16px 0; color: #000000; font-size: 16px; font-weight: 700;">Thank you for choosing GharSe!</p>
+      <p style="margin: 0 0 6px 0; font-size: 12px; font-weight: 700; color: #FF6B35; text-transform: uppercase; letter-spacing: 0.5px;">Need Help?</p>
+      <p style="margin: 0 0 4px 0;">
+        <a href="mailto:support@gharse.app" style="color: #FF6B35; text-decoration: none; font-size: 14px; font-weight: 700;">support@gharse.app</a>
       </p>
       <p style="margin: 0 0 12px 0;">
-        <a href="https://gharse.app" style="color: #FF6B35; text-decoration: none; font-size: 13px; font-weight: 600;">www.gharse.app</a>
+        <a href="https://gharse.app" style="color: #FF6B35; text-decoration: none; font-size: 14px; font-weight: 700;">www.gharse.app</a>
       </p>
-      <p style="margin: 0; font-size: 11px; color: #92400e; padding-top: 12px; border-top: 1px solid rgba(255, 107, 53, 0.2);">© 2025 GharSe • Authentic Home-Cooked Food</p>
+      <p style="margin: 0; font-size: 12px; color: #000000; font-weight: 600; padding-top: 12px; border-top: 2px solid rgba(255, 107, 53, 0.3);">© 2025 GharSe • Authentic Home-Cooked Food</p>
     </div>
   </div>
 </body>

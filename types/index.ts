@@ -135,8 +135,18 @@ export interface Order {
   };
   status: OrderStatus;
   orderType: 'delivery' | 'pickup';
-  scheduledTime?: Date; // For advance orders
+  
+  // SCHEDULED DELIVERY (matches Prisma schema)
+  scheduledTime?: Date; // Deprecated - use scheduledDeliveryAt
+  scheduledDeliveryAt?: Date; // Customer's chosen delivery time
+  scheduledWindowStart?: Date; // Start of delivery window (e.g., 2:00 PM)
+  scheduledWindowEnd?: Date; // End of delivery window (e.g., 2:30 PM)
+  minimumLeadTime?: number; // Minimum minutes ahead (2h 45min = 165 min)
+  prepTime?: number; // Prep time in minutes (2 hours default)
+  deliveryDuration?: number; // Delivery time in minutes (45 min default)
+  
   estimatedReadyTime: Date;
+  estimatedPrepTime?: number; // Legacy field - use prepTime
   actualReadyTime?: Date;
   deliveryTime?: Date;
   paymentMethod: PaymentMethod;

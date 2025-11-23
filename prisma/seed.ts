@@ -40,7 +40,7 @@ async function main() {
     },
   });
   console.log(`✅ Admin created: ${admin.email}`);
-  console.log(`   Password: ${process.env.ADMIN_DEFAULT_PASSWORD || 'Sailaja@2025'}`);
+  console.log('   Password: [REDACTED - Check your .env file]');
   console.log(`   Email verified: ${admin.emailVerified}`);
 
   // 2. Create Sample Menu Items
@@ -459,8 +459,8 @@ async function main() {
   console.log('\n🔐 Login Credentials:');
   console.log('   Admin:');
   console.log(`     Email: ${admin.email}`);
-  console.log(`     Password: ${process.env.ADMIN_DEFAULT_PASSWORD || '***REMOVED***'}`);
-  console.log('   Customer:');
+  console.log('     Password: [Check your .env file: ADMIN_DEFAULT_PASSWORD]');
+  console.log('   Customer (Sample):');
   console.log('     Email: customer@example.com');
   console.log('     Password: customer123');
   console.log('');
