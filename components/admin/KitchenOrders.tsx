@@ -318,38 +318,107 @@ const KitchenOrders: React.FC<KitchenOrdersProps> = ({
 
   // Calculate ready-by time and status
   const getReadyByInfo = (order: Order) => {
-    const prepTime = order.estimatedPrepTime || 30; // Default 30 minutes
-    const createdAt = new Date(order.createdAt);
-    const readyByTime = new Date(createdAt.getTime() + prepTime * 60000);
-    const now = new Date();
-    const minutesLeft = Math.floor((readyByTime.getTime() - now.getTime()) / 60000);
+    // For scheduled deliveries, work backwards from delivery time
+    const isScheduled = order.scheduledDeliveryAt || order.scheduledWindowStart;
     
-    let color = '#10b981'; // Green
-    let urgency = 'normal';
-    
-    if (minutesLeft < 0) {
-      color = '#dc2626'; // Red - overdue
-      urgency = 'overdue';
-    } else if (minutesLeft <= 5) {
-      color = '#f59e0b'; // Amber - urgent
-      urgency = 'urgent';
+    if (isScheduled) {
+      const scheduledDelivery = order.scheduledDeliveryAt || order.scheduledWindowStart;
+      const prepTime = order.prepTime || order.estimatedPrepTime || 120; // Default 2 hours
+      const deliveryDuration = order.deliveryDuration || 45; // Default 45 min
+      
+      // If no scheduled delivery time, return null
+      if (!scheduledDelivery) {
+        return null;
+      }
+      
+      // Calculate when cooking must START (delivery time - prep time - delivery duration)
+      const mustStartCookingBy = new Date(
+        new Date(scheduledDelivery).getTime() - (prepTime + deliveryDuration) * 60000
+      );
+      
+      // Calculate when food must be READY (delivery time - delivery duration)
+      const mustBeReadyBy = new Date(
+        new Date(scheduledDelivery).getTime() - deliveryDuration * 60000
+      );
+      
+      const now = new Date();
+      const minutesUntilStart = Math.floor((mustStartCookingBy.getTime() - now.getTime()) / 60000);
+      const minutesUntilReady = Math.floor((mustBeReadyBy.getTime() - now.getTime()) / 60000);
+      const minutesUntilDelivery = Math.floor((new Date(scheduledDelivery).getTime() - now.getTime()) / 60000);
+      
+      // Urgency based on start time, not delivery time
+      let color = '#10b981'; // Green - plenty of time
+      let urgency = 'normal';
+      
+      if (minutesUntilStart < 0) {
+        color = '#dc2626'; // Red - should have started already!
+        urgency = 'overdue';
+      } else if (minutesUntilStart <= 15) {
+        color = '#f59e0b'; // Amber - start soon!
+        urgency = 'urgent';
+      } else if (minutesUntilStart <= 30) {
+        color = '#3b82f6'; // Blue - prepare to start
+        urgency = 'upcoming';
+      }
+      
+      return {
+        isScheduled: true,
+        scheduledDeliveryTime: new Date(scheduledDelivery),
+        mustStartCookingBy,
+        mustBeReadyBy,
+        minutesUntilStart,
+        minutesUntilReady,
+        minutesUntilDelivery,
+        color,
+        urgency,
+        // Display formats
+        deliveryDateDisplay: format(new Date(scheduledDelivery), 'EEE, MMM d'), // "Sun, Nov 23"
+        deliveryTimeDisplay: format(new Date(scheduledDelivery), 'h:mm a'), // "12:00 PM"
+        startCookingDisplay: format(mustStartCookingBy, 'h:mm a'),
+        readyByDisplay: format(mustBeReadyBy, 'h:mm a'),
+        countdownText: minutesUntilStart < 0 
+          ? `START NOW! (${Math.abs(minutesUntilStart)} min overdue)` 
+          : minutesUntilStart === 0 
+            ? 'Start cooking now!'
+            : minutesUntilStart < 60
+              ? `Start in ${minutesUntilStart} min`
+              : minutesUntilStart < 1440 // Less than 24 hours
+                ? `Start in ${Math.floor(minutesUntilStart / 60)}h ${minutesUntilStart % 60}m`
+                : `Start in ${Math.floor(minutesUntilStart / 1440)}d ${Math.floor((minutesUntilStart % 1440) / 60)}h`
+      };
+    } else {
+      // ASAP order - original logic
+      const prepTime = order.estimatedPrepTime || 30; // Default 30 minutes
+      const createdAt = new Date(order.createdAt);
+      const readyByTime = new Date(createdAt.getTime() + prepTime * 60000);
+      const now = new Date();
+      const minutesLeft = Math.floor((readyByTime.getTime() - now.getTime()) / 60000);
+      
+      let color = '#10b981'; // Green
+      let urgency = 'normal';
+      
+      if (minutesLeft < 0) {
+        color = '#dc2626'; // Red - overdue
+        urgency = 'overdue';
+      } else if (minutesLeft <= 5) {
+        color = '#f59e0b'; // Amber - urgent
+        urgency = 'urgent';
+      }
+      
+      return {
+        isScheduled: false,
+        readyByTime,
+        minutesLeft,
+        color,
+        urgency,
+        displayTime: format(readyByTime, 'h:mm a'),
+        countdownText: minutesLeft < 0 
+          ? `${Math.abs(minutesLeft)} min overdue` 
+          : minutesLeft === 0 
+            ? 'Due now!'
+            : `${minutesLeft} min left`
+      };
     }
-    
-    const result = {
-      readyByTime,
-      minutesLeft,
-      color,
-      urgency,
-      displayTime: format(readyByTime, 'h:mm a'),
-      countdownText: minutesLeft < 0 
-        ? `${Math.abs(minutesLeft)} min overdue` 
-        : minutesLeft === 0 
-          ? 'Due now!'
-          : `${minutesLeft} min left`
-    };
-    
-    console.log('[KitchenOrders] Ready by info:', result);
-    return result;
   };
 
   const renderOrderCard = (order: Order) => {
@@ -415,8 +484,105 @@ const KitchenOrders: React.FC<KitchenOrdersProps> = ({
               </span>
             )}
           </div>
+        ) : readyByInfo.isScheduled ? (
+          /* SCHEDULED DELIVERY - Show full date/time prominently */
+          <div style={{ marginBottom: '0.75rem' }}>
+            {/* Scheduled Delivery Banner */}
+            <div style={{
+              padding: '0.75rem',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              borderRadius: '0.5rem',
+              marginBottom: '0.5rem',
+              boxShadow: '0 2px 8px rgba(102, 126, 234, 0.3)'
+            }}>
+              <div style={{ 
+                fontSize: '0.6875rem', 
+                color: 'rgba(255,255,255,0.9)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                marginBottom: '0.25rem',
+                fontWeight: 600
+              }}>
+                📅 Scheduled Delivery
+              </div>
+              <div style={{ 
+                fontSize: '1.125rem', 
+                fontWeight: 700,
+                color: 'white',
+                marginBottom: '0.125rem'
+              }}>
+                {readyByInfo.deliveryDateDisplay}
+              </div>
+              <div style={{ 
+                fontSize: '1rem', 
+                fontWeight: 600,
+                color: 'rgba(255,255,255,0.95)'
+              }}>
+                🕐 {readyByInfo.deliveryTimeDisplay}
+                {order.scheduledWindowEnd && 
+                  ` - ${format(new Date(order.scheduledWindowEnd), 'h:mm a')}`
+                }
+              </div>
+            </div>
+            
+            {/* Cooking Timeline */}
+            <div style={{
+              padding: '0.625rem 0.75rem',
+              backgroundColor: `${readyByInfo.color}10`,
+              borderRadius: '0.5rem',
+              border: `2px solid ${readyByInfo.color}`,
+              marginBottom: '0.5rem'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.375rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Clock size={14} style={{ color: readyByInfo.color }} />
+                  <span style={{ 
+                    fontSize: '0.6875rem', 
+                    color: '#6b7280',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.03em'
+                  }}>
+                    Start Cooking By
+                  </span>
+                </div>
+                <span style={{ 
+                  fontSize: '0.875rem', 
+                  fontWeight: 700,
+                  color: readyByInfo.color
+                }}>
+                  {readyByInfo.startCookingDisplay}
+                </span>
+              </div>
+              <div style={{ 
+                fontSize: '0.75rem', 
+                fontWeight: 600,
+                color: readyByInfo.color,
+                textAlign: 'right'
+              }}>
+                {readyByInfo.countdownText}
+              </div>
+            </div>
+            
+            {/* Food Ready Time */}
+            <div style={{
+              padding: '0.5rem 0.75rem',
+              backgroundColor: '#f9fafb',
+              borderRadius: '0.5rem',
+              border: '1px solid #e5e7eb',
+              fontSize: '0.75rem',
+              color: '#6b7280'
+            }}>
+              <span>Food ready by: </span>
+              <span style={{ fontWeight: 600, color: '#374151' }}>
+                {readyByInfo.readyByDisplay}
+              </span>
+              <span style={{ marginLeft: '0.5rem', fontSize: '0.6875rem' }}>
+                ({readyByInfo.minutesUntilDelivery} min until delivery)
+              </span>
+            </div>
+          </div>
         ) : (
-          /* Non-ready orders show ready-by time */
+          /* ASAP orders - original display */
           <div style={{ 
             marginBottom: '0.75rem',
             padding: '0.5rem 0.75rem',
