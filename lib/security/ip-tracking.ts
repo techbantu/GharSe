@@ -107,7 +107,7 @@ export async function recordAttackAttempt(
   }
   
   // Store in memory cache only (no database table in schema)
-  ipCache.set(ip, threatData);
+  ipTracking.set(ip, threatData);
   
   return threatData;
 }
