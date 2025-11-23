@@ -176,7 +176,7 @@ export async function queryAuditLogs(filters: {
   startDate?: Date;
   endDate?: Date;
   limit?: number;
-}): Promise<Array<AuditLogEntry & { id: string; hash: string }>> {
+}): Promise<Array<AuditLogEntry & { id: string }>> {
   const logs = await prisma.auditLog.findMany({
     where: {
       ...(filters.userId && { userId: filters.userId }),
