@@ -257,7 +257,8 @@ export async function runRotationScript(): Promise<void> {
         console.log('   CUSTOMER_JWT_SECRET:', newSecrets.customerJwtSecret.substring(0, 16) + '...');
         console.log('\n⚠️  Remember to restart your application!');
       } catch (error) {
-        console.error('\n❌ Rotation failed:', error.message);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error('\n❌ Rotation failed:', errorMessage);
       }
     } else {
       console.log('\n❌ Rotation cancelled');
