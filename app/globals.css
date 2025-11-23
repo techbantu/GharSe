@@ -1226,7 +1226,8 @@ img {
 }
 
 /* ===== ENHANCED HOVER EFFECTS ===== */
-button:active {
+/* Global button effects - EXCEPT delivery-slot-button */
+button:not(.delivery-slot-button):active {
   opacity: 0.9;
 }
 
@@ -1235,12 +1236,12 @@ a:active {
 }
 
 /* ===== INTERACTIVE STATE ENHANCEMENTS ===== */
-:focus-visible {
+:focus-visible:not(.delivery-slot-button) {
   outline: 2px solid #FF6B35;
   outline-offset: 2px;
 }
 
-button:focus-visible {
+button:focus-visible:not(.delivery-slot-button) {
   outline: 2px solid #FF6B35;
   outline-offset: 2px;
 }
@@ -1248,6 +1249,102 @@ button:focus-visible {
 a:focus-visible {
   outline: 2px solid #FF6B35;
   outline-offset: 2px;
+}
+
+/* ===== DELIVERY SLOT BUTTONS - COMPLETE ISOLATION FROM GLOBAL STYLES ===== */
+/* 
+ * Nuclear option: These buttons must be completely isolated from all global CSS
+ * They use inline styles ONLY for selection state - border + box-shadow
+ * Any conflicting styles from globals will cause visual glitches
+ */
+
+/* Reset ALL possible button styles with maximum specificity */
+button.delivery-slot-button,
+button.delivery-slot-button *,
+button.delivery-slot-button::before,
+button.delivery-slot-button::after {
+  /* Remove ALL outlines */
+  outline: 0 !important;
+  outline-width: 0 !important;
+  outline-style: none !important;
+  outline-offset: 0 !important;
+  outline-color: transparent !important;
+  
+  /* Remove Tailwind ring utilities */
+  --tw-ring-offset-shadow: 0 0 transparent !important;
+  --tw-ring-shadow: 0 0 transparent !important;
+  --tw-ring-offset-width: 0px !important;
+  --tw-ring-offset-color: transparent !important;
+  --tw-ring-color: transparent !important;
+  --tw-ring-width: 0px !important;
+  
+  /* Ensure box-sizing is border-box (prevents border from adding to width) */
+  box-sizing: border-box !important;
+  
+  /* Prevent transform from affecting border rendering */
+  transform: none !important;
+  -webkit-transform: none !important;
+  -moz-transform: none !important;
+  -ms-transform: none !important;
+}
+
+/* Remove outlines on ALL interaction states */
+button.delivery-slot-button:focus,
+button.delivery-slot-button:focus-visible,
+button.delivery-slot-button:focus-within,
+button.delivery-slot-button:active,
+button.delivery-slot-button:hover,
+button.delivery-slot-button[data-focus],
+button.delivery-slot-button[data-focus-visible],
+button.delivery-slot-button[aria-selected="true"] {
+  outline: 0 !important;
+  outline-width: 0 !important;
+  outline-style: none !important;
+  outline-offset: 0 !important;
+  outline-color: transparent !important;
+  transform: none !important;
+}
+
+/* Ensure no pseudo-elements exist that could add extra borders */
+button.delivery-slot-button::before,
+button.delivery-slot-button::after {
+  content: none !important;
+  display: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* Remove any opacity changes that could cause visual artifacts */
+button.delivery-slot-button:active {
+  opacity: 1 !important;
+}
+
+/* Remove user-select to prevent blue selection highlights */
+button.delivery-slot-button {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  
+  /* Remove tap highlights on mobile */
+  -webkit-tap-highlight-color: transparent !important;
+  tap-highlight-color: transparent !important;
+  
+  /* Ensure no text decoration */
+  text-decoration: none !important;
+  
+  /* Prevent any filters that might affect border rendering */
+  filter: none !important;
+  -webkit-filter: none !important;
+  
+  /* Ensure backface-visibility doesn't cause rendering issues */
+  backface-visibility: hidden !important;
+  -webkit-backface-visibility: hidden !important;
+  
+  /* Force GPU rendering for crisp borders */
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
 }
 
 /* Remove any bottom borders from footer */

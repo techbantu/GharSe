@@ -87,9 +87,33 @@ const CreateOrderSchema = z.object({
   scheduledDeliveryAt: z.string().datetime().optional(), // ISO datetime string
   scheduledWindowStart: z.string().datetime().optional(), // ISO datetime string
   scheduledWindowEnd: z.string().datetime().optional(), // ISO datetime string
-  prepTime: z.number().int().positive().default(120), // Minutes (2 hours)
-  deliveryTime: z.number().int().positive().default(45), // Minutes
-  minimumLeadTime: z.number().int().positive().default(165), // Minutes (2h 45min)
+  prepTime: z.preprocess(
+    (val) => {
+      // Handle edge cases: if 0, null, undefined, negative, or invalid → use default
+      const num = Number(val);
+      if (!val || num <= 0 || isNaN(num)) return 120; // Default 2 hours
+      return num;
+    },
+    z.number().int().min(1, 'Prep time must be at least 1 minute')
+  ), // Minutes (2 hours default)
+  deliveryTime: z.preprocess(
+    (val) => {
+      // Handle edge cases: if 0, null, undefined, negative, or invalid → use default
+      const num = Number(val);
+      if (!val || num <= 0 || isNaN(num)) return 45; // Default 45 minutes
+      return num;
+    },
+    z.number().int().min(1, 'Delivery time must be at least 1 minute')
+  ), // Minutes (45 min default)
+  minimumLeadTime: z.preprocess(
+    (val) => {
+      // Handle edge cases: if 0, null, undefined, negative, or invalid → use default
+      const num = Number(val);
+      if (!val || num <= 0 || isNaN(num)) return 165; // Default 2h 45min
+      return num;
+    },
+    z.number().int().min(1, 'Minimum lead time must be at least 1 minute')
+  ), // Minutes (2h 45min default)
 });
 
 /**
@@ -104,12 +128,27 @@ async function createOrderLogic(body: unknown): Promise<Result<{
   };
 }, AppError>> {
   try {
+    // DEBUGGING: Log incoming request body to identify validation issues
+    console.log('📦 Order API - Received body:', JSON.stringify(body, null, 2));
+    
     // Validate input with Zod
     const validationResult = CreateOrderSchema.safeParse(body);
     
     if (!validationResult.success) {
       const errors = validationResult.error.issues;
       const firstError = errors[0];
+      
+      // ENHANCED ERROR LOGGING
+      console.error('❌ Validation failed:', {
+        error: firstError?.message,
+        path: firstError?.path,
+        code: firstError?.code,
+        allErrors: errors.map(e => ({
+          path: e.path.join('.'),
+          message: e.message,
+          received: (e as any).received,
+        })),
+      });
       
       return Err(
         new ValidationError(

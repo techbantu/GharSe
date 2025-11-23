@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { UtensilsCrossed, Plus, Edit, Trash2, Search, Image as ImageIcon, MapPin, Palmtree, Store, Wheat, Waves, Castle, Leaf, Flame, WheatOff, MilkOff, Sprout, Milk, ChefHat, Ban } from 'lucide-react';
 import EditMenuItemModal from '@/components/admin/menu/EditMenuItemModal';
+import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
 
 interface MenuItem {
   id: string;
@@ -50,6 +51,15 @@ export default function MenuPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedRegion, setSelectedRegion] = useState('all');
+  
+  // Delete modal state
+  const [deleteModal, setDeleteModal] = useState({
+    isOpen: false,
+    itemId: '',
+    itemName: '',
+    orderCount: 0,
+    stage: 'initial' as 'initial' | 'options' | 'final-confirm' | 'success',
+  });
 
   const fetchMenu = async () => {
     try {
@@ -114,27 +124,115 @@ export default function MenuPage() {
     }
   };
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to delete "${name}"?`)) return;
+  const handleDelete = (id: string, name: string) => {
+    // STEP 1: Show modal immediately (don't make API call yet!)
+    // We'll check order history when user confirms
+    setDeleteModal({
+      isOpen: true,
+      itemId: id,
+      itemName: name,
+      orderCount: 0, // We don't know yet, will check on confirm
+      stage: 'initial',
+    });
+  };
 
+  const handleDeleteConfirm = async (action: 'mark-unavailable' | 'force-delete' | 'simple-delete') => {
+    const { itemId, itemName, orderCount } = deleteModal;
+    
     try {
-      const response = await fetch(`/api/menu/${id}`, {
-        method: 'DELETE',
-      });
+      if (action === 'simple-delete') {
+        // User confirmed deletion from initial modal
+        // Now check if item has orders by attempting to delete
+        const response = await fetch(`/api/menu/${itemId}`, {
+          method: 'DELETE',
+        });
 
-      if (response.ok) {
         const data = await response.json();
-        if (data.success) {
-          setMenuItems(prev => prev.filter(item => item.id !== id));
+
+        if (response.ok && data.success) {
+          // Successfully deleted (no orders)
+          setMenuItems(prev => prev.filter(item => item.id !== itemId));
+          
+          // Show success modal
+          setDeleteModal({
+            ...deleteModal,
+            stage: 'success',
+          });
+        } else if (response.status === 409 && data.hasOrders) {
+          // Item has order history - show options modal instead
+          setDeleteModal({
+            ...deleteModal,
+            orderCount: data.orderCount || 0,
+            stage: 'options',
+          });
         } else {
-          alert(data.error || 'Failed to delete item');
+          // Other errors
+          setDeleteModal({
+            ...deleteModal,
+            isOpen: false,
+          });
+          alert(`❌ DELETION FAILED\n\n${data.error}\n\nPlease try again.`);
         }
-      } else {
-        alert('Failed to delete item');
+      } else if (action === 'mark-unavailable') {
+        // Mark item as unavailable
+        const item = menuItems.find(i => i.id === itemId);
+        if (item) {
+          await handleSave({
+            ...item,
+            isAvailable: false,
+          });
+          
+          // Close modal and show success message
+          setDeleteModal({
+            ...deleteModal,
+            isOpen: false,
+          });
+          
+          alert(`✅ SUCCESS!\n\n"${itemName}" is now marked as "Not Available"\n\n✓ Hidden from customer menu\n✓ You can re-enable it anytime`);
+        }
+      } else if (action === 'force-delete') {
+        // Check if we need final confirmation
+        const isHighSelling = orderCount >= 10;
+        
+        if (deleteModal.stage === 'options') {
+          // Show final confirmation
+          setDeleteModal({
+            ...deleteModal,
+            stage: 'final-confirm',
+          });
+        } else {
+          // Perform the force deletion
+          const forceResponse = await fetch(`/api/menu/${itemId}?force=true`, {
+            method: 'DELETE',
+          });
+
+          const forceData = await forceResponse.json();
+
+          if (forceResponse.ok && forceData.success) {
+            // Remove from list
+            setMenuItems(prev => prev.filter(item => item.id !== itemId));
+            
+            // Show success modal
+            setDeleteModal({
+              ...deleteModal,
+              stage: 'success',
+            });
+          } else {
+            setDeleteModal({
+              ...deleteModal,
+              isOpen: false,
+            });
+            alert(`❌ DELETION FAILED\n\n${forceData.error}\n\nPlease try again.`);
+          }
+        }
       }
     } catch (error) {
       console.error('Error deleting item:', error);
-      alert('An error occurred while deleting');
+      setDeleteModal({
+        ...deleteModal,
+        isOpen: false,
+      });
+      alert('❌ CONNECTION ERROR\n\nUnable to delete item. Please try again.');
     }
   };
 
@@ -683,6 +781,15 @@ export default function MenuPage() {
         onClose={() => setIsModalOpen(false)}
         item={editingItem}
         onSave={handleSave}
+      />
+
+      <DeleteConfirmModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal({ ...deleteModal, isOpen: false })}
+        itemName={deleteModal.itemName}
+        orderCount={deleteModal.orderCount}
+        stage={deleteModal.stage}
+        onConfirm={handleDeleteConfirm}
       />
     </div>
   );

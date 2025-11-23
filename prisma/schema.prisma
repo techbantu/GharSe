@@ -273,8 +273,17 @@ model OrderItem {
   order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
   orderId String
 
-  menuItem   MenuItem @relation(fields: [menuItemId], references: [id])
-  menuItemId String
+  // CRITICAL FIX: Made nullable to support menu item deletion
+  // When a menu item is deleted, we preserve order history by:
+  // 1. Setting menuItemId to null
+  // 2. Storing item details in deletedItemName/deletedItemDescription
+  menuItem   MenuItem? @relation(fields: [menuItemId], references: [id])
+  menuItemId String?
+
+  // Preserve deleted item information for order history
+  deletedItemName        String? // Original menu item name (if deleted)
+  deletedItemDescription String? // Original item description (if deleted)
+  deletedItemImage       String? // Original item image URL (if deleted)
 
   quantity Int
   price    Float // Price at time of order (for historical accuracy)

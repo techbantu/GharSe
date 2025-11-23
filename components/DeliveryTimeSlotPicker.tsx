@@ -155,9 +155,9 @@ export const DeliveryTimeSlotPicker: React.FC<DeliveryTimeSlotPickerProps> = ({
       scheduledDeliveryAt: slot.startTime,
       scheduledWindowStart: slot.startTime,
       scheduledWindowEnd: slot.endTime,
-      prepTime: userRegion.minimumLeadTime - userRegion.businessHours.openTime.hour * 60,
-      deliveryTime: 45,
-      minimumLeadTime: userRegion.minimumLeadTime,
+      prepTime: 120, // Fixed: 2 hours prep time (was incorrectly calculating negative value)
+      deliveryTime: 45, // 45 minutes delivery time
+      minimumLeadTime: userRegion.minimumLeadTime, // Total lead time (e.g., 165 minutes)
     });
   };
 
@@ -277,29 +277,44 @@ export const DeliveryTimeSlotPicker: React.FC<DeliveryTimeSlotPickerProps> = ({
                 type="button"
                 onClick={() => handleDateSelect(date)}
                 disabled={slotsAvailable === 0}
+                className="delivery-slot-button"
                 style={{
                   position: 'relative',
-                  padding: '8px',
-                  borderRadius: '8px',
-                  border: `2px solid ${isSelected ? '#f97316' : slotsAvailable === 0 ? '#e5e7eb' : '#e5e7eb'}`,
-                  background: isSelected ? '#fff7ed' : slotsAvailable === 0 ? '#f9fafb' : 'white',
+                  padding: '0.5rem',
+                  borderRadius: '0.5rem',
+                  border: isSelected ? '2px solid #f97316' : '1px solid #e5e7eb',
+                  background: isSelected ? '#fff7ed' : slotsAvailable === 0 ? '#f9fafb' : '#ffffff',
                   cursor: slotsAvailable === 0 ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.2s',
-                  boxShadow: isSelected ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' : 'none',
-                  transform: isSelected ? 'scale(1.05)' : 'scale(1)',
+                  transition: 'border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease',
+                  boxShadow: isSelected ? '0 0 0 2px rgba(249, 115, 22, 0.2)' : 'none',
+                  transform: 'none',
                   opacity: slotsAvailable === 0 ? 0.5 : 1,
+                  outline: 'none',
+                  outlineOffset: 0,
+                  WebkitTapHighlightColor: 'transparent',
+                  boxSizing: 'border-box',
+                  minWidth: '60px',
+                  minHeight: '80px',
                 }}
                 onMouseEnter={(e) => {
                   if (!isSelected && slotsAvailable > 0) {
-                    e.currentTarget.style.borderColor = '#fed7aa';
-                    e.currentTarget.style.boxShadow = '0 1px 2px 0 rgba(0, 0, 0, 0.05)';
+                    e.currentTarget.style.setProperty('border-color', '#fed7aa', 'important');
+                    e.currentTarget.style.setProperty('border-width', '1px', 'important');
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (!isSelected && slotsAvailable > 0) {
-                    e.currentTarget.style.borderColor = '#e5e7eb';
-                    e.currentTarget.style.boxShadow = 'none';
+                    e.currentTarget.style.setProperty('border-color', '#e5e7eb', 'important');
+                    e.currentTarget.style.setProperty('border-width', '1px', 'important');
                   }
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.outline = 'none';
+                  e.currentTarget.style.outlineOffset = '0';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.outline = 'none';
+                  e.currentTarget.style.outlineOffset = '0';
                 }}
               >
                 {/* Day of week */}
@@ -365,11 +380,14 @@ export const DeliveryTimeSlotPicker: React.FC<DeliveryTimeSlotPickerProps> = ({
                   <CheckCircle2 
                     style={{
                       position: 'absolute',
-                      top: '-4px',
-                      left: '-4px',
-                      width: '16px',
-                      height: '16px',
-                      color: '#ea580c',
+                      top: '4px',
+                      left: '4px',
+                      width: '18px',
+                      height: '18px',
+                      color: '#f97316',
+                      backgroundColor: '#fff7ed',
+                      borderRadius: '50%',
+                      padding: '1px',
                     }}
                   />
                 )}
@@ -441,30 +459,45 @@ export const DeliveryTimeSlotPicker: React.FC<DeliveryTimeSlotPickerProps> = ({
                     type="button"
                     onClick={() => handleSlotSelect(slot)}
                     disabled={!slot.isAvailable}
+                    className="delivery-slot-button"
                     style={{
                       position: 'relative',
-                      padding: '12px',
-                      borderRadius: '8px',
-                      border: `2px solid ${isSelected ? '#f97316' : !slot.isAvailable ? '#e5e7eb' : '#e5e7eb'}`,
-                      background: isSelected ? '#fff7ed' : !slot.isAvailable ? '#f9fafb' : 'white',
+                      padding: '0.75rem',
+                      borderRadius: '0.5rem',
+                      border: isSelected ? '2px solid #f97316' : '1px solid #e5e7eb',
+                      background: isSelected ? '#fff7ed' : !slot.isAvailable ? '#f9fafb' : '#ffffff',
                       cursor: !slot.isAvailable ? 'not-allowed' : 'pointer',
-                      transition: 'all 0.2s',
+                      transition: 'border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease',
                       textAlign: 'left',
-                      boxShadow: isSelected ? '0 4px 6px -1px rgba(0, 0, 0, 0.1)' : 'none',
-                      transform: isSelected ? 'scale(1.05)' : 'scale(1)',
+                      boxShadow: isSelected ? '0 0 0 2px rgba(249, 115, 22, 0.2)' : 'none',
+                      transform: 'none',
                       opacity: !slot.isAvailable ? 0.5 : 1,
+                      outline: 'none',
+                      outlineOffset: 0,
+                      WebkitTapHighlightColor: 'transparent',
+                      boxSizing: 'border-box',
+                      minWidth: '140px',
+                      minHeight: '80px',
                     }}
                     onMouseEnter={(e) => {
                       if (!isSelected && slot.isAvailable) {
-                        e.currentTarget.style.borderColor = '#fed7aa';
-                        e.currentTarget.style.boxShadow = '0 1px 2px 0 rgba(0, 0, 0, 0.05)';
+                        e.currentTarget.style.setProperty('border-color', '#fed7aa', 'important');
+                        e.currentTarget.style.setProperty('border-width', '1px', 'important');
                       }
                     }}
                     onMouseLeave={(e) => {
                       if (!isSelected && slot.isAvailable) {
-                        e.currentTarget.style.borderColor = '#e5e7eb';
-                        e.currentTarget.style.boxShadow = 'none';
+                        e.currentTarget.style.setProperty('border-color', '#e5e7eb', 'important');
+                        e.currentTarget.style.setProperty('border-width', '1px', 'important');
                       }
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.outline = 'none';
+                      e.currentTarget.style.outlineOffset = '0';
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.outline = 'none';
+                      e.currentTarget.style.outlineOffset = '0';
                     }}
                   >
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -543,7 +576,10 @@ export const DeliveryTimeSlotPicker: React.FC<DeliveryTimeSlotPickerProps> = ({
                           right: '8px',
                           width: '20px',
                           height: '20px',
-                          color: '#ea580c',
+                          color: '#f97316',
+                          backgroundColor: '#fff7ed',
+                          borderRadius: '50%',
+                          padding: '1px',
                         }}
                       />
                     )}
