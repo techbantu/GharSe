@@ -29,6 +29,7 @@ import { calculateFirstOrderDiscount, markFirstOrderUsed } from '@/lib/first-ord
 import { getMaxWalletUsage, debitWallet } from '@/lib/wallet-manager';
 import { withIdempotency } from '@/lib/idempotency';
 import { geocodeAddress } from '@/lib/geocoding';
+import { notificationManager } from '@/lib/notifications/notification-manager';
 
 /**
  * Validation Schema for Order Creation
