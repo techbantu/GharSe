@@ -139,31 +139,17 @@ export async function logAuditEvent(entry: AuditLogEntry): Promise<void> {
     // Encrypt sensitive information
     const { encrypted, iv, authTag } = encrypt(detailsJson);
     
-    // Get previous log entry for chain integrity
-    const previousLog = await prisma.auditLog.findFirst({
-      orderBy: { createdAt: 'desc' },
-      select: { hash: true },
-    });
-    
-    // Generate hash for this entry
-    const hash = generateLogHash(entry, previousLog?.hash || '');
-    
     // Store in database
     await prisma.auditLog.create({
       data: {
-        eventType: entry.eventType,
-        riskLevel: entry.riskLevel,
+        action: entry.eventType,
+        entityType: entry.resourceType,
+        entityId: entry.resourceId,
         userId: entry.userId,
-        userEmail: entry.userEmail,
-        userRole: entry.userRole,
-        ip: entry.ip,
-        userAgent: entry.userAgent,
-        detailsEncrypted: encrypted,
-        encryptionIv: iv,
-        encryptionAuthTag: authTag,
-        hash,
-        previousHash: previousLog?.hash || null,
         sessionId: entry.sessionId,
+        ipAddress: entry.ip,
+        userAgent: entry.userAgent,
+        details: entry.details,
         createdAt: entry.timestamp,
       },
     });
