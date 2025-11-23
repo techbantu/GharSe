@@ -145,7 +145,7 @@ function ProfilePageContent() {
       pendingReorderItems: pendingReorderItemsRef.current,
       cartItemsLength: cart.items.length,
       showCart,
-      cartItems: cart.items.map(item => ({ name: item.menuItem.name, quantity: item.quantity }))
+      cartItems: cart.items.map(item => ({ name: item.menuItem?.name || 'Unknown Item', quantity: item.quantity }))
     });
     
     if (pendingReorderItemsRef.current > 0 && cart.items.length > 0 && !showCart) {

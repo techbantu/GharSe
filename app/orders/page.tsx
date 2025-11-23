@@ -184,7 +184,7 @@ export default function OrdersPage() {
 
       for (const orderItem of orderToReorder.items) {
         try {
-          // Extract data from nested structure (API returns item.menuItem.id, item.menuItem.name)
+          // Extract data from nested structure (API returns item.menuItem.id, item.menuItem?.name || 'Unknown Item')
           const menuItemId = orderItem.menuItemId || orderItem.menuItem?.id || orderItem.id;
           const itemName = orderItem.menuItem?.name || orderItem.name;
           

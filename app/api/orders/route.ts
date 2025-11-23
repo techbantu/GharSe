@@ -552,7 +552,7 @@ async function createOrderLogic(body: unknown): Promise<Result<{
           menuItemId: item.menuItemId,
           menuItem: {
             id: item.menuItem.id,
-            name: item.menuItem.name,
+            name: item.menuItem?.name || 'Unknown Item',
             description: item.menuItem.description || '',
             price: parseFloat(item.menuItem.price.toString()),
             originalPrice: item.menuItem.originalPrice ? parseFloat(item.menuItem.originalPrice.toString()) : undefined,
@@ -620,7 +620,7 @@ async function createOrderLogic(body: unknown): Promise<Result<{
           status: order.status,
           createdAt: order.createdAt,
           items: order.items.map((item: any) => ({
-            menuItem: { name: item.menuItem.name },
+            menuItem: { name: item.menuItem?.name || 'Unknown Item' },
             quantity: item.quantity,
           })),
         });
@@ -1052,7 +1052,7 @@ export async function GET(request: NextRequest) {
         id: item.id,
         menuItem: {
           id: item.menuItem.id,
-          name: item.menuItem.name,
+          name: item.menuItem?.name || 'Unknown Item',
           description: item.menuItem.description || '',
           price: item.price, // Use price at time of order
           category: (item.menuItem.category || 'Main Course') as MenuCategory,

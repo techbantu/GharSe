@@ -221,7 +221,7 @@ const OrderTracking: React.FC<OrderTrackingProps> = ({ orderId, orderNumber }) =
             {order.items.map(item => (
               <div key={item.id} className="flex justify-between text-sm">
                 <span>
-                  {item.quantity}x {item.menuItem.name}
+                  {item.quantity}x {item.menuItem?.name || 'Unknown Item'}
                 </span>
                 <span className="font-semibold">
                   ₹{Math.round(item.subtotal)}

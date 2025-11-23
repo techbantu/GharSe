@@ -332,7 +332,7 @@ export async function POST(request: NextRequest) {
         menuItemId: item.menuItemId,
         menuItem: {
           id: item.menuItem.id,
-          name: item.menuItem.name,
+          name: item.menuItem?.name || 'Unknown Item',
           description: item.menuItem.description || '',
           price: item.menuItem.price,
           category: item.menuItem.category,

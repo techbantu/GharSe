@@ -82,7 +82,7 @@ export async function PUT(
         orderType: 'delivery' as const,
         items: updatedOrder.items.map((item: any) => ({
           menuItem: {
-            name: item.menuItem.name,
+            name: item.menuItem?.name || 'Unknown Item',
             price: item.price
           },
           quantity: item.quantity,

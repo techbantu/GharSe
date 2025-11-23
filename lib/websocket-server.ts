@@ -136,7 +136,7 @@ export function initializeWebSocket(httpServer: HTTPServer) {
             estimatedDelivery: order.estimatedDelivery,
             message: getStatusMessage(order.status),
             items: order.items.map(item => ({
-              name: item.menuItem.name,
+              name: item.menuItem?.name || 'Unknown Item',
               quantity: item.quantity,
             })),
           });
@@ -269,7 +269,7 @@ export async function broadcastNewOrderToAdmin(order: {
       status: order.status,
       createdAt: order.createdAt.toISOString(),
       items: order.items.map(item => ({
-        name: item.menuItem.name,
+        name: item.menuItem?.name || 'Unknown Item',
         quantity: item.quantity,
       })),
       timestamp: new Date().toISOString(),

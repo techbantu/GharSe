@@ -243,7 +243,7 @@ const JourneyTimeline: React.FC<JourneyTimelineProps> = ({ orders, onReorder }) 
           // Extract menu item data (handle both structures: direct and nested)
           const getItemName = (item: OrderItem | { menuItem?: { name?: string } }): string => {
             if ('name' in item && item.name) return item.name;
-            if ('menuItem' in item && item.menuItem?.name) return item.menuItem.name;
+            if ('menuItem' in item && item.menuItem?.name) return item.menuItem?.name || 'Unknown Item';
             return 'Delicious Dish';
           };
           
@@ -566,7 +566,7 @@ const JourneyTimeline: React.FC<JourneyTimelineProps> = ({ orders, onReorder }) 
                   {order.items.map((item: OrderItem | { quantity: number; name?: string; price?: number; menuItem?: { name?: string; price?: number } }, idx: number) => {
                     const getItemNameInternal = (item: OrderItem | { name?: string; menuItem?: { name?: string } }): string => {
                       if ('name' in item && item.name) return item.name;
-                      if ('menuItem' in item && item.menuItem?.name) return item.menuItem.name;
+                      if ('menuItem' in item && item.menuItem?.name) return item.menuItem?.name || 'Unknown Item';
                       return 'Item';
                     };
                     const getItemPriceInternal = (item: OrderItem | { price?: number; menuItem?: { price?: number } }): number => {

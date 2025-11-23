@@ -259,7 +259,7 @@ export function filterOrdersBySearch(orders: Order[], query: string): Order[] {
     
     // Search by items
     const itemMatch = order.items.some(item => 
-      item.menuItem.name.toLowerCase().includes(searchLower)
+      item.menuItem?.name || 'Unknown Item'.toLowerCase().includes(searchLower)
     );
     if (itemMatch) return true;
     

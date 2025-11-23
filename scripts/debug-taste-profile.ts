@@ -80,7 +80,7 @@ async function debugTasteProfile() {
         console.log(`      - Price: ₹${item.price}`);
         
         if (item.menuItem) {
-          console.log(`      - Dish Name: ${item.menuItem.name}`);
+          console.log(`      - Dish Name: ${item.menuItem?.name || 'Unknown Item'}`);
           console.log(`      - Category: ${item.menuItem.category}`);
           console.log(`      - Available: ${item.menuItem.isAvailable}`);
           

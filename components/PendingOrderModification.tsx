@@ -112,7 +112,7 @@ const PendingOrderModification: React.FC<PendingOrderModificationProps> = ({
       
       // Transform items to include required fields at top level
       const transformedItems: OrderItem[] = order.items
-        .filter(item => item.menuItem && item.menuItem.name)
+        .filter(item => item.menuItem && item.menuItem?.name || 'Unknown Item')
         .map(item => ({
           id: item.id,
           menuItemId: item.menuItem.id,
@@ -525,7 +525,7 @@ const PendingOrderModification: React.FC<PendingOrderModificationProps> = ({
       .filter(item => !originalItemIds.has(item.menuItemId))
       .map(item => ({
         menuItemId: item.menuItemId,
-        name: item.menuItem.name,
+        name: item.menuItem?.name || 'Unknown Item',
         price: item.price,
         quantity: item.quantity,
       }));
@@ -823,7 +823,7 @@ const PendingOrderModification: React.FC<PendingOrderModificationProps> = ({
                 }}>
                   <img
                     src={item.menuItem.image}
-                    alt={item.menuItem.name}
+                    alt={item.menuItem?.name || 'Unknown Item'}
                     style={{
                       width: '100%',
                       height: '100%',
@@ -857,7 +857,7 @@ const PendingOrderModification: React.FC<PendingOrderModificationProps> = ({
                   overflow: 'hidden',
                   textOverflow: 'ellipsis'
                 }}>
-                  {item.menuItem.name}
+                  {item.menuItem?.name || 'Unknown Item'}
                 </div>
                 <div style={{
                   fontSize: '0.875rem',

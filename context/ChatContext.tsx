@@ -268,7 +268,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           cartData = {
             items: parsedCart.items.map((item: any) => ({
               id: item.menuItem.id,
-              name: item.menuItem.name,
+              name: item.menuItem?.name || 'Unknown Item',
               quantity: item.quantity,
               price: item.menuItem.price,
               category: item.menuItem.category,

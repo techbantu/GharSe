@@ -337,7 +337,7 @@ export default function KitchenTicket({ order, onStatusChange, isUrgent }: Kitch
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: '1.125rem', fontWeight: 700, color: '#1f2937' }}>
-                      {item.menuItem.name}
+                      {item.menuItem?.name || 'Unknown Item'}
                     </div>
                     {item.customizations && Object.keys(item.customizations).length > 0 && (
                       <div style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.25rem' }}>

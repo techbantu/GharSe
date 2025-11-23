@@ -158,7 +158,7 @@ export async function POST(request: NextRequest) {
         createdAt: finalizedOrder.createdAt,
         items: finalizedOrder.items.map((item: any) => ({
           menuItem: {
-            name: item.menuItem.name,
+            name: item.menuItem?.name || 'Unknown Item',
           },
           quantity: item.quantity,
         })),

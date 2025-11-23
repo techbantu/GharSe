@@ -627,7 +627,7 @@ const KitchenOrders: React.FC<KitchenOrdersProps> = ({
         <div style={{ marginBottom: '0.75rem' }}>
           {order.items.map((item, idx) => (
             <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', marginBottom: '0.25rem' }}>
-              <span style={{ fontWeight: 600, color: '#374151' }}>{item.quantity}x {item.menuItem.name}</span>
+              <span style={{ fontWeight: 600, color: '#374151' }}>{item.quantity}x {item.menuItem?.name || 'Unknown Item'}</span>
             </div>
           ))}
         </div>

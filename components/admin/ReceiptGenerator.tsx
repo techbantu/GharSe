@@ -159,7 +159,7 @@ const ReceiptGenerator: React.FC<ReceiptGeneratorProps> = ({ order, onClose }) =
                 {order.items && order.items.length > 0 ? (
                   order.items.map((item, index) => (
                     <tr key={index} className="border-b border-gray-200">
-                      <td className="py-3 text-gray-900">{item.menuItem.name}</td>
+                      <td className="py-3 text-gray-900">{item.menuItem?.name || 'Unknown Item'}</td>
                       <td className="py-3 text-center text-gray-900">{item.quantity}</td>
                       <td className="py-3 text-right text-gray-900">₹{item.menuItem.price.toFixed(2)}</td>
                       <td className="py-3 text-right text-gray-900">₹{(item.menuItem.price * item.quantity).toFixed(2)}</td>

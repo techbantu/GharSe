@@ -177,7 +177,7 @@ export function ActionButton({ action, onExecute, sessionId }: ActionButtonProps
             try {
               // Check if we have menuItem data from backend
               if (item.menuItem) {
-                console.log('[ActionButton] Using menuItem from backend:', item.menuItem.name);
+                console.log('[ActionButton] Using menuItem from backend:', item.menuItem?.name || 'Unknown Item');
                 addItem(item.menuItem, item.quantity);
                 successCount++;
               } else {

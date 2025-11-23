@@ -174,7 +174,7 @@ const MobileOrderCard: React.FC<MobileOrderCardProps> = ({
               <div key={index} className="flex justify-between text-sm">
                 <div className="flex gap-2">
                   <span className="font-medium text-gray-900">{item.quantity}x</span>
-                  <span className="text-gray-700">{item.menuItem.name}</span>
+                  <span className="text-gray-700">{item.menuItem?.name || 'Unknown Item'}</span>
                 </div>
                 <span className="text-gray-500">₹{(item.menuItem.price * item.quantity).toFixed(2)}</span>
               </div>

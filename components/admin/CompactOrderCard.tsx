@@ -150,7 +150,7 @@ export default function CompactOrderCard({
               <div className="items-list">
                 {order.items.map((item, idx) => (
                   <div key={idx} className="item-row">
-                    <span className="item-name">{item.quantity}x {item.menuItem.name}</span>
+                    <span className="item-name">{item.quantity}x {item.menuItem?.name || 'Unknown Item'}</span>
                     <span className="item-price">₹{item.subtotal.toLocaleString('en-IN')}</span>
                   </div>
                 ))}

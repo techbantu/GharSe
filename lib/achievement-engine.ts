@@ -458,7 +458,7 @@ function countSpicyDishes(orders: any[]): number {
   let count = 0;
   orders.forEach((order) => {
     order.items.forEach((item: any) => {
-      const name = item.menuItem.name.toLowerCase();
+      const name = item.menuItem?.name || 'Unknown Item'.toLowerCase();
       const desc = (item.menuItem.description || '').toLowerCase();
       if (name.includes('spicy') || name.includes('hot') || name.includes('vindaloo') || 
           desc.includes('spicy') || desc.includes('hot')) {
@@ -473,7 +473,7 @@ function countUniqueCurries(orders: any[]): number {
   const curries = new Set<string>();
   orders.forEach((order) => {
     order.items.forEach((item: any) => {
-      const name = item.menuItem.name.toLowerCase();
+      const name = item.menuItem?.name || 'Unknown Item'.toLowerCase();
       const category = item.menuItem.category.toLowerCase();
       if (category.includes('curry') || name.includes('curry')) {
         curries.add(item.menuItemId);
@@ -487,7 +487,7 @@ function countBiryaniOrders(orders: any[]): number {
   let count = 0;
   orders.forEach((order) => {
     order.items.forEach((item: any) => {
-      const name = item.menuItem.name.toLowerCase();
+      const name = item.menuItem?.name || 'Unknown Item'.toLowerCase();
       if (name.includes('biryani')) {
         count += item.quantity;
       }

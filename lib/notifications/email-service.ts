@@ -40,7 +40,7 @@ const generateOrderConfirmationHTML = (order: Order): string => {
     .map(
       (item) => `
     <tr style="border-bottom: 1px solid #e5e7eb; background-color: #ffffff;">
-      <td style="padding: 14px 8px; color: #000000; font-size: 15px; font-weight: 600;">${item.menuItem.name} × ${item.quantity}</td>
+      <td style="padding: 14px 8px; color: #000000; font-size: 15px; font-weight: 600;">${item.menuItem?.name || 'Unknown Item'} × ${item.quantity}</td>
       <td style="padding: 14px 8px; text-align: right; color: #000000; font-size: 15px; font-weight: 600;">₹${item.subtotal.toFixed(2)}</td>
     </tr>
   `
@@ -309,7 +309,7 @@ const generateOrderRejectionHTML = (order: any): string => {
       (item: any) => `
     <tr>
       <td style="padding: 10px; border-bottom: 1px solid #e5e7eb;">
-        <p style="margin: 0; color: #1f2937; font-weight: 600; font-size: 15px;">${item.menuItem.name}</p>
+        <p style="margin: 0; color: #1f2937; font-weight: 600; font-size: 15px;">${item.menuItem?.name || 'Unknown Item'}</p>
         <p style="margin: 4px 0 0 0; color: #6b7280; font-size: 13px;">Qty: ${item.quantity}</p>
       </td>
       <td style="padding: 10px; text-align: right; border-bottom: 1px solid #e5e7eb; color: #1f2937; font-weight: 500;">

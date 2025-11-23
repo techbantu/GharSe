@@ -464,7 +464,7 @@ const CartSidebar: React.FC<CartSidebarProps> = ({ isOpen, onClose, onCheckout }
                       }}>
                         <img
                           src={item.menuItem.image}
-                          alt={item.menuItem.name}
+                          alt={item.menuItem?.name || 'Unknown Item'}
                           style={{
                             width: '100%',
                             height: '100%',
@@ -476,7 +476,7 @@ const CartSidebar: React.FC<CartSidebarProps> = ({ isOpen, onClose, onCheckout }
                             target.style.display = 'none';
                             const parent = target.parentElement;
                             if (parent) {
-                              parent.innerHTML = `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 24px;">${item.menuItem.name.charAt(0)}</div>`;
+                              parent.innerHTML = `<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 24px;">${item.menuItem?.name || 'Unknown Item'.charAt(0)}</div>`;
                             }
                           }}
                         />
@@ -501,7 +501,7 @@ const CartSidebar: React.FC<CartSidebarProps> = ({ isOpen, onClose, onCheckout }
                           WebkitLineClamp: 2,
                           WebkitBoxOrient: 'vertical'
                         }}>
-                          {item.menuItem.name}
+                          {item.menuItem?.name || 'Unknown Item'}
                         </h3>
                         <button
                           onClick={() => removeItem(item.id)}
