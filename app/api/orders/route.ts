@@ -599,14 +599,13 @@ async function createOrderLogic(body: unknown): Promise<Result<{
         const notificationOrder = {
           ...order,
           customer: data.customer,
-          delivery: data.delivery,
           estimatedReadyTime: order.estimatedDelivery || new Date(),
-          deliveryAddress: data.delivery?.address ? {
-            street: data.delivery.address.street,
-            city: data.delivery.address.city,
-            zipCode: data.delivery.address.zipCode,
-            state: data.delivery.address.state,
-            country: 'India',
+          deliveryAddress: data.deliveryAddress ? {
+            street: data.deliveryAddress.street,
+            city: data.deliveryAddress.city,
+            zipCode: data.deliveryAddress.zipCode,
+            state: data.deliveryAddress.state,
+            country: data.deliveryAddress.country || 'India',
           } : undefined,
           items: order.items.map(item => ({
             id: item.id,
