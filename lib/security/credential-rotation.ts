@@ -86,17 +86,6 @@ export async function rotateJWTSecret(): Promise<{
     // Update in memory
     activeKeys.set('JWT_SECRET', newKeyPair);
     
-    // Store in database for persistence
-    await prisma.secretRotation.create({
-      data: {
-        secretType: 'JWT_SECRET',
-        secretHashCurrent: hashSecret(newSecret),
-        secretHashPrevious: hashSecret(current.current),
-        rotatedAt: newKeyPair.rotatedAt,
-        expiresAt: newKeyPair.expiresAt,
-      },
-    });
-    
     console.log('✅ JWT secret rotated successfully');
     console.log(`   Previous secret is valid until: ${newKeyPair.expiresAt.toISOString()}`);
     
