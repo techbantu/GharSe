@@ -103,7 +103,7 @@ export async function archiveExpiredOrders(dryRun = false): Promise<{
           deliveryCity: order.deliveryCity,
           deliveryZip: order.deliveryZip,
           items: order.items.map(item => ({
-            menuItemName: item.menuItem.name,
+            menuItemName: item.menuItem?.name || 'Unknown Item',
             quantity: item.quantity,
             price: item.price,
             subtotal: item.subtotal,
