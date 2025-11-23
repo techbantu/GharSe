@@ -108,25 +108,6 @@ export async function recordAttackAttempt(
   
   // Store in memory cache only (no database table in schema)
   ipCache.set(ip, threatData);
-    create: {
-      ip,
-      threatLevel: threatData.threatLevel,
-      totalAttempts: 1,
-      firstSeen: threatData.firstSeen,
-      lastSeen: threatData.lastSeen,
-      isBlacklisted: false,
-      attacks: {
-        create: {
-          attackType,
-          details: JSON.stringify(details),
-          timestamp: now,
-        },
-      },
-    },
-  });
-  
-  // Log to console
-  console.warn(`⚠️  Attack detected: ${attackType} from IP ${ip} (Threat: ${threatData.threatLevel})`);
   
   return threatData;
 }
