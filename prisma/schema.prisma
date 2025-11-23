@@ -61,6 +61,10 @@ model Chef {
   orders    Order[]
   analytics ChefAnalytics[]
   payouts   Payout[]
+  
+  // Multi-Tenant Support (optional)
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
 
   // Tracking
   createdAt DateTime @default(now())
@@ -254,6 +258,13 @@ model Order {
 
   // Coupon Tracking (NEW!)
   couponUsage CouponUsage?
+  
+  // Delivery Tracking (NEW! - Real-time GPS tracking)
+  delivery Delivery?
+  
+  // Multi-Tenant Support (optional)
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
 
   @@index([orderNumber])
   @@index([customerId]) // NEW! Fast customer order lookup
@@ -404,6 +415,10 @@ model Admin {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   lastLoginAt DateTime?
+  
+  // Multi-Tenant Support (optional)
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
 
   @@index([email])
   @@index([emailVerificationToken])
@@ -1214,3 +1229,159 @@ model DatabaseChange {
   @@index([commandTag])
   @@map("database_changes")
 }
+
+// ===== DELIVERY TRACKING SYSTEM (REAL-TIME GPS) =====
+
+// Delivery Partner/Driver Management
+model DeliveryPartner {
+  id          String @id @default(cuid())
+  name        String
+  phone       String @unique
+  email       String? @unique
+  vehicleType String // "bike", "scooter", "car", "bicycle"
+  vehicleNumber String?
+  
+  // Real-time location (updated every 5 seconds during delivery)
+  currentLat  Float?
+  currentLng  Float?
+  lastPingAt  DateTime?
+  
+  // Status
+  isOnline    Boolean @default(false) // Is app open and location sharing
+  isAvailable Boolean @default(true)  // Available to accept new orders
+  
+  // Performance metrics
+  totalDeliveries  Int @default(0)
+  rating           Float?
+  completionRate   Float @default(0) // Percentage of orders completed
+  averageTime      Int? // Average delivery time in minutes
+  
+  // Relations
+  deliveries  Delivery[]
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([isOnline, isAvailable]) // Fast lookup for available drivers
+  @@index([phone])
+  @@index([currentLat, currentLng]) // Geospatial queries
+}
+
+// Delivery Tracking Record (One per order)
+model Delivery {
+  id        String @id @default(cuid())
+  orderId   String @unique
+  order     Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  // Assigned driver
+  partnerId String?
+  partner   DeliveryPartner? @relation(fields: [partnerId], references: [id], onDelete: SetNull)
+  
+  // Route coordinates
+  pickupLat    Float // Chef/Restaurant location
+  pickupLng    Float
+  dropoffLat   Float // Customer location
+  dropoffLng   Float
+  
+  // Tracking status
+  status           String @default("PENDING") // PENDING, ASSIGNED, PICKED_UP, IN_TRANSIT, ARRIVED, DELIVERED, CANCELLED
+  estimatedArrival DateTime?
+  actualArrival    DateTime?
+  
+  // Distance and time
+  distanceKm       Float? // Total distance
+  estimatedMinutes Int? // ETA in minutes
+  actualMinutes    Int? // Actual time taken
+  
+  // Path tracking (breadcrumb trail for replay)
+  pathPoints Json? // Array of {lat, lng, timestamp, speed}
+  
+  // Driver earnings
+  deliveryFee      Float @default(0)
+  driverPayout     Float @default(0) // Amount paid to driver
+  
+  // Timestamps
+  assignedAt    DateTime? // When driver accepted
+  pickedUpAt    DateTime? // When driver picked up from kitchen
+  deliveredAt   DateTime? // When delivered to customer
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([orderId])
+  @@index([partnerId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// Add Delivery relation to Order model (needs manual addition to Order model above)
+// In Order model, add: delivery Delivery?
+
+// ===== WHITE-LABEL SAAS MULTI-TENANCY =====
+
+// Tenant/Platform Management (Each city/region can have its own instance)
+model Tenant {
+  id          String @id @default(cuid())
+  slug        String @unique // "delhi-home-chefs", "mumbai-kitchen", "bangalore-eats"
+  name        String // "Delhi Home Chefs"
+  domain      String? @unique // Optional custom domain (delhi.gharse.com)
+  
+  // Branding
+  logo          String?
+  primaryColor  String @default("#FF6B35") // Orange
+  secondaryColor String @default("#FFA500") // Amber
+  favicon       String?
+  
+  // Subscription & Billing
+  plan          String @default("FREE") // FREE, STARTER, PROFESSIONAL, ENTERPRISE
+  subscriptionStatus String @default("TRIAL") // TRIAL, ACTIVE, SUSPENDED, CANCELLED
+  trialEndsAt   DateTime?
+  billingCycle  String? // "monthly", "annual"
+  monthlyPrice  Float @default(0) // What they pay per month
+  
+  // Usage limits (based on plan)
+  maxChefs      Int @default(5) // FREE: 5, STARTER: 25, PROFESSIONAL: 100, ENTERPRISE: unlimited
+  maxOrders     Int @default(100) // Per month
+  maxMenuItems  Int @default(50)
+  maxStorage    Int @default(1) // GB
+  
+  // Current usage (tracked monthly)
+  currentChefs     Int @default(0)
+  currentOrders    Int @default(0)
+  currentMenuItems Int @default(0)
+  currentStorage   Float @default(0) // MB
+  
+  // Revenue tracking
+  monthlyRevenue Float @default(0) // Total GMV this month
+  commission     Float @default(15) // Platform commission % (parent takes cut)
+  
+  // Contact
+  ownerName      String?
+  ownerEmail     String?
+  ownerPhone     String?
+  
+  // Settings
+  isActive       Boolean @default(true)
+  allowNewChefs  Boolean @default(true)
+  requireApproval Boolean @default(true)
+  
+  // Relations
+  chefs         Chef[]
+  orders        Order[]
+  admins        Admin[]
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([slug])
+  @@index([domain])
+  @@index([plan])
+  @@index([subscriptionStatus])
+}
+
+// Add tenantId to existing models (manual additions needed):
+// Chef: tenantId String?, tenant Tenant?
+// Order: tenantId String?, tenant Tenant?
+// Admin: tenantId String?, tenant Tenant?

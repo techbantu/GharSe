@@ -1,291 +1,444 @@
 /**
- * CHEF DISCOVERY PAGE - Customer-Facing
+ * CHEF DISCOVERY PAGE - Multi-Chef Marketplace
  * 
- * Purpose: Browse and discover home chefs in the area
- * 
- * Features:
- * - Chef listing with filters
- * - Cuisine type filter
- * - Rating filter
- * - Search by name/area
- * - View chef profiles and menus
- * - Direct order from chef
+ * Purpose: Browse all active home chefs and their specialties
+ * Features: Search, filter, precise sizing with px/rem
  */
 
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { showChefDiscovery } from '@/lib/feature-flags';
+import { Search, MapPin, Star, ChefHat, ArrowRight, Award } from 'lucide-react';
+import { isMultiChefMode } from '@/lib/feature-flags';
 
 interface Chef {
   id: string;
   businessName: string;
   name: string;
   slug: string;
-  bio: string | null;
-  cuisineTypes: string[];
-  logo: string | null;
-  coverImage: string | null;
-  isAcceptingOrders: boolean;
-  minOrderAmount: number;
+  bio?: string;
+  cuisineTypes?: string;
+  logo?: string;
+  coverImage?: string;
+  status: string;
+  isVerified: boolean;
   serviceRadius: number;
-  stats: {
-    totalOrders: number;
-    totalMenuItems: number;
+  minOrderAmount: number;
+  _count?: {
+    orders: number;
+    menuItems: number;
   };
 }
 
-export default function ChefDiscovery() {
+export default function ChefDiscoveryPage() {
   const router = useRouter();
   const [chefs, setChefs] = useState<Chef[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCuisine, setSelectedCuisine] = useState<string>('all');
-  const [availableCuisines, setAvailableCuisines] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState<string>('popular');
 
   useEffect(() => {
-    if (!showChefDiscovery()) {
+    if (!isMultiChefMode()) {
       router.push('/');
       return;
     }
-
-    loadChefs();
+    fetchChefs();
   }, []);
 
-  const loadChefs = async () => {
+  async function fetchChefs() {
     try {
-      setLoading(true);
-      const res = await fetch('/api/chefs?status=ACTIVE&verified=true');
-      
-      if (res.ok) {
-        const data = await res.json();
-        setChefs(data.data || []);
-
-        // Extract unique cuisines
-        const cuisines = new Set<string>();
-        data.data.forEach((chef: Chef) => {
-          chef.cuisineTypes?.forEach((cuisine: string) => cuisines.add(cuisine));
-        });
-        setAvailableCuisines(Array.from(cuisines).sort());
+      const response = await fetch('/api/chefs');
+      if (response.ok) {
+        const result = await response.json();
+        console.log('API Response:', result);
+        setChefs(result.data || result.chefs || []);
+      } else {
+        console.error('API error:', response.status);
+        setChefs([]);
       }
     } catch (error) {
-      console.error('Failed to load chefs:', error);
+      console.error('Failed to fetch chefs:', error);
+      setChefs([]);
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const filteredChefs = chefs.filter((chef) => {
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      if (
-        !chef.businessName.toLowerCase().includes(query) &&
-        !chef.name.toLowerCase().includes(query) &&
-        !chef.bio?.toLowerCase().includes(query)
-      ) {
-        return false;
+  function getCuisines(chef: Chef): string[] {
+    try {
+      if (typeof chef.cuisineTypes === 'string') {
+        return JSON.parse(chef.cuisineTypes);
       }
+      return Array.isArray(chef.cuisineTypes) ? chef.cuisineTypes : [];
+    } catch {
+      return [];
     }
+  }
 
-    // Cuisine filter
-    if (selectedCuisine !== 'all') {
-      if (!chef.cuisineTypes?.includes(selectedCuisine)) {
-        return false;
+  const allCuisines = Array.from(
+    new Set(chefs.flatMap(chef => getCuisines(chef)))
+  ).sort();
+
+  const filteredChefs = chefs
+    .filter(chef => {
+      const matchesSearch = 
+        chef.businessName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        chef.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (chef.bio?.toLowerCase().includes(searchQuery.toLowerCase()));
+
+      const matchesCuisine = selectedCuisine === 'all' || 
+        getCuisines(chef).some(c => c.toLowerCase() === selectedCuisine.toLowerCase());
+
+      return matchesSearch && matchesCuisine;
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'popular':
+          return (b._count?.orders || 0) - (a._count?.orders || 0);
+        case 'newest':
+          return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+        case 'min-order':
+          return a.minOrderAmount - b.minOrderAmount;
+        default:
+          return 0;
       }
-    }
+    });
 
-    return true;
-  });
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading chefs...</p>
-        </div>
-      </div>
-    );
+  if (!isMultiChefMode()) {
+    return null;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #fff5f0 0%, #fff 30%, #fff9f5 100%)' }}>
       {/* Hero Section */}
-      <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            Discover Local Home Chefs 👨‍🍳
-          </h1>
-          <p className="text-xl opacity-90 mb-8">
-            Fresh, homemade food from talented chefs in your neighborhood
-          </p>
-
-          {/* Search Bar */}
-          <div className="max-w-2xl">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search by name, cuisine, or area..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-6 py-4 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-white"
-              />
-              <div className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400">
-                🔍
+      <div style={{
+        background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+        color: 'white',
+        padding: '48px 16px'
+      }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '16px' }}>
+              <ChefHat style={{ width: '48px', height: '48px' }} />
+              <h1 style={{ fontSize: '3rem', fontWeight: '700', margin: 0 }}>Discover Home Chefs</h1>
+            </div>
+            <p style={{ fontSize: '1.25rem', color: 'rgba(255, 255, 255, 0.9)', maxWidth: '600px', margin: '0 auto', lineHeight: '1.6' }}>
+              Authentic home-cooked meals from passionate chefs in your neighborhood
+            </p>
+            <div style={{ marginTop: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '24px', color: 'rgba(255, 255, 255, 0.9)', fontSize: '0.95rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Award style={{ width: '20px', height: '20px' }} />
+                <span>{chefs.length} Verified Chefs</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Star style={{ width: '20px', height: '20px', fill: '#fbbf24' }} />
+                <span>Top Rated</span>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Filters */}
-        <div className="mb-8">
-          <h3 className="text-sm font-medium text-gray-700 mb-3">Filter by Cuisine</h3>
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setSelectedCuisine('all')}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                selectedCuisine === 'all'
-                  ? 'bg-orange-500 text-white'
-                  : 'bg-white text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              All Cuisines
-            </button>
-            {availableCuisines.map((cuisine) => (
-              <button
-                key={cuisine}
-                onClick={() => setSelectedCuisine(cuisine)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                  selectedCuisine === cuisine
-                    ? 'bg-orange-500 text-white'
-                    : 'bg-white text-gray-700 hover:bg-gray-100'
-                }`}
+      {/* Search and Filters */}
+      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 16px', transform: 'translateY(-32px)', position: 'relative', zIndex: 10 }}>
+        <div style={{
+          background: 'white',
+          borderRadius: '16px',
+          boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
+          padding: '24px'
+        }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* Search */}
+            <div style={{ flex: 1, position: 'relative' }}>
+              <Search style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af', width: '20px', height: '20px' }} />
+              <input
+                type="text"
+                placeholder="Search chefs, cuisines, or dishes..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{
+                  width: '100%',
+                  paddingLeft: '48px',
+                  paddingRight: '16px',
+                  paddingTop: '12px',
+                  paddingBottom: '12px',
+                  border: '2px solid #e5e7eb',
+                  borderRadius: '12px',
+                  fontSize: '1rem',
+                  transition: 'all 0.2s',
+                  outline: 'none'
+                }}
+                onFocus={(e) => e.target.style.borderColor = '#f97316'}
+                onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+              {/* Cuisine Filter */}
+              <select
+                value={selectedCuisine}
+                onChange={(e) => setSelectedCuisine(e.target.value)}
+                style={{
+                  flex: 1,
+                  minWidth: '200px',
+                  padding: '12px 16px',
+                  border: '2px solid #e5e7eb',
+                  borderRadius: '12px',
+                  fontSize: '1rem',
+                  background: 'white',
+                  cursor: 'pointer',
+                  outline: 'none'
+                }}
               >
-                {cuisine}
-              </button>
-            ))}
+                <option value="all">All Cuisines</option>
+                {allCuisines.map(cuisine => (
+                  <option key={cuisine} value={cuisine}>{cuisine}</option>
+                ))}
+              </select>
+
+              {/* Sort */}
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                style={{
+                  flex: 1,
+                  minWidth: '180px',
+                  padding: '12px 16px',
+                  border: '2px solid #e5e7eb',
+                  borderRadius: '12px',
+                  fontSize: '1rem',
+                  background: 'white',
+                  cursor: 'pointer',
+                  outline: 'none'
+                }}
+              >
+                <option value="popular">Most Popular</option>
+                <option value="newest">Newest First</option>
+                <option value="min-order">Min Order Amount</option>
+              </select>
+            </div>
           </div>
         </div>
+      </div>
 
-        {/* Results Count */}
-        <div className="mb-6">
-          <p className="text-gray-600">
-            {filteredChefs.length} {filteredChefs.length === 1 ? 'chef' : 'chefs'} found
-          </p>
-        </div>
-
-        {/* Chef Grid */}
-        {filteredChefs.length === 0 ? (
-          <div className="text-center py-16">
-            <div className="text-6xl mb-4">🔍</div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No chefs found</h3>
-            <p className="text-gray-500">Try adjusting your search or filters</p>
+      {/* Results */}
+      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 16px 64px' }}>
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '80px 20px' }}>
+            <div style={{
+              display: 'inline-block',
+              width: '48px',
+              height: '48px',
+              border: '4px solid #fee2e2',
+              borderTopColor: '#f97316',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite'
+            }} />
+            <p style={{ marginTop: '16px', color: '#6b7280', fontSize: '1.125rem' }}>Loading chefs...</p>
+            <style jsx>{`
+              @keyframes spin {
+                to { transform: rotate(360deg); }
+              }
+            `}</style>
+          </div>
+        ) : filteredChefs.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '80px 20px' }}>
+            <ChefHat style={{ width: '80px', height: '80px', color: '#d1d5db', margin: '0 auto 24px' }} />
+            <h3 style={{ fontSize: '1.875rem', fontWeight: '600', color: '#374151', marginBottom: '12px' }}>No chefs found</h3>
+            <p style={{ color: '#6b7280', fontSize: '1.125rem', marginBottom: '24px' }}>
+              {searchQuery || selectedCuisine !== 'all' 
+                ? 'Try adjusting your search or filters' 
+                : 'Be the first to join our marketplace!'}
+            </p>
+            <button
+              onClick={() => router.push('/chef/register')}
+              style={{
+                background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+                color: 'white',
+                padding: '14px 32px',
+                borderRadius: '12px',
+                border: 'none',
+                fontSize: '1.0625rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
+                transition: 'transform 0.2s'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+              onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+            >
+              Become a Chef Partner
+            </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredChefs.map((chef) => (
-              <div
-                key={chef.id}
-                className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden cursor-pointer"
-                onClick={() => router.push(`/chefs/${chef.slug}`)}
-              >
-                {/* Cover Image */}
-                <div className="h-48 bg-gradient-to-r from-orange-400 to-red-400 relative">
-                  {chef.coverImage ? (
-                    <img
-                      src={chef.coverImage}
-                      alt={chef.businessName}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-white text-6xl">
-                      🍳
-                    </div>
-                  )}
-
-                  {/* Logo/Avatar */}
-                  <div className="absolute -bottom-8 left-6">
-                    <div className="w-16 h-16 rounded-full bg-white shadow-lg flex items-center justify-center text-3xl border-4 border-white">
-                      {chef.logo ? (
-                        <img
-                          src={chef.logo}
-                          alt={chef.name}
-                          className="w-full h-full rounded-full object-cover"
-                        />
-                      ) : (
-                        <span>👨‍🍳</span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Status Badge */}
-                  {chef.isAcceptingOrders && (
-                    <div className="absolute top-4 right-4 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-medium">
-                      🟢 Open Now
-                    </div>
-                  )}
-                </div>
-
-                {/* Content */}
-                <div className="p-6 pt-10">
-                  <h3 className="text-xl font-bold text-gray-900 mb-1">{chef.businessName}</h3>
-                  <p className="text-sm text-gray-500 mb-3">by {chef.name}</p>
-
-                  {/* Cuisines */}
-                  {chef.cuisineTypes && chef.cuisineTypes.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mb-3">
-                      {chef.cuisineTypes.slice(0, 3).map((cuisine) => (
-                        <span
-                          key={cuisine}
-                          className="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full"
-                        >
-                          {cuisine}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Bio */}
-                  {chef.bio && (
-                    <p className="text-sm text-gray-600 mb-4 line-clamp-2">{chef.bio}</p>
-                  )}
-
-                  {/* Stats */}
-                  <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
-                    <div className="flex items-center space-x-4">
-                      <span>📦 {chef.stats.totalOrders} orders</span>
-                      <span>🍽️ {chef.stats.totalMenuItems} items</span>
-                    </div>
-                  </div>
-
-                  {/* Min Order */}
-                  <div className="border-t pt-4">
-                    <p className="text-xs text-gray-500">
-                      Min. order: <span className="font-semibold text-gray-900">₹{chef.minOrderAmount}</span>
-                    </p>
-                  </div>
-
-                  {/* Action Button */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      router.push(`/chefs/${chef.slug}`);
-                    }}
-                    className="w-full mt-4 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors font-medium"
-                  >
-                    View Menu
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+          <>
+            <p style={{ color: '#6b7280', marginBottom: '24px', fontSize: '1rem' }}>
+              Found <span style={{ fontWeight: '600', color: '#f97316' }}>{filteredChefs.length}</span> chef{filteredChefs.length !== 1 ? 's' : ''}
+            </p>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+              gap: '32px'
+            }}>
+              {filteredChefs.map((chef) => (
+                <ChefCard key={chef.id} chef={chef} router={router} getCuisines={getCuisines} />
+              ))}
+            </div>
+          </>
         )}
       </div>
     </div>
   );
 }
 
+function ChefCard({ chef, router, getCuisines }: { chef: Chef; router: any; getCuisines: (chef: Chef) => string[] }) {
+  const cuisines = getCuisines(chef);
+
+  return (
+    <div style={{
+      background: 'white',
+      borderRadius: '16px',
+      overflow: 'hidden',
+      boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+      transition: 'all 0.3s',
+      cursor: 'pointer'
+    }}
+    onMouseEnter={(e) => {
+      e.currentTarget.style.transform = 'translateY(-8px)';
+      e.currentTarget.style.boxShadow = '0 12px 24px rgba(0,0,0,0.12)';
+    }}
+    onMouseLeave={(e) => {
+      e.currentTarget.style.transform = 'translateY(0)';
+      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
+    }}>
+      {/* Cover Image */}
+      <div style={{ position: 'relative', height: '192px', background: 'linear-gradient(135deg, #fecaca 0%, #fde68a 100%)' }}>
+        {chef.coverImage ? (
+          <img
+            src={chef.coverImage}
+            alt={chef.businessName}
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          />
+        ) : (
+          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <ChefHat style={{ width: '80px', height: '80px', color: '#fb923c' }} />
+          </div>
+        )}
+        
+        {chef.isVerified && (
+          <div style={{
+            position: 'absolute',
+            top: '16px',
+            right: '16px',
+            background: '#3b82f6',
+            color: 'white',
+            padding: '6px 12px',
+            borderRadius: '20px',
+            fontSize: '0.75rem',
+            fontWeight: '600',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+          }}>
+            <Award style={{ width: '14px', height: '14px' }} />
+            Verified
+          </div>
+        )}
+      </div>
+
+      {/* Content */}
+      <div style={{ padding: '24px' }}>
+        <h3 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1f2937', marginBottom: '4px' }}>{chef.businessName}</h3>
+        <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '16px' }}>by {chef.name}</p>
+
+        {/* Cuisines */}
+        {cuisines.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
+            {cuisines.slice(0, 3).map((cuisine, idx) => (
+              <span
+                key={idx}
+                style={{
+                  padding: '4px 12px',
+                  background: '#fff7ed',
+                  color: '#ea580c',
+                  borderRadius: '16px',
+                  fontSize: '0.8125rem',
+                  fontWeight: '500'
+                }}
+              >
+                {cuisine}
+              </span>
+            ))}
+            {cuisines.length > 3 && (
+              <span style={{
+                padding: '4px 12px',
+                background: '#f3f4f6',
+                color: '#6b7280',
+                borderRadius: '16px',
+                fontSize: '0.8125rem',
+                fontWeight: '500'
+              }}>
+                +{cuisines.length - 3} more
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Bio */}
+        {chef.bio && (
+          <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '16px', lineHeight: '1.5', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+            {chef.bio}
+          </p>
+        )}
+
+        {/* Stats */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px', fontSize: '0.875rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#6b7280' }}>
+            <MapPin style={{ width: '16px', height: '16px' }} />
+            <span>{chef.serviceRadius} km</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#6b7280' }}>
+            <span style={{ fontSize: '1rem' }}>₹</span>
+            <span>Min ₹{chef.minOrderAmount}</span>
+          </div>
+        </div>
+
+        {/* CTA Button */}
+        <button
+          onClick={() => router.push(`/?chef=${chef.slug}`)}
+          style={{
+            width: '100%',
+            background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+            color: 'white',
+            fontWeight: '600',
+            padding: '12px 24px',
+            borderRadius: '12px',
+            border: 'none',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
+            transition: 'all 0.2s',
+            fontSize: '0.9375rem'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'scale(1.02)';
+            e.currentTarget.style.boxShadow = '0 6px 16px rgba(249, 115, 22, 0.4)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'scale(1)';
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(249, 115, 22, 0.3)';
+          }}
+        >
+          View Menu & Order
+          <ArrowRight style={{ width: '20px', height: '20px' }} />
+        </button>
+      </div>
+    </div>
+  );
+}
