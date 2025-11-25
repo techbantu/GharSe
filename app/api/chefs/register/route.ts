@@ -129,6 +129,18 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Check if email already exists in Admin table (prevents unique constraint violation)
+    const existingAdmin = await prisma.admin.findUnique({
+      where: { email },
+    });
+    
+    if (existingAdmin) {
+      return NextResponse.json(
+        { error: 'Email already registered as admin' },
+        { status: 400 }
+      );
+    }
+
     // Generate unique slug from business name
     const baseSlug = businessName
       .toLowerCase()
@@ -171,44 +183,49 @@ export async function POST(request: NextRequest) {
     // Hash password
     const passwordHash = await hashPassword(password);
 
-    // Create chef record WITH Admin account for authentication
-    const chef = await prisma.chef.create({
-      data: {
-        name,
-        businessName,
-        slug,
-        email,
-        phone,
-        bio,
-        cuisineTypes: JSON.stringify(cuisineTypes),
-        address: JSON.stringify(address),
-        serviceRadius,
-        minOrderAmount,
-        preparationBuffer,
-        fssaiNumber,
-        fssaiExpiry: new Date(fssaiExpiry),
-        gstNumber: gstNumber || null,
-        logo: logoUrl,
-        coverImage: coverUrl,
-        status: 'PENDING', // Requires admin approval
-        isVerified: false,
-        commissionRate: 10.0, // Default 10%
-        subscriptionTier: 'free',
-        isAcceptingOrders: false, // Can't accept until approved
-      },
-    });
+    // Create chef record AND Admin account atomically (transaction ensures both succeed or both fail)
+    const chef = await prisma.$transaction(async (tx) => {
+      // Create chef record
+      const newChef = await tx.chef.create({
+        data: {
+          name,
+          businessName,
+          slug,
+          email,
+          phone,
+          bio,
+          cuisineTypes: JSON.stringify(cuisineTypes),
+          address: JSON.stringify(address),
+          serviceRadius,
+          minOrderAmount,
+          preparationBuffer,
+          fssaiNumber,
+          fssaiExpiry: new Date(fssaiExpiry),
+          gstNumber: gstNumber || null,
+          logo: logoUrl,
+          coverImage: coverUrl,
+          status: 'PENDING', // Requires admin approval
+          isVerified: false,
+          commissionRate: 10.0, // Default 10%
+          subscriptionTier: 'free',
+          isAcceptingOrders: false, // Can't accept until approved
+        },
+      });
 
-    // Create Admin account for chef authentication (MANAGER role for chef dashboard access)
-    await prisma.admin.create({
-      data: {
-        email: email,
-        name: name,
-        phone: phone,
-        passwordHash: passwordHash,
-        role: 'MANAGER', // MANAGER role allows chef to manage their menu and orders
-        isActive: false, // Inactive until chef is approved
-        emailVerified: false,
-      },
+      // Create Admin account for chef authentication (MANAGER role for chef dashboard access)
+      await tx.admin.create({
+        data: {
+          email: email,
+          name: name,
+          phone: phone,
+          passwordHash: passwordHash,
+          role: 'MANAGER', // MANAGER role allows chef to manage their menu and orders
+          isActive: false, // Inactive until chef is approved
+          emailVerified: false,
+        },
+      });
+
+      return newChef;
     });
 
     // TODO: Send email verification to chef

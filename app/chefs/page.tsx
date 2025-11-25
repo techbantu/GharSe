@@ -99,7 +99,11 @@ export default function ChefDiscoveryPage() {
         case 'popular':
           return (b._count?.orders || 0) - (a._count?.orders || 0);
         case 'newest':
-          return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+          // Handle missing createdAt: undefined timestamps sort to bottom
+          if (!a.createdAt && !b.createdAt) return 0;
+          if (!a.createdAt) return 1; // a goes after b
+          if (!b.createdAt) return -1; // b goes after a
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         case 'min-order':
           return a.minOrderAmount - b.minOrderAmount;
         default:
