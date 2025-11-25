@@ -44,48 +44,63 @@ async function testTransformation() {
     
     console.log('\n✅ Test 2: Create Sample Delivery Partner');
     
-    // Create a test delivery partner
-    const driver = await prisma.deliveryPartner.create({
-      data: {
-        name: 'Rajesh Kumar',
-        phone: '9876543210',
-        email: 'rajesh@delivery.com',
-        vehicleType: 'bike',
-        vehicleNumber: 'DL01AB1234',
-        isOnline: true,
-        isAvailable: true,
-        currentLat: 28.6139, // Delhi coordinates
-        currentLng: 77.2090,
-        lastPingAt: new Date(),
-      }
+    // Check if delivery partner already exists, otherwise create
+    let driver = await prisma.deliveryPartner.findUnique({
+      where: { phone: '9876543210' }
     });
     
-    console.log(`   - Created driver: ${driver.name} (${driver.phone})`);
+    if (!driver) {
+      driver = await prisma.deliveryPartner.create({
+        data: {
+          name: 'Rajesh Kumar',
+          phone: '9876543210',
+          email: 'rajesh@delivery.com',
+          vehicleType: 'bike',
+          vehicleNumber: 'DL01AB1234',
+          isOnline: true,
+          isAvailable: true,
+          currentLat: 28.6139, // Delhi coordinates
+          currentLng: 77.2090,
+          lastPingAt: new Date(),
+        }
+      });
+      console.log(`   - Created driver: ${driver.name} (${driver.phone})`);
+    } else {
+      console.log(`   - Driver already exists: ${driver.name} (${driver.phone})`);
+    }
+    
     console.log(`   - Location: ${driver.currentLat}, ${driver.currentLng}`);
     console.log(`   - Status: ${driver.isOnline ? 'Online' : 'Offline'}`);
     
     console.log('\n✅ Test 3: Create Sample Tenant');
     
-    // Create a test tenant for white-label
-    const tenant = await prisma.tenant.create({
-      data: {
-        slug: 'delhi-home-chefs',
-        name: 'Delhi Home Chefs',
-        domain: 'delhi.gharse.com',
-        plan: 'PROFESSIONAL',
-        subscriptionStatus: 'ACTIVE',
-        primaryColor: '#FF6B35',
-        secondaryColor: '#FFA500',
-        maxChefs: 100,
-        maxOrders: 10000,
-        commission: 15,
-        ownerName: 'Amit Singh',
-        ownerEmail: 'amit@delhihomechefs.com',
-        ownerPhone: '9876543211',
-      }
+    // Check if tenant already exists, otherwise create
+    let tenant = await prisma.tenant.findUnique({
+      where: { slug: 'delhi-home-chefs' }
     });
     
-    console.log(`   - Created tenant: ${tenant.name}`);
+    if (!tenant) {
+      tenant = await prisma.tenant.create({
+        data: {
+          slug: 'delhi-home-chefs',
+          name: 'Delhi Home Chefs',
+          domain: 'delhi.gharse.com',
+          plan: 'PROFESSIONAL',
+          subscriptionStatus: 'ACTIVE',
+          primaryColor: '#FF6B35',
+          secondaryColor: '#FFA500',
+          maxChefs: 100,
+          maxOrders: 10000,
+          commission: 15,
+          ownerName: 'Amit Singh',
+          ownerEmail: 'amit@delhihomechefs.com',
+          ownerPhone: '9876543211',
+        }
+      });
+      console.log(`   - Created tenant: ${tenant.name}`);
+    } else {
+      console.log(`   - Tenant already exists: ${tenant.name}`);
+    }
     console.log(`   - Slug: ${tenant.slug}`);
     console.log(`   - Plan: ${tenant.plan}`);
     console.log(`   - Domain: ${tenant.domain}`);

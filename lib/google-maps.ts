@@ -247,7 +247,7 @@ export function createMarker(
   position: Coordinates,
   options: {
     title?: string;
-    icon?: string;
+    icon?: string | { url: string; scaledSize?: any; anchor?: any };
     draggable?: boolean;
     animation?: 'DROP' | 'BOUNCE';
   } = {}
