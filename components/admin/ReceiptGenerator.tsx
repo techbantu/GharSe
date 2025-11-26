@@ -255,17 +255,17 @@ const ReceiptGenerator: React.FC<ReceiptGeneratorProps> = ({ order, onClose }) =
               <div className="text-right">
                 <p className="font-semibold text-gray-700">Payment Status:</p>
                 <span className={`inline-block px-3 py-1 rounded-full text-sm font-bold ${
-                  order.paymentStatus === 'completed' || order.paymentStatus === 'paid'
+                  order.paymentStatus === 'PAID'
                     ? 'bg-green-100 text-green-800'
                     : 'bg-yellow-100 text-yellow-800'
                 }`}>
-                  {order.paymentStatus === 'completed' || order.paymentStatus === 'paid' ? '✓ PAID' : order.paymentStatus}
+                  {order.paymentStatus === 'PAID' ? '✓ PAID' : order.paymentStatus}
                 </span>
               </div>
             </div>
             
             {/* UPI Transaction Verified Badge */}
-            {(order.paymentStatus === 'completed' || order.paymentStatus === 'paid') && 
+            {order.paymentStatus === 'PAID' && 
              (order.paymentMethod?.toLowerCase().includes('upi') || 
               order.paymentMethod?.toLowerCase().includes('gpay') || 
               order.paymentMethod?.toLowerCase().includes('phonepe') || 
