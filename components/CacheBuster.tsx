@@ -27,6 +27,27 @@ export function CacheBuster() {
   const pathname = usePathname();
 
   useEffect(() => {
+    // ALWAYS unregister service workers to prevent stale cache issues
+    // This runs for ALL pages, not just admin
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then((registrations) => {
+        registrations.forEach((registration) => {
+          console.log('🧹 Unregistering service worker for fresh content');
+          registration.unregister();
+        });
+      });
+      
+      // Also clear Cache API to ensure fresh bundles
+      if ('caches' in window) {
+        caches.keys().then((names) => {
+          names.forEach((name) => {
+            console.log(`🧹 Clearing cache: ${name}`);
+            caches.delete(name);
+          });
+        });
+      }
+    }
+    
     // ONLY ENABLE AUTO-RELOAD FOR ADMIN PAGES
     // Regular users don't need aggressive cache management
     const isAdminPage = pathname?.startsWith('/admin');
@@ -97,17 +118,7 @@ export function CacheBuster() {
       detectAndFixStaleCacheForAdmin();
     }
 
-    // 3. Unregister any service workers (they cache aggressively)
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then((registrations) => {
-        registrations.forEach((registration) => {
-          console.log('🧹 Unregistering service worker');
-          registration.unregister();
-        });
-      });
-    }
-
-    // 4. Clear old reload attempt counter after successful load
+    // 3. Clear old reload attempt counter after successful load
     const clearAttemptTimer = setTimeout(() => {
       sessionStorage.removeItem(RELOAD_ATTEMPT_KEY);
     }, 5000);

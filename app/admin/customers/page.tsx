@@ -38,11 +38,9 @@ export default function CustomersPage() {
   useEffect(() => {
     const fetchCustomers = async () => {
       try {
-        const token = localStorage.getItem('adminToken');
-        if (!token) return;
-
+        // Use credentials: 'include' to send httpOnly cookies
         const response = await fetch('/api/orders', {
-          headers: { 'Authorization': `Bearer ${token}` }
+          credentials: 'include'
         });
 
         if (response.ok) {

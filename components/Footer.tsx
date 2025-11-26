@@ -25,12 +25,13 @@ import Logo from './Logo';
 
 const Footer: React.FC = () => {
   const router = useRouter();
-  const currentYear = new Date().getFullYear();
-  const [businessStatus, setBusinessStatus] = useState(getBusinessStatusMessage());
+  // HYDRATION-SAFE: Use 2025 as fallback, update on client mount
+  const [currentYear, setCurrentYear] = useState(2025);
+  const [businessStatus, setBusinessStatus] = useState({ message: 'Loading...', color: 'yellow' });
   
   // Handle navigation - scroll to section on homepage, or navigate to homepage then scroll
   const handleNavigation = (section: string) => {
-    if (window.location.pathname === '/') {
+    if (typeof window !== 'undefined' && window.location.pathname === '/') {
       // On homepage, scroll to section
       const element = document.getElementById(section);
       if (element) {
@@ -42,11 +43,15 @@ const Footer: React.FC = () => {
     }
   };
   
-  // Update status every minute
+  // Initialize values on client mount to prevent hydration mismatch
   useEffect(() => {
+    setCurrentYear(new Date().getFullYear());
+    setBusinessStatus(getBusinessStatusMessage());
+    
+    // Update status every minute
     const interval = setInterval(() => {
       setBusinessStatus(getBusinessStatusMessage());
-    }, 60000); // Update every minute
+    }, 60000);
     
     return () => clearInterval(interval);
   }, []);

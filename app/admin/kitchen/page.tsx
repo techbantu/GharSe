@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import KitchenOrders from '@/components/admin/KitchenOrders';
+import KitchenDisplay from '@/components/admin/KitchenDisplay';
 
 export default function KitchenPage() {
-  return <KitchenOrders autoRefresh={true} refreshInterval={30000} />;
+  return <KitchenDisplay autoRefresh={true} refreshInterval={30000} />;
 }

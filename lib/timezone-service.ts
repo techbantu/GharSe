@@ -476,3 +476,95 @@ export function isOpenForUser(): boolean {
   return isRestaurantOpen(region);
 }
 
+// ===== RESTAURANT TIMEZONE CONFIGURATION =====
+
+/**
+ * CRITICAL: Global restaurant timezone setting
+ * 
+ * This is the SINGLE SOURCE OF TRUTH for the restaurant's operating timezone.
+ * All delivery slots, emails, and chef dashboards use THIS timezone.
+ * 
+ * Why not use user's timezone?
+ * - Restaurant operates in ONE timezone (where the kitchen is)
+ * - Chef needs to see times in THEIR local time
+ * - Customer email shows RESTAURANT time (when food will arrive)
+ * - Prevents confusion when customer is traveling
+ */
+export const RESTAURANT_TIMEZONE = process.env.RESTAURANT_TIMEZONE || 'Asia/Kolkata';
+export const RESTAURANT_REGION_ID = process.env.RESTAURANT_REGION_ID || 'IN';
+
+/**
+ * Get restaurant's region configuration
+ * Always use this for server-side operations (emails, chef dashboard, etc.)
+ */
+export function getRestaurantRegion(): RegionConfig {
+  return REGIONS[RESTAURANT_REGION_ID] || REGIONS['IN'];
+}
+
+/**
+ * Format date in RESTAURANT's timezone (NOT user's timezone)
+ * Use this for all customer-facing communications (emails, SMS, receipts)
+ */
+export function formatForRestaurant(utcDate: Date | string, formatString: string = 'PPpp'): string {
+  const region = getRestaurantRegion();
+  const dateObj = typeof utcDate === 'string' ? new Date(utcDate) : utcDate;
+  return formatLocalTime(dateObj, region, formatString);
+}
+
+// ===== HUMAN-FRIENDLY TIME FORMATTING =====
+
+/**
+ * Convert minutes to human-readable format
+ * 
+ * Examples:
+ * - 120 min → "2 hours"
+ * - 45 min → "45 min"
+ * - 165 min → "2 hr 45 min"
+ * - 90 min → "1 hr 30 min"
+ * - 60 min → "1 hour"
+ * 
+ * Why? "120 min" is confusing. "2 hours" is clear.
+ */
+export function formatMinutesToHuman(minutes: number): string {
+  if (minutes < 60) {
+    return `${minutes} min`;
+  }
+  
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  
+  // Clean hour formatting
+  const hourLabel = hours === 1 ? 'hour' : 'hours';
+  
+  if (remainingMinutes === 0) {
+    return `${hours} ${hourLabel}`;
+  }
+  
+  // Use "hr" for compound times (more readable)
+  return `${hours} hr ${remainingMinutes} min`;
+}
+
+/**
+ * Format prep + delivery time for customer-facing display
+ * 
+ * Example: "2 hours prep time + 45 min delivery"
+ * 
+ * This is what goes in emails and receipts
+ */
+export function formatPrepAndDeliveryTime(prepMinutes: number, deliveryMinutes: number): string {
+  const prepFormatted = formatMinutesToHuman(prepMinutes);
+  const deliveryFormatted = formatMinutesToHuman(deliveryMinutes);
+  
+  return `${prepFormatted} prep time + ${deliveryFormatted} delivery`;
+}
+
+/**
+ * Format total time for display
+ * 
+ * Example: "2 hr 45 min total"
+ */
+export function formatTotalTime(prepMinutes: number, deliveryMinutes: number): string {
+  const total = prepMinutes + deliveryMinutes;
+  return `${formatMinutesToHuman(total)} total`;
+}
+

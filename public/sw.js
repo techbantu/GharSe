@@ -14,7 +14,7 @@
  * THIS COMPETES WITH NATIVE APPS - 80% OF MARKET ON MOBILE
  */
 
-const CACHE_VERSION = 'gharse-v1.0.0';
+const CACHE_VERSION = 'gharse-v1.0.1';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 const IMAGE_CACHE = `${CACHE_VERSION}-images`;
@@ -91,6 +91,11 @@ self.addEventListener('fetch', (event) => {
   // Skip WebSocket connections
   if (url.protocol === 'ws:' || url.protocol === 'wss:') {
     return;
+  }
+
+  // Next.js dev assets - NEVER cache (causes HMR issues)
+  if (url.pathname.startsWith('/_next/')) {
+    return; // Let browser handle these normally
   }
 
   // API requests - Network first with cache fallback

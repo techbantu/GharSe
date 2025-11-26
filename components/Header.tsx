@@ -20,6 +20,7 @@ import { LoginModal } from './auth/LoginModal';
 import { RegisterModal } from './auth/RegisterModal';
 import { ForgotPasswordModal } from './auth/ForgotPasswordModal';
 import Logo from './Logo';
+import { ClientOnly } from './ClientOnly';
 
 interface HeaderProps {
   onCartClick: () => void;
@@ -222,30 +223,20 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
       
       {/* Main Navigation - Premium Glass Effect */}
       <header
+        className={`header-glass ${isScrolled ? 'header-scrolled' : ''}`}
         style={{
           position: 'sticky',
           top: '0.75rem',
           zIndex: 50,
-          background: isScrolled 
-            ? 'rgba(255, 255, 255, 0.95)' 
-            : 'rgba(255, 255, 255, 0.85)',
           backdropFilter: 'blur(20px) saturate(180%)',
           WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-          borderBottom: isScrolled 
-            ? '1px solid rgba(0, 0, 0, 0.08)' 
-            : '1px solid rgba(0, 0, 0, 0.04)',
-          boxShadow: isScrolled
-            ? '0 4px 24px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04)'
-            : '0 1px 3px rgba(0, 0, 0, 0.02)',
           transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           borderRadius: '1rem',
-          marginLeft: '0.75rem',
-          marginRight: '0.75rem',
-          marginTop: '0.75rem'
+          margin: '0.75rem'
         }}
       >
-        <nav className="container-custom mx-auto" style={{ paddingLeft: '1rem', paddingRight: '1rem', paddingTop: '0.75rem', paddingBottom: '0.75rem' }}>
-          <div className="flex items-center justify-between" style={{ gap: '0.5rem', minWidth: 0 }}>
+        <nav className="container-custom mx-auto px-4 py-3">
+          <div className="flex items-center justify-between gap-2" style={{ minWidth: 0 }}>
             {/* Logo and Brand - Premium Design */}
             <button 
               onClick={() => scrollToSection('home')}
@@ -256,22 +247,14 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
                 cursor: 'pointer', 
                 padding: 0, 
                 minWidth: '120px',
-                maxWidth: '120px',
-                flex: '0 0 auto',
-                position: 'relative',
-                zIndex: 20
+                maxWidth: '160px',
+                flex: '0 0 auto'
               }}
             >
-              <img 
-                src="/images/GharSe.png" 
-                alt="GharSe - From Real Homes To Your Hungry Heart"
-                style={{
-                  width: '100%',
-                  height: 'auto',
-                  objectFit: 'contain',
-                  display: 'block'
-                }}
+              <Logo 
+                variant="small" 
                 className="group-hover:opacity-90"
+                style={{ width: '100%', height: 'auto' }}
               />
             </button>
             
@@ -360,10 +343,11 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
               {/* Auth Buttons - Visible on ALL screens (Hydration-safe rendering) */}
               {/* Always render container to prevent hydration mismatch */}
               <div className="flex items-center" style={{ gap: '6px' }}>
-                {/* Only render auth buttons after client-side hydration */}
-                {isMounted && !isLoading && (
-                  <>
-                    {!isAuthenticated ? (
+                {/* ClientOnly wrapper prevents hydration mismatch for auth state */}
+                <ClientOnly>
+                  {!isLoading && (
+                    <>
+                      {!isAuthenticated ? (
                       <>
                         <button
                           onClick={() => setShowLoginModal(true)}
@@ -474,8 +458,9 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
                         </button>
                       </>
                     )}
-                  </>
-                )}
+                    </>
+                  )}
+                </ClientOnly>
               </div>
               
               {/* Cart Button - Premium 3D Design */}
@@ -493,102 +478,100 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
                 className="group"
                 aria-label="Shopping Cart"
               >
-                <div style={{
-                  position: 'relative',
-                  display: 'flex',
-                  alignItems: 'center',
-                  background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
-                  color: 'white',
-                  borderRadius: '12px',
-                  transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                  boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
-                  gap: '6px',
-                  padding: '0 14px',
-                  height: '44px',
-                  transform: 'translateY(0)',
-                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif'
-                }} className="group-hover:shadow-lg group-hover:-translate-y-0.5 active:translate-y-0">
+                <div 
+                  suppressHydrationWarning
+                  style={{
+                    position: 'relative',
+                    display: 'flex',
+                    alignItems: 'center',
+                    background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+                    color: 'white',
+                    borderRadius: '12px',
+                    transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                    boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
+                    gap: '6px',
+                    padding: '0 14px',
+                    height: '44px',
+                    transform: 'translateY(0)',
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif'
+                  }} 
+                  className="group-hover:shadow-lg group-hover:-translate-y-0.5 active:translate-y-0"
+                >
                   
                   <ShoppingCart 
                     size={20} 
                     style={{ flexShrink: 0, position: 'relative', zIndex: 1 }} 
                     strokeWidth={2.5}
                   />
-                  <span style={{
-                    fontWeight: 700,
-                    display: 'none',
-                    whiteSpace: 'nowrap',
-                    fontSize: '14px',
-                    position: 'relative',
-                    zIndex: 1,
-                  }} className="sm:inline">
-                    ₹{Math.round(cart.total)}
-                  </span>
-                  
+                </div>
+                {/* Cart badge - ClientOnly wrapper prevents hydration mismatch */}
+                <ClientOnly>
                   {itemCount > 0 && (
                     <span style={{
                       position: 'absolute',
-                      top: '-6px',
-                      right: '-6px',
+                      top: '-4px',
+                      right: '-4px',
                       background: 'linear-gradient(135deg, #FFB800, #FFA500)',
                       color: '#1F2937',
                       fontSize: '11px',
                       fontWeight: 800,
-                      minWidth: '22px',
-                      height: '22px',
-                      padding: '0 6px',
-                      borderRadius: '11px',
+                      minWidth: '20px',
+                      height: '20px',
+                      padding: '0 5px',
+                      borderRadius: '10px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      boxShadow: '0 4px 12px rgba(255, 184, 0, 0.5), 0 0 0 2px white',
-                      border: '1.5px solid white',
+                      boxShadow: '0 2px 8px rgba(255, 184, 0, 0.4)',
+                      border: '2px solid white',
                       fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif',
-                      letterSpacing: '-0.02em'
-                    }} className="animate-scale-in">
+                      zIndex: 10
+                    }}>
                       {itemCount}
                     </span>
                   )}
-                </div>
+                </ClientOnly>
               </button>
               
-              {/* Mobile/Tablet Menu Toggle Button - Only rendered on client after hydration, hidden on desktop */}
-              {isMounted && !isDesktop && (
-                <button
-                  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                  aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
-                  data-mobile-menu-toggle="true"
-                  className="flex items-center justify-center"
-                  style={{
-                    height: '44px',
-                    width: '44px',
-                    minWidth: '44px',
-                    background: isMobileMenuOpen ? 'rgba(249, 115, 22, 0.15)' : 'transparent',
-                    border: 'none',
-                    cursor: 'pointer',
-                    borderRadius: '12px',
-                    transition: 'all 0.2s',
-                    color: isMobileMenuOpen ? '#f97316' : '#374151',
-                    flexShrink: 0,
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(249, 115, 22, 0.1)';
-                    e.currentTarget.style.color = '#f97316';
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isMobileMenuOpen) {
-                      e.currentTarget.style.background = 'transparent';
-                      e.currentTarget.style.color = '#374151';
-                    }
-                  }}
-                >
-                  {isMobileMenuOpen ? (
-                    <X size={22} strokeWidth={2.5} />
-                  ) : (
-                    <Menu size={22} strokeWidth={2.5} />
-                  )}
-                </button>
-              )}
+              {/* Mobile/Tablet Menu Toggle Button - ClientOnly wrapper prevents hydration mismatch */}
+              <ClientOnly>
+                {!isDesktop && (
+                  <button
+                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                    aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+                    data-mobile-menu-toggle="true"
+                    className="flex items-center justify-center"
+                    style={{
+                      height: '44px',
+                      width: '44px',
+                      minWidth: '44px',
+                      background: isMobileMenuOpen ? 'rgba(249, 115, 22, 0.15)' : 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      borderRadius: '12px',
+                      transition: 'all 0.2s',
+                      color: isMobileMenuOpen ? '#f97316' : '#374151',
+                      flexShrink: 0,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(249, 115, 22, 0.1)';
+                      e.currentTarget.style.color = '#f97316';
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isMobileMenuOpen) {
+                        e.currentTarget.style.background = 'transparent';
+                        e.currentTarget.style.color = '#374151';
+                      }
+                    }}
+                  >
+                    {isMobileMenuOpen ? (
+                      <X size={22} strokeWidth={2.5} />
+                    ) : (
+                      <Menu size={22} strokeWidth={2.5} />
+                    )}
+                  </button>
+                )}
+              </ClientOnly>
             </div>
           </div>
           

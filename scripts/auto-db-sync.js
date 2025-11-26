@@ -64,11 +64,13 @@ async function main() {
   }
   
   const envContent = fs.readFileSync(envPath, 'utf8');
-  const dbUrlMatch = envContent.match(/DATABASE_URL="([^"]+)"/);
-  const databaseUrl = dbUrlMatch ? dbUrlMatch[1] : null;
+  // Match DATABASE_URL with or without quotes
+  const dbUrlMatch = envContent.match(/DATABASE_URL=["']?([^"'\n]+)["']?/);
+  const databaseUrl = dbUrlMatch ? dbUrlMatch[1].trim() : null;
   
   if (!databaseUrl) {
     log('❌ DATABASE_URL not found in .env!', colors.red);
+    log('💡 Make sure your .env has: DATABASE_URL=your_connection_string', colors.yellow);
     process.exit(1);
   }
   

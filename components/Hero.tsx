@@ -445,7 +445,7 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
                       >
                         <div className="relative rounded-2xl overflow-hidden shadow-xl transform group-hover:scale-105 transition-all duration-500 aspect-square">
                           <img
-                            src="https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=800&h=800&fit=crop&q=80"
+                            src="https://res.cloudinary.com/dt93mavok/image/upload/bantus-kitchen/menu-items/chicken-biryani-1763297725550.jpg"
                             alt="Authentic Hyderabadi Biryani - Traditional Indian rice dish with spices and meat, delivered fresh in Hayathnagar, Hyderabad"
                             className="w-full h-full object-cover"
                             onError={(e) => {
@@ -476,7 +476,7 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
                       >
                         <div className="relative rounded-2xl overflow-hidden shadow-xl transform group-hover:scale-105 transition-all duration-500 aspect-square">
                           <img
-                            src="https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=800&h=800&fit=crop&q=80"
+                            src="https://res.cloudinary.com/dt93mavok/image/upload/bantus-kitchen/menu-items/butter-chicken-1763297750353.jpg"
                             alt="Indian Curry Dishes - Creamy butter chicken, dal makhani, and paneer curry from Bantu's Kitchen in Hyderabad"
                             className="w-full h-full object-cover"
                             onError={(e) => {
@@ -507,7 +507,7 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
                       >
                         <div className="relative rounded-2xl overflow-hidden shadow-xl transform group-hover:scale-105 transition-all duration-500 aspect-square">
                           <img
-                            src="https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?w=800&h=800&fit=crop&q=80"
+                            src="https://res.cloudinary.com/dt93mavok/image/upload/bantus-kitchen/menu-items/paneer-tikka-1763297717277.jpg"
                             alt="Indian Appetizers - Paneer tikka, samosa, and chicken 65 starters from Bantu's Kitchen in Hayathnagar"
                             className="w-full h-full object-cover"
                             onError={(e) => {
@@ -538,7 +538,7 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
                       >
                         <div className="relative rounded-2xl overflow-hidden shadow-xl transform group-hover:scale-105 transition-all duration-500 aspect-square">
                           <img
-                            src="https://images.unsplash.com/photo-1631452180519-c014fe946bc7?w=800&h=800&fit=crop&q=80"
+                            src="https://res.cloudinary.com/dt93mavok/image/upload/bantus-kitchen/menu-items/rasmalai--2-pieces--1763297743823.jpg"
                             alt="Indian Desserts - Gulab jamun, rasmalai, and kheer traditional sweets from Bantu's Kitchen Hyderabad"
                             className="w-full h-full object-cover"
                             onError={(e) => {

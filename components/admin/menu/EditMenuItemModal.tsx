@@ -142,13 +142,14 @@ export default function EditMenuItemModal({ isOpen, onClose, item, onSave }: Edi
       <div style={{
         backgroundColor: '#ffffff',
         width: '100%',
-        maxWidth: '720px',
+        maxWidth: '600px',
         borderRadius: '1rem',
         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
         display: 'flex',
         flexDirection: 'column',
-        maxHeight: '85vh',
+        maxHeight: '90vh',
         overflow: 'hidden',
+        margin: '0 auto',
       }}>
         {/* Header */}
         <div style={{
@@ -198,14 +199,17 @@ export default function EditMenuItemModal({ isOpen, onClose, item, onSave }: Edi
           flex: 1,
         }}>
           <form onSubmit={handleSubmit} style={{
-            padding: '1.5rem',
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: '1.5rem',
+            padding: '1rem',
           }}>
             
+            {/* Responsive grid: stacked on mobile, side-by-side on desktop */}
+            <div style={{ 
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+              gap: '1.5rem',
+            }}>
             {/* LEFT COLUMN - Image & Basic Info */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {/* Image Preview & Upload */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 <label style={{
@@ -537,7 +541,7 @@ export default function EditMenuItemModal({ isOpen, onClose, item, onSave }: Edi
             </div>
 
             {/* RIGHT COLUMN - Preferences & Settings */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               
               {/* Availability Toggle */}
               <div style={{
@@ -751,6 +755,7 @@ export default function EditMenuItemModal({ isOpen, onClose, item, onSave }: Edi
                 </div>
               </div>
 
+            </div>
             </div>
           </form>
         </div>

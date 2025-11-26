@@ -517,11 +517,27 @@ export default function MenuPage() {
           </p>
         </div>
       ) : (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-          gap: '1.5rem',
-        }}>
+        <>
+        <style dangerouslySetInnerHTML={{__html: `
+          .menu-grid-admin {
+            display: grid !important;
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 0.75rem !important;
+          }
+          @media (min-width: 768px) {
+            .menu-grid-admin {
+              grid-template-columns: repeat(3, 1fr) !important;
+              gap: 1rem !important;
+            }
+          }
+          @media (min-width: 1024px) {
+            .menu-grid-admin {
+              grid-template-columns: repeat(4, 1fr) !important;
+              gap: 1.25rem !important;
+            }
+          }
+        `}} />
+        <div className="menu-grid-admin">
           {filteredItems.map((item) => (
             <div
               key={item.id}
@@ -538,9 +554,9 @@ export default function MenuPage() {
               onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)'}
               onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 1px 2px 0 rgba(0, 0, 0, 0.05)'}
             >
-              {/* Image Section */}
+              {/* Image Section - Compact for mobile */}
               <div style={{
-                height: '200px',
+                height: '120px',
                 width: '100%',
                 backgroundColor: '#f3f4f6',
                 position: 'relative',
@@ -687,7 +703,7 @@ export default function MenuPage() {
               </div>
 
               <div style={{
-                padding: '1rem',
+                padding: '0.625rem',
                 display: 'flex',
                 flexDirection: 'column',
                 flex: 1,
@@ -695,22 +711,22 @@ export default function MenuPage() {
                 <div style={{ marginBottom: 'auto' }}>
                   <div style={{ width: '100%' }}>
                     <h3 style={{
-                      fontSize: '0.9375rem',
+                      fontSize: '0.8125rem',
                       fontWeight: 700,
                       color: '#111827',
-                      whiteSpace: 'nowrap',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
                       overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      lineHeight: 1.3,
-                      marginBottom: '0.25rem'
+                      lineHeight: 1.25,
+                      marginBottom: '0.125rem'
                     }} title={item.name}>
                       {item.name}
                     </h3>
                   </div>
                   <p style={{
-                    fontSize: '0.75rem',
+                    fontSize: '0.6875rem',
                     color: '#6b7280',
-                    marginTop: '0.25rem',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis'
@@ -719,23 +735,22 @@ export default function MenuPage() {
                   </p>
 
                   <p style={{
-                    fontSize: '0.8125rem',
+                    fontSize: '0.6875rem',
                     color: '#4b5563',
-                    marginTop: '0.5rem',
+                    marginTop: '0.375rem',
                     display: '-webkit-box',
                     WebkitLineClamp: 2,
                     WebkitBoxOrient: 'vertical',
                     overflow: 'hidden',
-                    lineHeight: '1.4',
-                    height: '2.2rem',
+                    lineHeight: '1.35',
                   }}>
                     {item.description}
                   </p>
                   <p style={{
-                    fontSize: '1.125rem',
+                    fontSize: '0.9375rem',
                     fontWeight: 700,
                     color: '#ea580c',
-                    marginTop: '0.5rem'
+                    marginTop: '0.375rem'
                   }}>
                     ₹{item.price.toLocaleString('en-IN')}
                   </p>
@@ -743,43 +758,43 @@ export default function MenuPage() {
 
                 <div style={{
                   display: 'flex',
-                  gap: '0.5rem',
-                  marginTop: '0.75rem'
+                  gap: '0.375rem',
+                  marginTop: '0.5rem'
                 }}>
                   <button
                     onClick={() => handleEdit(item)}
                     style={{
                       flex: 1,
-                      height: '36px',
+                      height: '30px',
                       backgroundColor: '#fff7ed',
                       color: '#c2410c',
                       border: '1px solid #fed7aa',
-                      borderRadius: '0.5rem',
-                      fontSize: '0.8125rem',
+                      borderRadius: '0.375rem',
+                      fontSize: '0.75rem',
                       fontWeight: 600,
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      gap: '0.375rem',
+                      gap: '0.25rem',
                       transition: 'background-color 0.2s',
                       flexShrink: 0,
                     }}
                     onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#ffedd5'}
                     onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#fff7ed'}
                   >
-                    <Edit size={14} style={{ flexShrink: 0 }} />
+                    <Edit size={12} style={{ flexShrink: 0 }} />
                     Edit
                   </button>
                   <button
                     onClick={() => handleDelete(item.id, item.name)}
                     style={{
-                      height: '36px',
-                      width: '36px',
+                      height: '30px',
+                      width: '30px',
                       backgroundColor: '#fef2f2',
                       color: '#dc2626',
                       border: '1px solid #fecaca',
-                      borderRadius: '0.5rem',
+                      borderRadius: '0.375rem',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
@@ -790,13 +805,14 @@ export default function MenuPage() {
                     onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fee2e2'}
                     onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#fef2f2'}
                   >
-                    <Trash2 size={14} style={{ flexShrink: 0 }} />
+                    <Trash2 size={12} style={{ flexShrink: 0 }} />
                   </button>
                 </div>
               </div>
             </div>
           ))}
         </div>
+        </>
       )}
 
       <EditMenuItemModal 

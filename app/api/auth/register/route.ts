@@ -52,7 +52,7 @@ const RegisterSchema = z.object({
     .transform(val => val.replace(/\D/g, '')) // Remove non-digits
     .refine(val => val.length >= 10, 'Phone number must have at least 10 digits'),
   password: z.string()
-    .min(8, 'Password must be at least 8 characters'),
+    .min(6, 'Password must be at least 6 characters'),
   referredBy: z.string().optional(), // Referral code (if user was referred)
   termsAccepted: z.boolean().refine(val => val === true, 'You must accept all terms and conditions'),
 });

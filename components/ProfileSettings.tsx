@@ -66,6 +66,9 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [feedbackMessage, setFeedbackMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const [profileData, setProfileData] = useState({
     name: customer.name,
@@ -79,6 +82,14 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({
     confirmPassword: '',
   });
 
+  // Clear feedback after 5 seconds
+  React.useEffect(() => {
+    if (feedbackMessage) {
+      const timer = setTimeout(() => setFeedbackMessage(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [feedbackMessage]);
+
   const toggleSection = (section: string) => {
     const newExpanded = new Set(expandedSections);
     if (newExpanded.has(section)) {
@@ -90,35 +101,104 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({
   };
 
   const handleProfileUpdate = async () => {
-    await onUpdateProfile(profileData);
-    setIsEditingProfile(false);
+    setIsLoading(true);
+    setFeedbackMessage(null);
+    
+    try {
+      await onUpdateProfile(profileData);
+      setIsEditingProfile(false);
+      setFeedbackMessage({ type: 'success', message: '✅ Profile updated successfully!' });
+    } catch (error) {
+      setFeedbackMessage({ type: 'error', message: '❌ Failed to update profile. Please try again.' });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handlePasswordChange = async () => {
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      alert('Passwords do not match');
+    setFeedbackMessage(null);
+    
+    // Simple validation - minimum requirements only
+    if (!passwordData.currentPassword) {
+      setFeedbackMessage({ type: 'error', message: 'Please enter your current password' });
       return;
     }
     
-    if (passwordData.newPassword.length < 8) {
-      alert('Password must be at least 8 characters');
+    if (!passwordData.newPassword) {
+      setFeedbackMessage({ type: 'error', message: 'Please enter a new password' });
+      return;
+    }
+    
+    if (passwordData.newPassword.length < 6) {
+      setFeedbackMessage({ type: 'error', message: 'New password must be at least 6 characters' });
+      return;
+    }
+    
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setFeedbackMessage({ type: 'error', message: 'Passwords do not match' });
       return;
     }
 
-    await onChangePassword(passwordData.currentPassword, passwordData.newPassword);
-    setIsChangingPassword(false);
-    setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    setIsLoading(true);
+    
+    try {
+      await onChangePassword(passwordData.currentPassword, passwordData.newPassword);
+      setIsChangingPassword(false);
+      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setFeedbackMessage({ type: 'success', message: '✅ Password changed successfully!' });
+    } catch (error: any) {
+      setFeedbackMessage({ 
+        type: 'error', 
+        message: error?.message || '❌ Failed to change password. Check your current password.' 
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <div style={{
-      display: 'grid',
-      gridTemplateColumns: 'repeat(1, minmax(0, 1fr))',
+      display: 'flex',
+      flexDirection: 'column',
       gap: '1rem',
-    }}
-    className="profile-settings-grid"
-    >
+    }}>
+      {/* Feedback Message Banner */}
+      {feedbackMessage && (
+        <div style={{
+          padding: '1rem',
+          borderRadius: '0.75rem',
+          backgroundColor: feedbackMessage.type === 'success' ? '#D1FAE5' : '#FEE2E2',
+          border: `1px solid ${feedbackMessage.type === 'success' ? '#10B981' : '#EF4444'}`,
+          color: feedbackMessage.type === 'success' ? '#065F46' : '#991B1B',
+          fontWeight: 600,
+          fontSize: '0.9375rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          animation: 'slideIn 0.3s ease-out',
+        }}>
+          <span>{feedbackMessage.message}</span>
+          <button
+            onClick={() => setFeedbackMessage(null)}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              padding: '0.25rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <X size={18} />
+          </button>
+        </div>
+      )}
       <style jsx>{`
+        @keyframes slideIn {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
         @media (min-width: 768px) {
           .profile-settings-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
@@ -130,6 +210,14 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({
           }
         }
       `}</style>
+      
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(1, minmax(0, 1fr))',
+        gap: '1rem',
+      }}
+      className="profile-settings-grid"
+      >
       {/* Personal Information Section */}
       <div style={{
         backgroundColor: '#fff',
@@ -799,28 +887,47 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({
                   <div style={{ display: 'flex', gap: '0.625rem', marginTop: '1rem' }}>
                     <button
                       onClick={handlePasswordChange}
+                      disabled={isLoading}
                       style={{
                         flex: 1,
                         paddingLeft: '1.5rem',
                         paddingRight: '1.5rem',
                         paddingTop: '0.75rem',
                         paddingBottom: '0.75rem',
-                        backgroundColor: '#16a34a',
+                        backgroundColor: isLoading ? '#9ca3af' : '#16a34a',
                         color: '#fff',
                         borderRadius: '0.75rem',
                         fontWeight: 600,
                         transition: 'all 0.2s',
                         border: 'none',
-                        cursor: 'pointer',
+                        cursor: isLoading ? 'not-allowed' : 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.5rem',
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#15803d';
+                        if (!isLoading) e.currentTarget.style.backgroundColor = '#15803d';
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = '#16a34a';
+                        if (!isLoading) e.currentTarget.style.backgroundColor = '#16a34a';
                       }}
                     >
-                      Update Password
+                      {isLoading ? (
+                        <>
+                          <div style={{
+                            width: '16px',
+                            height: '16px',
+                            border: '2px solid #fff',
+                            borderTopColor: 'transparent',
+                            borderRadius: '50%',
+                            animation: 'spin 0.8s linear infinite',
+                          }} />
+                          Updating...
+                        </>
+                      ) : (
+                        'Update Password'
+                      )}
                     </button>
                     <button
                       onClick={() => {
@@ -941,6 +1048,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({
             </div>
           </div>
         )}
+      </div>
       </div>
     </div>
   );

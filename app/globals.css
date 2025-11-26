@@ -460,6 +460,19 @@
   }
 }
 
+/* ===== HEADER GLASS EFFECT - HYDRATION SAFE ===== */
+.header-glass {
+  background: rgba(255, 255, 255, 0.85);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.header-glass.header-scrolled {
+  background: rgba(255, 255, 255, 0.95);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
 /* ===== PREMIUM UTILITY CLASSES ===== */
 .premium-gradient {
   background: linear-gradient(135deg, #f97316 0%, #ea580c 50%, #dc2626 100%);

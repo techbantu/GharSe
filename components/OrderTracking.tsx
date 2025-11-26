@@ -24,7 +24,7 @@ import {
   Mail
 } from 'lucide-react';
 import { Order, OrderStatus } from '@/types';
-import { format } from 'date-fns';
+import { formatForRestaurant, formatMinutesToHuman } from '@/lib/timezone-service';
 
 interface OrderTrackingProps {
   orderId: string;
@@ -120,7 +120,7 @@ const OrderTracking: React.FC<OrderTrackingProps> = ({ orderId, orderNumber }) =
           Order {order.orderNumber}
         </h2>
         <p className="text-gray-600">
-          Placed on {format(order.createdAt, 'MMMM d, yyyy h:mm a')}
+          Placed on {formatForRestaurant(order.createdAt, 'MMMM d, yyyy h:mm a')}
         </p>
       </div>
       
@@ -169,11 +169,11 @@ const OrderTracking: React.FC<OrderTrackingProps> = ({ orderId, orderNumber }) =
           <h3 className="text-xl font-semibold">Estimated Time</h3>
         </div>
         <p className="text-2xl font-bold">
-          {estimatedMinutes > 0 ? `${estimatedMinutes} minutes` : 'Ready now!'}
+          {estimatedMinutes > 0 ? formatMinutesToHuman(estimatedMinutes) : 'Ready now!'}
         </p>
         {order.estimatedReadyTime && (
           <p className="text-white/80 text-sm mt-2">
-            Ready by {format(order.estimatedReadyTime, 'h:mm a')}
+            Ready by {formatForRestaurant(order.estimatedReadyTime, 'h:mm a')}
           </p>
         )}
       </div>

@@ -439,7 +439,7 @@ const admin = {
   id: 'admin-1',
   email: 'admin@bantuskitchen.com',
   name: 'Kitchen Admin',
-  passwordHash: '$2a$10$vI8aWBnW3fID.ZQ4/zo1G.q1lRps.9cGLcZEiGDMVr5yUP1KUOYTa', // ***REMOVED***
+  passwordHash: '$2a$10$vI8aWBnW3fID.ZQ4/zo1G.q1lRps.9cGLcZEiGDMVr5yUP1KUOYTa', // ChangeThisPassword123!
   role: 'ADMIN',
   isActive: true
 };
@@ -470,7 +470,7 @@ async function seedDatabase() {
       await supabaseInsert('Admin', admin);
       console.log('   ✅ Admin user created');
       console.log('   📧 Email: admin@bantuskitchen.com');
-      console.log('   🔑 Password: ***REMOVED***');
+      console.log('   🔑 Password: ChangeThisPassword123!');
     } catch (error) {
       if (error.message.includes('duplicate')) {
         console.log('   ⏭️  Admin already exists');

@@ -151,17 +151,9 @@ export default function MenuManagerDashboard() {
   // Check authentication on mount
   useEffect(() => {
     const checkAuth = async () => {
-      const token = localStorage.getItem('adminToken');
-      if (!token) {
-        router.push('/admin/login');
-        return;
-      }
-
       try {
         const response = await fetch('/api/admin/me', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
+          credentials: 'include'
         });
 
         const data = await response.json();
@@ -171,14 +163,12 @@ export default function MenuManagerDashboard() {
           // Fetch menu items after authentication
           fetchMenuItems();
         } else {
-          localStorage.removeItem('adminToken');
-          localStorage.removeItem('adminUser');
+          sessionStorage.removeItem('adminUser');
           router.push('/admin/login');
         }
       } catch (error) {
         console.error('Auth check failed:', error);
-        localStorage.removeItem('adminToken');
-        localStorage.removeItem('adminUser');
+        sessionStorage.removeItem('adminUser');
         router.push('/admin/login');
       }
     };
@@ -900,11 +890,11 @@ export default function MenuManagerDashboard() {
                   e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)';
                 }}
               >
-                {/* Image - Compact Size (Similar to Homepage Menu) */}
+                {/* Image - More Compact for Mobile */}
                 <div style={{ 
                   position: 'relative', 
                   width: '100%',
-                  height: '120px',
+                  height: '100px',
                   backgroundColor: '#F3F4F6',
                   overflow: 'hidden'
                 }}>
@@ -1021,34 +1011,38 @@ export default function MenuManagerDashboard() {
                   )}
                 </div>
 
-                {/* Content - Compact */}
-                <div style={{ padding: '0.875rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                {/* Content - More Compact for Mobile */}
+                <div style={{ padding: '0.625rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between', marginBottom: '0.375rem' }}>
                     <h3 style={{
-                      fontSize: '0.9375rem',
+                      fontSize: '0.8125rem',
                       fontWeight: 700,
                       color: '#111827',
                       margin: 0,
                       flex: 1,
-                      lineHeight: '1.3'
+                      lineHeight: '1.25',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden'
                     }}>
                       {item.name}
                     </h3>
-                    <div style={{ display: 'flex', gap: '0.25rem', marginLeft: '0.5rem' }}>
+                    <div style={{ display: 'flex', gap: '0.125rem', marginLeft: '0.25rem', flexShrink: 0 }}>
                       {item.isVegetarian && (
-                        <Leaf size={16} style={{ color: '#10B981' }} />
+                        <Leaf size={12} style={{ color: '#10B981' }} />
                       )}
                       {item.spicyLevel > 0 && (
-                        <Flame size={16} style={{ color: '#EF4444' }} />
+                        <Flame size={12} style={{ color: '#EF4444' }} />
                       )}
                     </div>
                   </div>
 
                   <p style={{
-                    fontSize: '0.8125rem',
+                    fontSize: '0.6875rem',
                     color: '#6B7280',
-                    marginBottom: '0.625rem',
-                    lineHeight: '1.4',
+                    marginBottom: '0.5rem',
+                    lineHeight: '1.35',
                     display: '-webkit-box',
                     WebkitLineClamp: 2,
                     WebkitBoxOrient: 'vertical',
@@ -1058,21 +1052,18 @@ export default function MenuManagerDashboard() {
                     {item.description}
                   </p>
 
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.625rem', marginTop: 'auto' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <IndianRupee size={16} style={{ color: '#10B981' }} />
-                      <span style={{ fontSize: '1.125rem', fontWeight: 700, color: '#111827' }}>
-                        ₹{item.price}
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', color: '#6B7280' }}>
-                      <Clock size={14} />
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem', marginTop: 'auto' }}>
+                    <span style={{ fontSize: '0.9375rem', fontWeight: 700, color: '#10B981' }}>
+                      ₹{item.price}
+                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.6875rem', color: '#6B7280' }}>
+                      <Clock size={12} />
                       <span>{item.preparationTime}m</span>
                     </div>
                   </div>
 
-                  {/* Actions */}
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  {/* Actions - Compact */}
+                  <div style={{ display: 'flex', gap: '0.375rem' }}>
                     <button
                       onClick={() => startEdit(item)}
                       style={{
@@ -1080,19 +1071,18 @@ export default function MenuManagerDashboard() {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: '0.5rem',
-                        paddingTop: '0.5rem',
-                        paddingBottom: '0.5rem',
+                        gap: '0.375rem',
+                        padding: '0.375rem 0.5rem',
                         backgroundColor: '#3B82F6',
                         color: '#ffffff',
-                        borderRadius: '0.5rem',
-                        fontSize: '0.875rem',
+                        borderRadius: '0.375rem',
+                        fontSize: '0.75rem',
                         fontWeight: 600,
                         border: 'none',
                         cursor: 'pointer'
                       }}
                     >
-                      <Edit size={16} />
+                      <Edit size={14} />
                       <span>Edit</span>
                     </button>
                     <button
@@ -1101,20 +1091,17 @@ export default function MenuManagerDashboard() {
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        paddingLeft: '0.75rem',
-                        paddingRight: '0.75rem',
-                        paddingTop: '0.5rem',
-                        paddingBottom: '0.5rem',
-                        backgroundColor: '#EF4444',
-                        color: '#ffffff',
-                        borderRadius: '0.5rem',
-                        fontSize: '0.875rem',
+                        padding: '0.375rem 0.5rem',
+                        backgroundColor: '#FEE2E2',
+                        color: '#DC2626',
+                        borderRadius: '0.375rem',
+                        fontSize: '0.75rem',
                         fontWeight: 600,
                         border: 'none',
                         cursor: 'pointer'
                       }}
                     >
-                      <Trash2 size={16} />
+                      <Trash2 size={14} />
                     </button>
                   </div>
                 </div>

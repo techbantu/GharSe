@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Printer, Phone, MapPin, CreditCard, Clock, CheckCircle, User, ChevronDown, ChevronUp, Banknote } from 'lucide-react';
-import { format } from 'date-fns';
+import { formatForRestaurant } from '@/lib/timezone-service';
 
 interface OrderItem {
   menuItem: {
@@ -251,6 +251,8 @@ export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetai
   // Helper to get payment method text and icon
   const renderPaymentInfo = (method?: string) => {
     const m = method?.toLowerCase() || 'cash';
+    
+    // Cash on Delivery
     if (m === 'cash' || m === 'cash-on-delivery') {
       return (
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -261,6 +263,57 @@ export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetai
         </div>
       );
     }
+    
+    // UPI Payment (PhonePe, GPay, Paytm, BHIM, etc.)
+    if (m.includes('upi') || m.includes('gpay') || m.includes('phonepe') || m.includes('paytm') || m.includes('bhim')) {
+      // Extract the UPI app name
+      const upiAppNames: Record<string, string> = {
+        'gpay': 'Google Pay',
+        'phonepe': 'PhonePe',
+        'paytm': 'Paytm',
+        'bhim': 'BHIM UPI',
+        'amazonpay': 'Amazon Pay',
+        'upi': 'UPI',
+      };
+      
+      let appName = 'UPI';
+      for (const [key, name] of Object.entries(upiAppNames)) {
+        if (m.includes(key)) {
+          appName = name;
+          break;
+        }
+      }
+      
+      return (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div style={{
+            width: '14px',
+            height: '14px',
+            background: 'linear-gradient(135deg, #7C3AED, #5B21B6)',
+            borderRadius: '4px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '8px',
+            color: 'white',
+            fontWeight: 700,
+            flexShrink: 0
+          }}>
+            📱
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            <p style={{ fontSize: '0.75rem', fontWeight: 600, color: '#5B21B6', margin: 0, lineHeight: '1' }}>
+              {appName} ✓
+            </p>
+            <p style={{ fontSize: '0.625rem', color: '#7C3AED', margin: 0, lineHeight: '1' }}>
+              Paid Online
+            </p>
+          </div>
+        </div>
+      );
+    }
+    
+    // Card payment
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
         <CreditCard size={14} color="#6b7280" style={{ flexShrink: 0 }} />
@@ -311,7 +364,7 @@ export default function OrderDetailsModal({ isOpen, onClose, order }: OrderDetai
               Order #{order.orderNumber}
             </h2>
             <p style={{ fontSize: '0.6875rem', color: '#6b7280', marginTop: '0.125rem' }}>
-              {format(new Date(order.createdAt), 'MMM d, yyyy • h:mm a')}
+              {formatForRestaurant(new Date(order.createdAt), 'MMM d, yyyy • h:mm a')}
             </p>
           </div>
           <button

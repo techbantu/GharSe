@@ -32,39 +32,36 @@ export default function AdminDashboardPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    // Check if admin is logged in with valid token
-    const token = localStorage.getItem('adminToken');
-    if (!token) {
-      router.push('/admin/login');
-      return;
-    }
-
-    // Verify token is still valid by checking with API
+    // Verify session is still valid by checking with API using httpOnly cookies
     fetch('/api/admin/me', {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
+      credentials: 'include'
     })
       .then(res => res.json())
       .then(data => {
         if (data.success) {
           setIsLoggedIn(true);
         } else {
-          localStorage.removeItem('adminToken');
-          localStorage.removeItem('adminUser');
+          sessionStorage.removeItem('adminUser');
           router.push('/admin/login');
         }
       })
       .catch(() => {
-        localStorage.removeItem('adminToken');
+        sessionStorage.removeItem('adminUser');
         localStorage.removeItem('adminUser');
         router.push('/admin/login');
       });
   }, [router]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('adminToken');
-    localStorage.removeItem('adminUser');
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/admin/logout', {
+        method: 'POST',
+        credentials: 'include'
+      });
+    } catch (e) {
+      console.error('Logout error:', e);
+    }
+    sessionStorage.removeItem('adminUser');
     router.push('/admin/login');
   };
 

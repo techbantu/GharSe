@@ -10,7 +10,7 @@
 import React, { useRef } from 'react';
 import { Download, Mail, Printer, FileText } from 'lucide-react';
 import { Order } from '@/types';
-import { format } from 'date-fns';
+import { formatForRestaurant } from '@/lib/timezone-service';
 
 interface ReceiptGeneratorProps {
   order: Order;
@@ -120,7 +120,7 @@ const ReceiptGenerator: React.FC<ReceiptGeneratorProps> = ({ order, onClose }) =
               </div>
               <div className="text-right">
                 <p className="font-bold text-gray-700">Date:</p>
-                <p className="text-gray-900">{format(order.createdAt, 'MMM d, yyyy h:mm a')}</p>
+                <p className="text-gray-900">{formatForRestaurant(order.createdAt, 'MMM d, yyyy h:mm a')}</p>
               </div>
             </div>
           </div>
@@ -208,29 +208,77 @@ const ReceiptGenerator: React.FC<ReceiptGeneratorProps> = ({ order, onClose }) =
             </div>
           </div>
 
-          {/* Payment Info */}
-          <div className="mt-6 bg-green-50 border border-green-200 rounded-lg p-4">
+          {/* Payment Info - Enhanced for UPI */}
+          <div className={`mt-6 rounded-lg p-4 ${
+            order.paymentMethod?.toLowerCase().includes('upi') || 
+            order.paymentMethod?.toLowerCase().includes('gpay') || 
+            order.paymentMethod?.toLowerCase().includes('phonepe') || 
+            order.paymentMethod?.toLowerCase().includes('paytm') || 
+            order.paymentMethod?.toLowerCase().includes('bhim')
+              ? 'bg-purple-50 border border-purple-200'
+              : 'bg-green-50 border border-green-200'
+          }`}>
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-semibold text-gray-700">Payment Method:</p>
-                <p className="text-gray-900 capitalize">
-                  {order.paymentMethod
-                    ? order.paymentMethod.replace(/-/g, ' ').replace(/_/g, ' ')
-                    : 'Cash on Delivery'}
-                  {order.pricing?.tip && order.pricing.tip > 0 && <span className="text-green-600 ml-2">💝 ₹{order.pricing.tip}</span>}
-                </p>
+                <div className="flex items-center gap-2 mt-1">
+                  {/* UPI Payment - Special Display */}
+                  {order.paymentMethod?.toLowerCase().includes('upi') || 
+                   order.paymentMethod?.toLowerCase().includes('gpay') || 
+                   order.paymentMethod?.toLowerCase().includes('phonepe') || 
+                   order.paymentMethod?.toLowerCase().includes('paytm') || 
+                   order.paymentMethod?.toLowerCase().includes('bhim') ? (
+                    <>
+                      <span className="text-xl">📱</span>
+                      <span className="text-purple-700 font-bold">
+                        {order.paymentMethod?.toLowerCase().includes('gpay') ? 'Google Pay' :
+                         order.paymentMethod?.toLowerCase().includes('phonepe') ? 'PhonePe' :
+                         order.paymentMethod?.toLowerCase().includes('paytm') ? 'Paytm' :
+                         order.paymentMethod?.toLowerCase().includes('bhim') ? 'BHIM UPI' : 'UPI Payment'}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-xl">💵</span>
+                      <span className="text-gray-900 font-semibold">
+                        {order.paymentMethod
+                          ? order.paymentMethod.replace(/-/g, ' ').replace(/_/g, ' ')
+                          : 'Cash on Delivery'}
+                      </span>
+                    </>
+                  )}
+                  {order.pricing?.tip && order.pricing.tip > 0 && (
+                    <span className="text-green-600 ml-2">💝 ₹{order.pricing.tip}</span>
+                  )}
+                </div>
               </div>
               <div className="text-right">
                 <p className="font-semibold text-gray-700">Payment Status:</p>
                 <span className={`inline-block px-3 py-1 rounded-full text-sm font-bold ${
-                  order.paymentStatus === 'completed' 
+                  order.paymentStatus === 'completed' || order.paymentStatus === 'paid'
                     ? 'bg-green-100 text-green-800'
                     : 'bg-yellow-100 text-yellow-800'
                 }`}>
-                  {order.paymentStatus}
+                  {order.paymentStatus === 'completed' || order.paymentStatus === 'paid' ? '✓ PAID' : order.paymentStatus}
                 </span>
               </div>
             </div>
+            
+            {/* UPI Transaction Verified Badge */}
+            {(order.paymentStatus === 'completed' || order.paymentStatus === 'paid') && 
+             (order.paymentMethod?.toLowerCase().includes('upi') || 
+              order.paymentMethod?.toLowerCase().includes('gpay') || 
+              order.paymentMethod?.toLowerCase().includes('phonepe') || 
+              order.paymentMethod?.toLowerCase().includes('paytm')) && (
+              <div className="mt-3 pt-3 border-t border-purple-200">
+                <div className="flex items-center justify-center gap-2 text-purple-700">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <span className="font-semibold text-sm">Payment Verified via UPI</span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Footer */}

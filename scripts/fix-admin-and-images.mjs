@@ -47,7 +47,7 @@ async function main() {
     console.log('👤 Fixing admin user password...');
     
     const adminEmail = 'admin@bantuskitchen.com';
-    const adminPassword = '***REMOVED***';
+    const adminPassword = 'ChangeThisPassword123!';
     
     // Hash password
     const passwordHash = await bcrypt.hash(adminPassword, 10);

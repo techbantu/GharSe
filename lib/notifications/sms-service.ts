@@ -14,7 +14,7 @@
 import { Order } from '@/types';
 import { logger } from '@/utils/logger';
 import { restaurantInfo } from '@/data/menuData';
-import { formatForRegion } from '@/lib/timezone-service';
+import { formatForRestaurant, formatMinutesToHuman, formatPrepAndDeliveryTime } from '@/lib/timezone-service';
 
 // Twilio configuration
 const TWILIO_CONFIG = {
@@ -27,14 +27,26 @@ const TWILIO_CONFIG = {
 
 // SMS templates
 const generateOrderConfirmationSMS = (order: Order): string => {
-  const estimatedTime = formatForRegion(order.estimatedReadyTime, 'IN', 'h:mm a');
+  // Use scheduled delivery time if available, otherwise estimated ready time
+  const isScheduled = order.scheduledDeliveryAt || order.scheduledWindowStart;
+  let deliveryInfo: string;
+  
+  if (isScheduled) {
+    const deliveryTime = order.scheduledWindowStart || order.scheduledDeliveryAt;
+    const formattedTime = formatForRestaurant(deliveryTime!, 'h:mm a');
+    const formattedDate = formatForRestaurant(deliveryTime!, 'EEE, MMM d');
+    deliveryInfo = `Scheduled: ${formattedDate} at ${formattedTime}`;
+  } else {
+    const estimatedTime = formatForRestaurant(order.estimatedReadyTime, 'h:mm a');
+    deliveryInfo = `Ready by: ${estimatedTime}`;
+  }
 
   return `✓ Order Confirmed!
 
 ${restaurantInfo.name}
 Order: ${order.orderNumber}
 Total: ₹${order.pricing.total.toFixed(0)}
-Ready by: ${estimatedTime}
+${deliveryInfo}
 
 ${order.orderType === 'delivery' ? 'Will be delivered to you.' : 'Ready for pickup.'}
 
@@ -45,8 +57,15 @@ Call: ${restaurantInfo.contact.phone}
 };
 
 const generateStatusUpdateSMS = (order: Order, newStatus: string): string => {
+  // Get the appropriate delivery time
+  const isScheduled = order.scheduledDeliveryAt || order.scheduledWindowStart;
+  const deliveryTime = isScheduled 
+    ? (order.scheduledWindowStart || order.scheduledDeliveryAt)
+    : order.estimatedReadyTime;
+  const formattedTime = formatForRestaurant(deliveryTime!, 'h:mm a');
+  
   const statusMessages: Record<string, string> = {
-    confirmed: `Order ${order.orderNumber} confirmed! We're preparing your food. Ready by ${formatForRegion(order.estimatedReadyTime, 'IN', 'h:mm a')}.`,
+    confirmed: `Order ${order.orderNumber} confirmed! We're preparing your food. ${isScheduled ? `Scheduled for ${formattedTime}` : `Ready by ${formattedTime}`}.`,
     preparing: `Your order ${order.orderNumber} is being prepared! 👨‍🍳`,
     ready: `Order ${order.orderNumber} is ready! ${order.orderType === 'delivery' ? 'Out for delivery soon.' : 'Ready for pickup.'}`,
     'out-for-delivery': `Order ${order.orderNumber} is on the way! 🛵`,

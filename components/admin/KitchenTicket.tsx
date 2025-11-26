@@ -17,7 +17,7 @@
 import React from 'react';
 import { Order } from '@/types';
 import { Clock, MapPin, Phone, Utensils, AlertCircle, CheckCircle } from 'lucide-react';
-import { format } from 'date-fns';
+import { formatForRestaurant, formatMinutesToHuman } from '@/lib/timezone-service';
 
 interface KitchenTicketProps {
   order: Order;
@@ -160,14 +160,14 @@ export default function KitchenTicket({ order, onStatusChange, isUrgent }: Kitch
                     color: '#667eea',
                     marginBottom: '0.25rem'
                   }}>
-                    {timeMetrics.scheduledDelivery && format(timeMetrics.scheduledDelivery, 'EEE, MMM d')}
+                    {timeMetrics.scheduledDelivery && formatForRestaurant(timeMetrics.scheduledDelivery, 'EEE, MMM d')}
                   </div>
                   <div style={{ 
                     fontSize: '1rem', 
                     fontWeight: 700, 
                     color: '#764ba2'
                   }}>
-                    🕐 {timeMetrics.scheduledDelivery && format(timeMetrics.scheduledDelivery, 'h:mm a')}
+                    🕐 {timeMetrics.scheduledDelivery && formatForRestaurant(timeMetrics.scheduledDelivery, 'h:mm a')}
                   </div>
                   <div style={{ 
                     fontSize: '0.75rem', 
@@ -176,10 +176,8 @@ export default function KitchenTicket({ order, onStatusChange, isUrgent }: Kitch
                     fontWeight: 600
                   }}>
                     Start in {(timeMetrics.minutesUntilStart ?? 0) < 0 
-                      ? `NOW! (${Math.abs(timeMetrics.minutesUntilStart ?? 0)}m late)` 
-                      : (timeMetrics.minutesUntilStart ?? 0) < 60
-                        ? `${timeMetrics.minutesUntilStart ?? 0} min`
-                        : `${Math.floor((timeMetrics.minutesUntilStart ?? 0) / 60)}h ${(timeMetrics.minutesUntilStart ?? 0) % 60}m`
+                      ? `NOW! (${formatMinutesToHuman(Math.abs(timeMetrics.minutesUntilStart ?? 0))} late)` 
+                      : formatMinutesToHuman(timeMetrics.minutesUntilStart ?? 0)
                     }
                   </div>
                 </>
@@ -187,10 +185,10 @@ export default function KitchenTicket({ order, onStatusChange, isUrgent }: Kitch
                 <>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#6b7280', fontSize: '0.875rem' }}>
                     <Clock size={16} />
-                    <span style={{ fontWeight: 600 }}>{format(orderTime, 'h:mm a')}</span>
+                    <span style={{ fontWeight: 600 }}>{formatForRestaurant(orderTime, 'h:mm a')}</span>
                   </div>
                   <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.25rem' }}>
-                    {timeMetrics.minutesElapsed ?? 0} min ago
+                    {formatMinutesToHuman(timeMetrics.minutesElapsed ?? 0)} ago
                   </div>
                 </>
               )}

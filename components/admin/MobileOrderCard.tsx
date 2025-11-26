@@ -11,7 +11,7 @@ import {
   DollarSign,
   ShoppingBag
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { formatForRestaurant } from '@/lib/timezone-service';
 
 interface MobileOrderCardProps {
   order: Order;
@@ -125,7 +125,7 @@ const MobileOrderCard: React.FC<MobileOrderCardProps> = ({
             </span>
           </div>
           <span className="text-xs text-gray-500 font-medium">
-            {format(new Date(order.createdAt), 'h:mm a')}
+            {formatForRestaurant(new Date(order.createdAt), 'h:mm a')}
           </span>
         </div>
 

@@ -112,14 +112,9 @@ export default function OrdersPage() {
 
   const fetchOrders = async () => {
     try {
-      const token = localStorage.getItem('adminToken');
-      if (!token) {
-        window.location.href = '/admin/login';
-        return;
-      }
-
+      // Use credentials: 'include' to send httpOnly cookies
       const response = await fetch('/api/orders', {
-        headers: { 'Authorization': `Bearer ${token}` }
+        credentials: 'include'
       });
 
       if (response.ok) {
@@ -170,13 +165,12 @@ export default function OrdersPage() {
         order.id === orderId ? { ...order, status: newStatus as OrderStatus } : order
       ));
 
-      const token = localStorage.getItem('adminToken');
       const response = await fetch(`/api/orders/${orderId}/status`, {
         method: 'PUT',
         headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
+        credentials: 'include',
         body: JSON.stringify({ status: newStatus }),
       });
 

@@ -26,16 +26,9 @@ export default function AdminDashboard() {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const token = localStorage.getItem('adminToken');
-        if (!token) {
-          window.location.href = '/admin/login';
-          return;
-        }
-
+        // Use credentials: 'include' to send httpOnly cookies
         const response = await fetch('/api/orders', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+          credentials: 'include'
         });
 
         if (response.ok) {
@@ -282,10 +275,10 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Recent Orders */}
+      {/* Recent Orders - Compact Mobile-First Design */}
       <div style={{
         backgroundColor: '#ffffff',
-        padding: '1.5rem',
+        padding: '1rem',
         borderRadius: '0.75rem',
         border: '1px solid #e5e7eb',
         boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
@@ -294,198 +287,124 @@ export default function AdminDashboard() {
           display: 'flex', 
           justifyContent: 'space-between', 
           alignItems: 'center',
-          marginBottom: '1.5rem'
+          marginBottom: '1rem'
         }}>
-          <h2 style={{ fontSize: '1.125rem', fontWeight: 700, color: '#111827' }}>
+          <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#111827' }}>
             Recent Orders
           </h2>
           <Link 
             href="/admin/orders"
             style={{ 
-              fontSize: '0.875rem', 
+              fontSize: '0.8125rem', 
               color: '#ea580c', 
-              fontWeight: 500,
+              fontWeight: 600,
               textDecoration: 'none'
             }}
           >
-            View All
+            View All →
           </Link>
         </div>
         
         {orders.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '3rem 0' }}>
-            <div style={{ marginBottom: '1rem' }}>
-              <ShoppingBag size={48} style={{ color: '#9ca3af', margin: '0 auto' }} />
-            </div>
-            <h3 style={{ fontSize: '1.125rem', fontWeight: 500, color: '#111827' }}>
+          <div style={{ textAlign: 'center', padding: '2rem 0' }}>
+            <ShoppingBag size={40} style={{ color: '#d1d5db', margin: '0 auto 0.75rem' }} />
+            <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>
               No orders yet
-            </h3>
-            <p style={{ fontSize: '0.875rem', color: '#6b7280', marginTop: '0.25rem' }}>
-              New orders will appear here automatically.
             </p>
           </div>
         ) : (
-          <div style={{ 
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-            gap: '1rem'
-          }}>
-            {orders.slice(0, 8).map((order) => (
-              <div 
-                key={order.id}
-                style={{
-                  padding: '1.25rem',
-                  backgroundColor: '#ffffff',
-                  borderRadius: '0.75rem',
-                  border: `2px solid ${getStatusColor(order.status)}30`,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '1rem',
-                  position: 'relative',
-                  overflow: 'hidden'
-                }}
-                onClick={() => {
-                  setSelectedOrder(order);
-                  setIsModalOpen(true);
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-4px)';
-                  e.currentTarget.style.boxShadow = `0 8px 16px -4px ${getStatusColor(order.status)}40`;
-                  e.currentTarget.style.borderColor = getStatusColor(order.status);
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = 'none';
-                  e.currentTarget.style.borderColor = `${getStatusColor(order.status)}30`;
-                }}
-              >
-                {/* Status Indicator Bar */}
-                <div style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  height: '4px',
-                  backgroundColor: getStatusColor(order.status),
-                  background: `linear-gradient(90deg, ${getStatusColor(order.status)} 0%, ${getStatusColor(order.status)}CC 100%)`
-                }} />
-
-                {/* Header with Order Number & Status */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div style={{ flex: 1 }}>
-                    <p style={{ 
-                      fontSize: '0.875rem', 
-                      fontWeight: 700, 
-                      color: '#111827',
-                      marginBottom: '0.25rem'
-                    }}>
-                      #{order.orderNumber.replace('BK-', '')}
-                    </p>
-                    <p style={{ 
-                      fontSize: '0.75rem', 
-                      color: '#6b7280',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.25rem'
-                    }}>
-                      <Clock size={12} />
-                      {format(new Date(order.createdAt), 'h:mm a')}
-                    </p>
-                  </div>
+          <>
+            {/* 2-Column Grid - Mobile & Desktop */}
+            <div 
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, 1fr)',
+                gap: '0.625rem'
+              }}
+            >
+              {orders.slice(0, 8).map((order) => (
+                <div 
+                  key={order.id}
+                  onClick={() => {
+                    setSelectedOrder(order);
+                    setIsModalOpen(true);
+                  }}
+                  style={{
+                    padding: '0.75rem',
+                    backgroundColor: '#ffffff',
+                    borderRadius: '0.625rem',
+                    border: `2px solid ${getStatusColor(order.status)}`,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s',
+                    position: 'relative'
+                  }}
+                >
+                  {/* Status Badge - Top Right */}
                   <span style={{
-                    padding: '0.25rem 0.625rem',
+                    position: 'absolute',
+                    top: '0.5rem',
+                    right: '0.5rem',
+                    padding: '0.125rem 0.375rem',
                     borderRadius: '9999px',
-                    fontSize: '0.625rem',
-                    fontWeight: 600,
+                    fontSize: '0.5rem',
+                    fontWeight: 700,
                     backgroundColor: getStatusColor(order.status),
                     color: '#ffffff',
                     textTransform: 'uppercase',
-                    letterSpacing: '0.025em',
-                    whiteSpace: 'nowrap'
+                    letterSpacing: '0.02em'
                   }}>
-                    {order.status === 'out-for-delivery' ? 'OUT' : order.status.replace('-', ' ').split(' ')[0]}
+                    {order.status === 'out-for-delivery' ? 'OUT' : 
+                     order.status === 'pending-confirmation' ? 'NEW' :
+                     order.status === 'delivered' ? 'DONE' :
+                     order.status.split('-')[0].substring(0, 4).toUpperCase()}
                   </span>
-                </div>
 
-                {/* Items Count */}
-                <div style={{
-                  padding: '0.75rem',
-                  backgroundColor: '#f9fafb',
-                  borderRadius: '0.5rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.625rem'
-                }}>
+                  {/* Order Number */}
+                  <p style={{ 
+                    fontSize: '0.8125rem', 
+                    fontWeight: 800, 
+                    color: '#111827',
+                    marginBottom: '0.125rem'
+                  }}>
+                    #{order.orderNumber.replace('BK-', '')}
+                  </p>
+                  
+                  {/* Time */}
+                  <p style={{ 
+                    fontSize: '0.625rem', 
+                    color: '#9ca3af',
+                    marginBottom: '0.5rem'
+                  }}>
+                    {format(new Date(order.createdAt), 'h:mm a')}
+                  </p>
+
+                  {/* Items + Total Row */}
                   <div style={{
-                    width: '2rem',
-                    height: '2rem',
-                    backgroundColor: `${getStatusColor(order.status)}15`,
-                    borderRadius: '0.5rem',
                     display: 'flex',
+                    justifyContent: 'space-between',
                     alignItems: 'center',
-                    justifyContent: 'center'
+                    paddingTop: '0.375rem',
+                    borderTop: `1px dashed ${getStatusColor(order.status)}40`
                   }}>
-                    <Package size={16} style={{ color: getStatusColor(order.status) }} />
+                    <span style={{ 
+                      fontSize: '0.625rem', 
+                      color: '#6b7280',
+                      fontWeight: 500
+                    }}>
+                      {order.items.length} item{order.items.length > 1 ? 's' : ''}
+                    </span>
+                    <span style={{ 
+                      fontSize: '0.875rem', 
+                      fontWeight: 700, 
+                      color: getStatusColor(order.status)
+                    }}>
+                      ₹{order.total}
+                    </span>
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '0.125rem' }}>
-                      Items
-                    </p>
-                    <p style={{ fontSize: '0.875rem', fontWeight: 600, color: '#111827' }}>
-                      {order.items.length} {order.items.length === 1 ? 'item' : 'items'}
-                    </p>
-                  </div>
                 </div>
-
-                {/* Total Amount */}
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  paddingTop: '0.75rem',
-                  borderTop: '1px solid #f3f4f6'
-                }}>
-                  <span style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 500 }}>
-                    Total
-                  </span>
-                  <span style={{ 
-                    fontSize: '1.125rem', 
-                    fontWeight: 700, 
-                    color: getStatusColor(order.status),
-                    display: 'flex',
-                    alignItems: 'center'
-                  }}>
-                    ₹{order.total}
-                  </span>
-                </div>
-
-                {/* Quick View Indicator */}
-                <div style={{
-                  position: 'absolute',
-                  bottom: '0.5rem',
-                  right: '0.5rem',
-                  width: '1.5rem',
-                  height: '1.5rem',
-                  borderRadius: '50%',
-                  backgroundColor: `${getStatusColor(order.status)}20`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  opacity: 0.6,
-                  transition: 'opacity 0.2s'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
-                onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
-                >
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ color: getStatusColor(order.status) }}>
-                    <path d="M4 2L8 6L4 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
 

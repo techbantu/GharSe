@@ -388,23 +388,20 @@ function ProfilePageContent() {
   };
 
   const handleChangePassword = async (currentPassword: string, newPassword: string) => {
-    try {
-      const response = await fetch('/api/auth/change-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ currentPassword, newPassword }),
-      });
+    const response = await fetch('/api/auth/change-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
 
-      const data = await response.json();
+    const data = await response.json();
 
-      if (data.success) {
-        toast.success('Password Changed!', 'Your password has been updated successfully.');
-      } else {
-        toast.error('Failed to Change Password', data.error || 'Please check your current password.');
-      }
-    } catch (error) {
-      toast.error('Error', 'An error occurred while changing your password.');
+    if (data.success) {
+      toast.success('Password Changed!', 'Your password has been updated successfully.');
+    } else {
+      // Throw error so ProfileSettings can catch it and display feedback
+      throw new Error(data.error || 'Please check your current password.');
     }
   };
 

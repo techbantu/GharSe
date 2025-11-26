@@ -16,7 +16,12 @@ import nodemailer from 'nodemailer';
 import { Order, CustomerInfo } from '@/types';
 import { logger } from '@/utils/logger';
 import { restaurantInfo } from '@/data/menuData';
-import { formatForRegion } from '@/lib/timezone-service';
+import { 
+  formatForRestaurant, 
+  formatPrepAndDeliveryTime,
+  getRestaurantRegion,
+  RESTAURANT_REGION_ID 
+} from '@/lib/timezone-service';
 
 // Email provider configuration
 const EMAIL_CONFIG = {
@@ -83,15 +88,15 @@ const generateOrderConfirmationHTML = (order: Order): string => {
       <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; padding: 18px; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);">
         <p style="margin: 0 0 8px 0; color: #ffffff; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; opacity: 0.95;">📅 Scheduled Delivery</p>
         <p style="margin: 0; color: #ffffff; font-size: 32px; font-weight: 900; line-height: 1;">
-          ${formatForRegion(order.scheduledDeliveryAt || order.scheduledWindowStart || new Date(), 'IN', 'h:mm a')}
-          ${order.scheduledWindowEnd ? ` - ${formatForRegion(order.scheduledWindowEnd, 'IN', 'h:mm a')}` : ''}
+          ${formatForRestaurant(order.scheduledWindowStart || order.scheduledDeliveryAt || new Date(), 'h:mm a')}
+          ${order.scheduledWindowEnd ? ` - ${formatForRestaurant(order.scheduledWindowEnd, 'h:mm a')}` : ''}
         </p>
         <p style="margin: 10px 0 0 0; color: #ffffff; font-size: 16px; font-weight: 600;">
-          ${formatForRegion(order.scheduledDeliveryAt || order.scheduledWindowStart || new Date(), 'IN', 'EEEE, MMMM d, yyyy')}
+          ${formatForRestaurant(order.scheduledWindowStart || order.scheduledDeliveryAt || new Date(), 'EEEE, MMMM d, yyyy')}
         </p>
         ${order.prepTime ? `
         <p style="margin: 12px 0 0 0; color: rgba(255,255,255,0.9); font-size: 13px; background: rgba(255,255,255,0.15); padding: 8px 12px; border-radius: 6px; display: inline-block;">
-          ⏱️ ${order.prepTime} min prep time + ${order.deliveryDuration || 45} min delivery
+          ⏱️ ${formatPrepAndDeliveryTime(order.prepTime, order.deliveryDuration || 45)}
         </p>
         ` : ''}
       </div>
@@ -101,10 +106,10 @@ const generateOrderConfirmationHTML = (order: Order): string => {
       <div style="background-color: #fef3c7; border-radius: 8px; padding: 18px; margin-bottom: 16px; border-left: 4px solid #f59e0b; box-shadow: 0 2px 8px rgba(245, 158, 11, 0.15);">
         <p style="margin: 0 0 8px 0; color: #92400e; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700;">⏱️ Estimated Preparation Time</p>
         <p style="margin: 0; color: #000000; font-size: 32px; font-weight: 900; line-height: 1;">
-          ${formatForRegion(order.estimatedReadyTime, 'IN', 'h:mm a')}
+          ${formatForRestaurant(order.estimatedReadyTime, 'h:mm a')}
         </p>
         <p style="margin: 10px 0 0 0; color: #1f2937; font-size: 16px; font-weight: 600;">
-          ${formatForRegion(order.estimatedReadyTime, 'IN', 'EEEE, MMMM d, yyyy')}
+          ${formatForRestaurant(order.estimatedReadyTime, 'EEEE, MMMM d, yyyy')}
         </p>
       </div>
       `

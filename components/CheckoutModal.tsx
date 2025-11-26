@@ -25,9 +25,12 @@ import {
   AlertCircle, 
   Heart, 
   Hourglass, 
-  Calendar 
+  Calendar,
+  Zap,
+  Smartphone
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { formatForRestaurant, formatMinutesToHuman } from '@/lib/timezone-service';
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/context/ToastContext';
 import { useRouter } from 'next/navigation';
@@ -64,6 +67,19 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
   // Coming Soon modal state for payment methods
   const [showComingSoonModal, setShowComingSoonModal] = useState(false);
   
+  // UPI Payment state
+  const [showUPIPaymentModal, setShowUPIPaymentModal] = useState(false);
+  const [upiPaymentData, setUPIPaymentData] = useState<{
+    upiId: string;
+    amount: number;
+    orderId: string;
+    orderNumber: string;
+  } | null>(null);
+  const [utrNumber, setUtrNumber] = useState('');
+  const [selectedUPIApp, setSelectedUPIApp] = useState<string>('');
+  const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
+  const [upiVerificationError, setUpiVerificationError] = useState<string>('');
+  
   // Notification status state
   const [notificationStatus, setNotificationStatus] = useState<{
     email?: { success: boolean; error?: string; skipped?: boolean };
@@ -86,7 +102,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
     deliveryInstructions: '',
     specialInstructions: '',
     orderType: 'delivery' as 'delivery' | 'pickup',
-    paymentMethod: 'cash-on-delivery' as 'cash-on-delivery' | 'card',
+    paymentMethod: 'cash-on-delivery' as 'cash-on-delivery' | 'card' | 'upi',
     paymentMethodDetails: '', // Specific gateway: "paytm", "form-b", "google-pay", "phonepe", etc.
     tip: 0, // Tip amount
     scheduledTime: '',
@@ -321,24 +337,11 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
       newErrors.phone = 'Phone is required';
       if (!firstErrorField) firstErrorField = 'phone';
     } else {
-      // Extract only digits from phone
+      // SIMPLIFIED: Just check if we have at least 10 digits
       const phoneDigits = formData.phone.replace(/\D/g, '');
-      
-      // Check if it's a valid Indian number (should be exactly 10 digits after +91)
       if (phoneDigits.length < 10) {
-        newErrors.phone = 'Phone must be 10 digits';
+        newErrors.phone = 'Please enter a valid phone number';
         if (!firstErrorField) firstErrorField = 'phone';
-      } else if (phoneDigits.length > 12) {
-        // More than 12 total (91 + 10 digits)
-        newErrors.phone = 'Invalid phone number';
-        if (!firstErrorField) firstErrorField = 'phone';
-      } else {
-        // Check if starts with valid Indian mobile prefix (6, 7, 8, 9)
-        const mobileNumber = phoneDigits.length === 12 ? phoneDigits.substring(2) : phoneDigits;
-        if (mobileNumber.length === 10 && !/^[6789]/.test(mobileNumber)) {
-          newErrors.phone = 'Indian mobile numbers start with 6, 7, 8, or 9';
-          if (!firstErrorField) firstErrorField = 'phone';
-        }
       }
     }
     
@@ -375,29 +378,14 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
         if (!firstErrorField) firstErrorField = 'street';
       }
       
+      // SIMPLIFIED: Just check if city and state are filled
       if (!formData.city.trim()) {
         newErrors.city = 'City is required';
-        if (!firstErrorField) firstErrorField = 'city';
-      } else if (/\d/.test(formData.city)) {
-        // City cannot contain numbers
-        newErrors.city = 'City name cannot contain numbers';
-        if (!firstErrorField) firstErrorField = 'city';
-      } else if (!/^[a-zA-Z\s\-'.]+$/.test(formData.city)) {
-        // City should only contain letters, spaces, hyphens, apostrophes, and periods
-        newErrors.city = 'City name can only contain letters';
         if (!firstErrorField) firstErrorField = 'city';
       }
       
       if (!formData.state.trim()) {
         newErrors.state = 'State is required';
-        if (!firstErrorField) firstErrorField = 'state';
-      } else if (/\d/.test(formData.state)) {
-        // State cannot contain numbers
-        newErrors.state = 'State name cannot contain numbers';
-        if (!firstErrorField) firstErrorField = 'state';
-      } else if (!/^[a-zA-Z\s\-'.]+$/.test(formData.state)) {
-        // State should only contain letters, spaces, hyphens, apostrophes, and periods
-        newErrors.state = 'State name can only contain letters';
         if (!firstErrorField) firstErrorField = 'state';
       }
       
@@ -642,6 +630,19 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
       
       // Go to pending modification step
       setStep('pending');
+      
+      // GENIUS: If UPI payment was selected, show UPI verification modal
+      if (formData.paymentMethod === 'upi') {
+        console.log('[CheckoutModal] UPI payment selected, showing payment modal');
+        setUPIPaymentData({
+          upiId: process.env.NEXT_PUBLIC_UPI_MERCHANT_ID || 'bantuskitchen@paytm',
+          amount: order.pricing.total,
+          orderId: order.id,
+          orderNumber: order.orderNumber,
+        });
+        setSelectedUPIApp(formData.paymentMethodDetails || '');
+        setShowUPIPaymentModal(true);
+      }
       
       // Safety timeout for notification status (7 seconds)
       // ONLY set timeout if we haven't received notification status yet
@@ -1829,7 +1830,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                   </div>
                 )}
                 
-                {/* Payment Method - Premium Design */}
+                {/* Payment Method - Premium Design with UPI Support */}
                 <div>
                   <h3 style={{
                     fontSize: '1.125rem',
@@ -1840,12 +1841,21 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
-                    marginBottom: '16px'
+                    marginBottom: '8px'
                   }}>
                     <CreditCard size={20} strokeWidth={2.5} style={{ color: '#f97316' }} />
                     Payment Method
                   </h3>
+                  <p style={{
+                    fontSize: '0.8125rem',
+                    color: '#6B7280',
+                    marginBottom: '12px',
+                    fontStyle: 'italic'
+                  }}>
+                    💵 Choose your preferred payment method
+                  </p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {/* Cash on Delivery Option */}
                     <label 
                       style={{
                         display: 'flex',
@@ -1884,15 +1894,264 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                           accentColor: '#f97316'
                         }}
                       />
-                      <span style={{
-                        fontWeight: 600,
-                        fontSize: '0.9375rem',
-                        color: '#1F2937',
-                        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif'
-                      }}>
-                        Cash on Delivery
-                      </span>
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <span style={{
+                          fontWeight: 600,
+                          fontSize: '0.9375rem',
+                          color: '#1F2937',
+                          fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif'
+                        }}>
+                          💵 Cash on Delivery
+                        </span>
+                        <span style={{ fontSize: '0.75rem', color: '#6B7280', marginTop: '2px' }}>
+                          Pay when your food arrives
+                        </span>
+                      </div>
                     </label>
+                    
+                    {/* UPI Payment Option - NEW! */}
+                    <label 
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '16px 20px',
+                        borderRadius: '14px',
+                        border: `2px solid ${formData.paymentMethod === 'upi' ? '#8B5CF6' : '#E5E7EB'}`,
+                        background: formData.paymentMethod === 'upi' ? 'rgba(139, 92, 246, 0.05)' : 'white',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (formData.paymentMethod !== 'upi') {
+                          e.currentTarget.style.borderColor = '#D1D5DB';
+                          e.currentTarget.style.background = '#F9FAFB';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (formData.paymentMethod !== 'upi') {
+                          e.currentTarget.style.borderColor = '#E5E7EB';
+                          e.currentTarget.style.background = 'white';
+                        }
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value="upi"
+                        checked={formData.paymentMethod === 'upi'}
+                        onChange={handleChange}
+                        style={{
+                          width: '20px',
+                          height: '20px',
+                          marginRight: '12px',
+                          cursor: 'pointer',
+                          accentColor: '#8B5CF6'
+                        }}
+                      />
+                      <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{
+                            fontWeight: 600,
+                            fontSize: '0.9375rem',
+                            color: '#1F2937',
+                            fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif'
+                          }}>
+                            📱 UPI Payment
+                          </span>
+                          <span style={{
+                            fontSize: '0.625rem',
+                            fontWeight: 700,
+                            color: '#059669',
+                            backgroundColor: '#D1FAE5',
+                            padding: '2px 8px',
+                            borderRadius: '8px',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px'
+                          }}>
+                            Instant
+                          </span>
+                        </div>
+                        <span style={{ fontSize: '0.75rem', color: '#6B7280', marginTop: '2px' }}>
+                          PhonePe • Google Pay • Paytm • BHIM
+                        </span>
+                      </div>
+                    </label>
+                    
+                    {/* UPI App Selection - Show when UPI is selected */}
+                    {formData.paymentMethod === 'upi' && (
+                      <div style={{
+                        marginTop: '8px',
+                        padding: '16px',
+                        background: 'linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 100%)',
+                        borderRadius: '12px',
+                        border: '1px solid #DDD6FE'
+                      }}>
+                        <p style={{
+                          fontSize: '0.8125rem',
+                          fontWeight: 600,
+                          color: '#5B21B6',
+                          marginBottom: '12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}>
+                          <Zap size={14} /> Select your UPI app:
+                        </p>
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(2, 1fr)',
+                          gap: '8px'
+                        }}>
+                          {[
+                            { id: 'gpay', name: 'Google Pay', color: '#4285F4', bg: '#EBF4FF' },
+                            { id: 'phonepe', name: 'PhonePe', color: '#5F259F', bg: '#F3E8FF' },
+                            { id: 'paytm', name: 'Paytm', color: '#00BAF2', bg: '#E0F7FF' },
+                            { id: 'bhim', name: 'BHIM UPI', color: '#00695C', bg: '#E0F2F1' },
+                          ].map((app) => (
+                            <button
+                              key={app.id}
+                              type="button"
+                              onClick={() => setFormData(prev => ({ ...prev, paymentMethodDetails: app.id }))}
+                              style={{
+                                padding: '12px',
+                                borderRadius: '10px',
+                                border: `2px solid ${formData.paymentMethodDetails === app.id ? app.color : '#E5E7EB'}`,
+                                background: formData.paymentMethodDetails === app.id ? app.bg : 'white',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '10px',
+                                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif'
+                              }}
+                            >
+                              {/* Colored Circle Icon */}
+                              <div style={{
+                                width: '24px',
+                                height: '24px',
+                                borderRadius: '50%',
+                                backgroundColor: app.color,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: 'white',
+                                fontWeight: 700,
+                                fontSize: '0.75rem'
+                              }}>
+                                {app.name.charAt(0)}
+                              </div>
+                              <span style={{ fontWeight: 600, fontSize: '0.875rem', color: formData.paymentMethodDetails === app.id ? app.color : '#374151' }}>
+                                {app.name}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                        
+                        {/* QR Code Display - Shows when UPI app is selected */}
+                        {formData.paymentMethodDetails && (
+                          <div style={{
+                            marginTop: '16px',
+                            padding: '16px',
+                            background: 'white',
+                            borderRadius: '12px',
+                            border: '2px solid #C4B5FD',
+                            textAlign: 'center'
+                          }}>
+                            <p style={{
+                              fontSize: '0.75rem',
+                              fontWeight: 600,
+                              color: '#5B21B6',
+                              marginBottom: '12px',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.5px'
+                            }}>
+                              Scan QR Code to Pay
+                            </p>
+                            
+                            {/* QR Code Placeholder */}
+                            <div style={{
+                              width: '140px',
+                              height: '140px',
+                              margin: '0 auto 12px',
+                              background: 'linear-gradient(135deg, #8B5CF6 0%, #5B21B6 100%)',
+                              borderRadius: '16px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: 'white',
+                              fontSize: '3rem'
+                            }}>
+                              📱
+                            </div>
+                            
+                            {/* UPI ID Display */}
+                            <div style={{
+                              background: '#F5F3FF',
+                              padding: '10px 16px',
+                              borderRadius: '8px',
+                              display: 'inline-block'
+                            }}>
+                              <p style={{ fontSize: '0.6875rem', color: '#6B7280', marginBottom: '2px', margin: 0 }}>
+                                UPI ID
+                              </p>
+                              <p style={{
+                                fontSize: '0.875rem',
+                                fontWeight: 700,
+                                color: '#5B21B6',
+                                fontFamily: 'monospace',
+                                margin: 0
+                              }}>
+                                bantuskitchen@paytm
+                              </p>
+                            </div>
+                            
+                            <p style={{
+                              fontSize: '0.6875rem',
+                              color: '#9CA3AF',
+                              marginTop: '8px',
+                              margin: '8px 0 0 0'
+                            }}>
+                              Or pay directly using UPI ID above
+                            </p>
+                          </div>
+                        )}
+                        
+                        {/* UPI Payment Instructions */}
+                        <div style={{
+                          marginTop: '16px',
+                          padding: '12px',
+                          background: 'white',
+                          borderRadius: '10px',
+                          border: '1px solid #DDD6FE'
+                        }}>
+                          <p style={{
+                            fontSize: '0.75rem',
+                            color: '#5B21B6',
+                            marginBottom: '8px',
+                            fontWeight: 600,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}>
+                            <Clock size={12} /> How it works:
+                          </p>
+                          <ol style={{
+                            fontSize: '0.75rem',
+                            color: '#6B7280',
+                            margin: 0,
+                            paddingLeft: '16px',
+                            lineHeight: 1.6
+                          }}>
+                            <li>Place your order</li>
+                            <li>Scan QR code or use UPI ID to pay</li>
+                            <li>Enter UTR number to confirm payment</li>
+                            <li>Your order gets confirmed instantly!</li>
+                          </ol>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Credit/Debit Card Option - Coming Soon */}
                     <div 
                       onClick={() => setShowComingSoonModal(true)}
                       style={{
@@ -1905,7 +2164,8 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                         background: 'white',
                         cursor: 'pointer',
                         transition: 'all 0.2s',
-                        position: 'relative'
+                        position: 'relative',
+                        opacity: 0.7
                       }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.borderColor = '#D1D5DB';
@@ -1925,6 +2185,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                           background: 'white',
                           opacity: 0.5
                         }} />
+                        <CreditCard size={16} style={{ color: '#9CA3AF' }} />
                         <span style={{
                           fontWeight: 600,
                           fontSize: '0.9375rem',
@@ -1948,50 +2209,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                       </span>
                     </div>
                   </div>
-                  
-                  {/* Payment Method Details - Show when card is selected */}
-                  {formData.paymentMethod === 'card' && (
-                    <div style={{ marginTop: '16px' }}>
-                      <label style={{
-                        display: 'block',
-                        fontSize: '0.875rem',
-                        fontWeight: 600,
-                        color: '#374151',
-                        marginBottom: '8px',
-                        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif'
-                      }}>
-                        Payment Method Details (Optional)
-                      </label>
-                      <select
-                        name="paymentMethodDetails"
-                        value={formData.paymentMethodDetails}
-                        onChange={handleChange}
-                        style={{
-                          width: '100%',
-                          padding: '12px 16px',
-                          borderRadius: '12px',
-                          border: '1px solid #D1D5DB',
-                          fontSize: '0.9375rem',
-                          color: '#1F2937',
-                          backgroundColor: 'white',
-                          fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        <option value="">Select payment method...</option>
-                        <option value="paytm">Paytm</option>
-                        <option value="form-b">Form B</option>
-                        <option value="google-pay">Google Pay</option>
-                        <option value="phonepe">PhonePe</option>
-                        <option value="razorpay">Razorpay</option>
-                        <option value="stripe">Stripe</option>
-                        <option value="card">Credit/Debit Card</option>
-                        <option value="netbanking">Net Banking</option>
-                        <option value="upi">UPI</option>
-                        <option value="other">Other</option>
-                      </select>
-                    </div>
-                  )}
                   
                   {/* Tip Input */}
                   <div style={{ marginTop: '20px' }}>
@@ -2685,7 +2902,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                       fontWeight: 700,
                       color: '#14532d'
                     }}>
-                      {format(new Date(formData.scheduledWindowStart), 'EEEE, MMMM d, yyyy')}
+                      {formatForRestaurant(new Date(formData.scheduledWindowStart), 'EEEE, MMMM d, yyyy')}
                     </p>
                   </div>
                   <div style={{
@@ -2707,7 +2924,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                       fontWeight: 700,
                       color: '#14532d'
                     }}>
-                      {format(new Date(formData.scheduledWindowStart), 'h:mm a')} - {format(new Date(formData.scheduledWindowEnd), 'h:mm a')}
+                      {formatForRestaurant(new Date(formData.scheduledWindowStart), 'h:mm a')} - {formatForRestaurant(new Date(formData.scheduledWindowEnd), 'h:mm a')}
                     </p>
                   </div>
                   <div style={{
@@ -2724,7 +2941,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                       color: '#14532d',
                       lineHeight: '1.4'
                     }}>
-                      <strong>{Math.floor(formData.prepTime / 60)}h {formData.prepTime % 60}m</strong> prep time + <strong>{formData.deliveryTime}min</strong> delivery
+                      <strong>{formatMinutesToHuman(formData.prepTime)}</strong> prep + <strong>{formatMinutesToHuman(formData.deliveryTime)}</strong> delivery
                     </p>
                   </div>
                 </div>
@@ -3284,7 +3501,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                 marginBottom: '24px',
                 textAlign: 'center'
               }}>
-                We're working hard to bring you secure online payment options including <strong>Credit/Debit Cards</strong>, <strong>UPI</strong>, <strong>Net Banking</strong>, and popular payment apps!
+                We're working hard to bring you secure card payment options including <strong>Credit Cards</strong>, <strong>Debit Cards</strong>, and <strong>Net Banking</strong>!
               </p>
               
               {/* Payment methods preview */}
@@ -3302,14 +3519,14 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                   textTransform: 'uppercase',
                   letterSpacing: '0.5px'
                 }}>
-                  Payment Methods Coming Soon:
+                  Card Payments Coming Soon:
                 </p>
                 <div style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(2, 1fr)',
                   gap: '8px'
                 }}>
-                  {['Paytm', 'Google Pay', 'PhonePe', 'Razorpay', 'Stripe', 'UPI', 'Net Banking', 'Debit Card'].map((method) => (
+                  {['Visa', 'Mastercard', 'RuPay', 'Net Banking', 'Razorpay', 'Stripe'].map((method) => (
                     <div
                       key={method}
                       style={{
@@ -3331,24 +3548,24 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
               
               {/* Info box */}
               <div style={{
-                background: '#DBEAFE',
+                background: '#D1FAE5',
                 borderRadius: '12px',
                 padding: '16px',
                 marginBottom: '24px',
-                border: '1px solid #BFDBFE'
+                border: '1px solid #A7F3D0'
               }}>
                 <p style={{
                   fontSize: '0.875rem',
-                  color: '#1E40AF',
+                  color: '#065F46',
                   margin: 0,
                   lineHeight: '1.5',
                   display: 'flex',
                   alignItems: 'flex-start',
                   gap: '8px'
                 }}>
-                  <AlertCircle size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <CheckCircle size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
                   <span>
-                    <strong>Meanwhile:</strong> You can continue placing orders with <strong>Cash on Delivery</strong>. We'll notify you as soon as online payments are available!
+                    <strong>Good News!</strong> You can pay now using <strong>UPI</strong> (Google Pay, PhonePe, Paytm) or <strong>Cash on Delivery</strong>!
                   </span>
                 </p>
               </div>
@@ -3379,8 +3596,458 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                   e.currentTarget.style.boxShadow = '0 4px 12px rgba(249, 115, 22, 0.3)';
                 }}
               >
-                Got It! Continue with Cash on Delivery
+                Got It! Choose UPI or Cash on Delivery
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* UPI Payment Modal - Shows after order placement */}
+      {showUPIPaymentModal && upiPaymentData && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 10001,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+            background: 'rgba(0, 0, 0, 0.7)',
+            backdropFilter: 'blur(8px)',
+            animation: 'fadeIn 0.2s ease-out'
+          }}
+        >
+          <div
+            style={{
+              background: 'white',
+              borderRadius: '24px',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              maxWidth: '480px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflow: 'auto',
+              animation: 'slideUp 0.3s ease-out'
+            }}
+          >
+            {/* Header - Purple gradient for UPI branding */}
+            <div style={{
+              background: 'linear-gradient(135deg, #7C3AED 0%, #5B21B6 100%)',
+              padding: '24px',
+              textAlign: 'center',
+              position: 'relative',
+              borderRadius: '24px 24px 0 0'
+            }}>
+              {/* Close button */}
+              <button
+                onClick={() => {
+                  setShowUPIPaymentModal(false);
+                  setUtrNumber('');
+                  setSelectedUPIApp('');
+                  setUpiVerificationError('');
+                }}
+                style={{
+                  position: 'absolute',
+                  top: '16px',
+                  right: '16px',
+                  padding: '8px',
+                  background: 'rgba(255, 255, 255, 0.2)',
+                  border: 'none',
+                  borderRadius: '50%',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '36px',
+                  height: '36px',
+                  transition: 'all 0.2s'
+                }}
+              >
+                <X size={20} color="white" />
+              </button>
+              
+              {/* Icon */}
+              <div style={{
+                width: '72px',
+                height: '72px',
+                margin: '0 auto 12px',
+                background: 'rgba(255, 255, 255, 0.2)',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <span style={{ fontSize: '2.5rem' }}>📱</span>
+              </div>
+              
+              <h2 style={{
+                fontSize: '1.5rem',
+                fontWeight: 800,
+                color: 'white',
+                margin: '0 0 4px 0',
+                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif',
+                letterSpacing: '-0.02em'
+              }}>
+                Complete Payment
+              </h2>
+              
+              <p style={{
+                fontSize: '2rem',
+                color: '#DDD6FE',
+                margin: 0,
+                fontWeight: 700
+              }}>
+                ₹{upiPaymentData.amount.toFixed(2)}
+              </p>
+              
+              <p style={{
+                fontSize: '0.875rem',
+                color: '#C4B5FD',
+                margin: '4px 0 0 0'
+              }}>
+                Order {upiPaymentData.orderNumber}
+              </p>
+            </div>
+            
+            {/* Content */}
+            <div style={{ padding: '24px' }}>
+              {/* UPI ID Display */}
+              <div style={{
+                background: '#F5F3FF',
+                borderRadius: '12px',
+                padding: '16px',
+                marginBottom: '20px',
+                textAlign: 'center',
+                border: '2px dashed #C4B5FD'
+              }}>
+                <p style={{
+                  fontSize: '0.75rem',
+                  color: '#6B7280',
+                  marginBottom: '8px',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                  fontWeight: 600
+                }}>
+                  Pay to UPI ID
+                </p>
+                <p style={{
+                  fontSize: '1.25rem',
+                  fontWeight: 700,
+                  color: '#5B21B6',
+                  margin: 0,
+                  fontFamily: 'monospace',
+                  letterSpacing: '0.5px'
+                }}>
+                  {upiPaymentData.upiId}
+                </p>
+              </div>
+              
+              {/* Quick Pay Buttons */}
+              <div style={{ marginBottom: '24px' }}>
+                <p style={{
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  color: '#374151',
+                  marginBottom: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}>
+                  <span>⚡</span> Quick Pay via:
+                </p>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(2, 1fr)',
+                  gap: '10px'
+                }}>
+                  {[
+                    { id: 'gpay', name: 'Google Pay', icon: '🔵', color: '#4285F4' },
+                    { id: 'phonepe', name: 'PhonePe', icon: '💜', color: '#5F259F' },
+                    { id: 'paytm', name: 'Paytm', icon: '🔷', color: '#00BAF2' },
+                    { id: 'bhim', name: 'BHIM', icon: '🇮🇳', color: '#00695C' },
+                  ].map((app) => (
+                    <button
+                      key={app.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedUPIApp(app.id);
+                        // Create UPI intent URL
+                        const params = new URLSearchParams({
+                          pa: upiPaymentData.upiId,
+                          pn: "Bantu's Kitchen",
+                          am: upiPaymentData.amount.toFixed(2),
+                          cu: 'INR',
+                          tn: `Order ${upiPaymentData.orderNumber}`,
+                          tr: `BK${Date.now()}`,
+                        });
+                        const intentUrl = `upi://pay?${params.toString()}`;
+                        // Open UPI intent (works on mobile)
+                        window.open(intentUrl, '_blank');
+                      }}
+                      style={{
+                        padding: '14px 16px',
+                        borderRadius: '12px',
+                        border: `2px solid ${selectedUPIApp === app.id ? app.color : '#E5E7EB'}`,
+                        background: selectedUPIApp === app.id ? `${app.color}15` : 'white',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '10px',
+                        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif'
+                      }}
+                    >
+                      <span style={{ fontSize: '1.5rem' }}>{app.icon}</span>
+                      <span style={{
+                        fontWeight: 600,
+                        fontSize: '0.9375rem',
+                        color: '#1F2937'
+                      }}>
+                        {app.name}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Divider */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '16px',
+                marginBottom: '24px'
+              }}>
+                <div style={{ flex: 1, height: '1px', background: '#E5E7EB' }} />
+                <span style={{ fontSize: '0.75rem', color: '#6B7280', fontWeight: 600 }}>
+                  AFTER PAYMENT
+                </span>
+                <div style={{ flex: 1, height: '1px', background: '#E5E7EB' }} />
+              </div>
+              
+              {/* UTR Number Entry */}
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{
+                  display: 'block',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  color: '#374151',
+                  marginBottom: '8px'
+                }}>
+                  Enter UTR / Transaction Reference Number:
+                </label>
+                <p style={{
+                  fontSize: '0.75rem',
+                  color: '#6B7280',
+                  marginBottom: '8px'
+                }}>
+                  📋 Find this in your UPI app's payment confirmation (12-digit number)
+                </p>
+                <input
+                  type="text"
+                  value={utrNumber}
+                  onChange={(e) => {
+                    // Only allow alphanumeric, remove spaces
+                    const value = e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+                    if (value.length <= 22) {
+                      setUtrNumber(value);
+                      setUpiVerificationError('');
+                    }
+                  }}
+                  placeholder="e.g., 123456789012"
+                  style={{
+                    width: '100%',
+                    padding: '14px 16px',
+                    borderRadius: '12px',
+                    border: upiVerificationError ? '2px solid #EF4444' : '2px solid #E5E7EB',
+                    fontSize: '1.125rem',
+                    fontFamily: 'monospace',
+                    letterSpacing: '2px',
+                    textAlign: 'center',
+                    textTransform: 'uppercase',
+                    background: '#F9FAFB',
+                    outline: 'none',
+                    transition: 'all 0.2s'
+                  }}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = '#7C3AED';
+                    e.currentTarget.style.background = 'white';
+                  }}
+                  onBlur={(e) => {
+                    if (!upiVerificationError) {
+                      e.currentTarget.style.borderColor = '#E5E7EB';
+                    }
+                    e.currentTarget.style.background = '#F9FAFB';
+                  }}
+                />
+                <p style={{
+                  fontSize: '0.75rem',
+                  color: '#9CA3AF',
+                  marginTop: '6px',
+                  textAlign: 'center'
+                }}>
+                  {utrNumber.length}/12 characters entered
+                </p>
+                
+                {/* Error Message */}
+                {upiVerificationError && (
+                  <div style={{
+                    marginTop: '8px',
+                    padding: '10px 12px',
+                    background: '#FEF2F2',
+                    borderRadius: '8px',
+                    border: '1px solid #FECACA'
+                  }}>
+                    <p style={{
+                      fontSize: '0.8125rem',
+                      color: '#DC2626',
+                      margin: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}>
+                      <XCircle size={16} />
+                      {upiVerificationError}
+                    </p>
+                  </div>
+                )}
+              </div>
+              
+              {/* Verify Button */}
+              <button
+                type="button"
+                disabled={utrNumber.length < 12 || isVerifyingPayment}
+                onClick={async () => {
+                  if (utrNumber.length < 12) {
+                    setUpiVerificationError('Please enter a valid 12-digit UTR number');
+                    return;
+                  }
+                  
+                  setIsVerifyingPayment(true);
+                  setUpiVerificationError('');
+                  
+                  try {
+                    const response = await fetch('/api/payments/verify-upi', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        orderId: upiPaymentData.orderId,
+                        utrNumber: utrNumber,
+                        paymentApp: selectedUPIApp || formData.paymentMethodDetails || 'other',
+                      }),
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                      // Payment verified! Show success
+                      setShowUPIPaymentModal(false);
+                      setUtrNumber('');
+                      playSuccessSound();
+                      toast.success('Payment Verified! ✅', 'Your UPI payment has been confirmed. Order is now being prepared!');
+                      
+                      // Update order status if we have currentOrder
+                      if (currentOrder) {
+                        setCurrentOrder({
+                          ...currentOrder,
+                          paymentStatus: 'completed',
+                        });
+                      }
+                    } else {
+                      setUpiVerificationError(data.error || 'Payment verification failed. Please check your UTR number.');
+                    }
+                  } catch (error) {
+                    console.error('UPI verification error:', error);
+                    setUpiVerificationError('Failed to verify payment. Please try again.');
+                  } finally {
+                    setIsVerifyingPayment(false);
+                  }
+                }}
+                style={{
+                  width: '100%',
+                  padding: '16px',
+                  background: utrNumber.length >= 12 
+                    ? 'linear-gradient(135deg, #7C3AED 0%, #5B21B6 100%)' 
+                    : '#E5E7EB',
+                  color: utrNumber.length >= 12 ? 'white' : '#9CA3AF',
+                  border: 'none',
+                  borderRadius: '14px',
+                  fontSize: '1.0625rem',
+                  fontWeight: 700,
+                  cursor: utrNumber.length >= 12 ? 'pointer' : 'not-allowed',
+                  transition: 'all 0.2s',
+                  boxShadow: utrNumber.length >= 12 ? '0 4px 14px rgba(124, 58, 237, 0.3)' : 'none',
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px'
+                }}
+              >
+                {isVerifyingPayment ? (
+                  <>
+                    <div style={{
+                      width: '20px',
+                      height: '20px',
+                      border: '3px solid rgba(255,255,255,0.3)',
+                      borderTopColor: 'white',
+                      borderRadius: '50%',
+                      animation: 'spin 1s linear infinite'
+                    }} />
+                    Verifying Payment...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle size={20} />
+                    Verify Payment
+                  </>
+                )}
+              </button>
+              
+              {/* Skip for Now */}
+              <button
+                type="button"
+                onClick={() => {
+                  setShowUPIPaymentModal(false);
+                  setUtrNumber('');
+                  toast.info('Payment Pending', "Don't forget to complete your payment! You can verify it later from your order page.");
+                }}
+                style={{
+                  width: '100%',
+                  marginTop: '12px',
+                  padding: '12px',
+                  background: 'transparent',
+                  color: '#6B7280',
+                  border: 'none',
+                  borderRadius: '12px',
+                  fontSize: '0.875rem',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif'
+                }}
+              >
+                Pay Later (Cash on Delivery)
+              </button>
+              
+              {/* Help Text */}
+              <p style={{
+                marginTop: '16px',
+                padding: '12px',
+                background: '#FFFBEB',
+                borderRadius: '10px',
+                border: '1px solid #FDE68A',
+                fontSize: '0.75rem',
+                color: '#92400E',
+                lineHeight: 1.5,
+                textAlign: 'center'
+              }}>
+                💡 <strong>Tip:</strong> The UTR number is usually 12 digits. You can find it in your UPI app under "Transaction History" or in the payment success screen.
+              </p>
             </div>
           </div>
         </div>

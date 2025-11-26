@@ -4,12 +4,10 @@
  * This component displays the GharSe logo with the house/fork icon and brand name.
  * Supports different sizes and variants for use across the application.
  * 
- * If you have a logo image file, you can replace the SVG with:
- * <img src="/images/gharse-logo.png" alt="GharSe" className={className} style={style} />
+ * HYDRATION-SAFE: Uses consistent rendering between SSR and CSR
  */
 
 import React from 'react';
-import Image from 'next/image';
 
 interface LogoProps {
   /** Size variant: 'small' (header), 'medium' (footer), 'large' (hero) */
@@ -20,7 +18,7 @@ interface LogoProps {
   style?: React.CSSProperties;
   /** Show tagline below logo */
   showTagline?: boolean;
-  /** Use image file instead of SVG (if logo image is uploaded). Defaults to true - put your logo in public/images/gharse-logo.png */
+  /** Use image file instead of SVG. Defaults to true */
   useImage?: boolean;
 }
 
@@ -29,53 +27,39 @@ const Logo: React.FC<LogoProps> = ({
   className = '', 
   style = {},
   showTagline = false,
-  useImage = true // Default to using image file if available
+  useImage = true
 }) => {
-  // Size configurations - increased for better quality
+  // Size configurations - deterministic values for SSR/CSR consistency
   const sizes = {
-    small: { width: 180, height: 72, iconSize: 24 },
-    medium: { width: 240, height: 96, iconSize: 32 },
-    large: { width: 300, height: 120, iconSize: 40 },
-    'icon-only': { width: 48, height: 48, iconSize: 24 }
-  };
+    small: { width: 180, height: 72, iconSize: 24, maxWidth: '180px' },
+    medium: { width: 240, height: 96, iconSize: 32, maxWidth: '240px' },
+    large: { width: 300, height: 120, iconSize: 40, maxWidth: '300px' },
+    'icon-only': { width: 48, height: 48, iconSize: 24, maxWidth: '48px' }
+  } as const;
 
   const config = sizes[variant];
 
-  // If using image file (when user uploads their logo)
-  // Using the uploaded GharSe.png logo file
+  // Image-based logo - HYDRATION-SAFE: No dynamic values
   if (useImage) {
+    // Compute maxWidth deterministically (no conditional based on style prop)
+    const computedMaxWidth = config.maxWidth;
+    
     return (
-      <div className={`flex flex-col ${className}`} style={style}>
-        <div className="flex items-center">
-          <img
-            src="/images/GharSe.png"
-            alt="GharSe Logo"
-            width={config.width}
-            height={config.height}
-            style={{ 
-              maxWidth: style?.maxWidth || (variant === 'small' ? '180px' : variant === 'large' ? '300px' : '240px'),
-              height: 'auto',
-              objectFit: 'contain',
-              imageRendering: 'crisp-edges',
-              display: 'block',
-              ...style
-            }}
-            loading="eager"
-          />
-        </div>
-        {showTagline && (
-          <p 
-            className="text-white text-xs font-medium mt-1"
-            style={{
-              fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif',
-              letterSpacing: '0.02em',
-              color: '#D1D5DB'
-            }}
-          >
-            From Real Homes To Your Hungry Heart
-          </p>
-        )}
-      </div>
+      <img
+        src="/images/GharSe.png"
+        alt="GharSe Logo"
+        width={config.width}
+        height={config.height}
+        className={className}
+        style={{ 
+          maxWidth: style?.maxWidth || computedMaxWidth,
+          height: 'auto',
+          objectFit: 'contain' as const,
+          display: 'block',
+          ...style
+        }}
+        loading="eager"
+      />
     );
   }
 
