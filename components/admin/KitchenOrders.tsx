@@ -39,7 +39,11 @@ import {
 } from 'lucide-react';
 import { Order, OrderStatus } from '@/types';
 import { format } from 'date-fns';
-import { formatForUser, useUserRegion, convertUTCToLocal } from '@/lib/timezone-service';
+import { formatForRegion, REGIONS } from '@/lib/timezone-service';
+
+// CRITICAL FIX: Always use restaurant's fixed timezone (IST) for kitchen display
+// This prevents timezone flip when chef's browser is in a different timezone
+const RESTAURANT_TIMEZONE = 'IN'; // India (Asia/Kolkata)
 
 interface KitchenOrdersProps {
   autoRefresh?: boolean;
@@ -62,7 +66,8 @@ const KitchenOrders: React.FC<KitchenOrdersProps> = ({
   const prevOrderCountRef = useRef(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
-  const region = useUserRegion(); // Get restaurant timezone configuration
+  // CRITICAL: Use restaurant's fixed timezone config, NOT user's browser timezone
+  const region = REGIONS[RESTAURANT_TIMEZONE];
 
   // Fetch orders from API
   const fetchOrders = async () => {
@@ -372,11 +377,12 @@ const KitchenOrders: React.FC<KitchenOrdersProps> = ({
         minutesUntilDelivery,
         color,
         urgency,
-        // Display formats - FIX: Use formatForUser to ensure Restaurant Timezone (IST)
-        deliveryDateDisplay: formatForUser(scheduledDelivery, 'EEE, MMM d'), // "Sun, Nov 23"
-        deliveryTimeDisplay: formatForUser(scheduledDelivery, 'h:mm a'), // "12:00 PM"
-        startCookingDisplay: formatForUser(mustStartCookingBy, 'h:mm a'),
-        readyByDisplay: formatForUser(mustBeReadyBy, 'h:mm a'),
+        // Display formats - CRITICAL FIX: Use formatForRegion with restaurant's fixed timezone
+        // This ensures times display correctly regardless of chef's browser timezone
+        deliveryDateDisplay: formatForRegion(scheduledDelivery, RESTAURANT_TIMEZONE, 'EEE, MMM d'), // "Sun, Nov 23"
+        deliveryTimeDisplay: formatForRegion(scheduledDelivery, RESTAURANT_TIMEZONE, 'h:mm a'), // "12:00 PM"
+        startCookingDisplay: formatForRegion(mustStartCookingBy, RESTAURANT_TIMEZONE, 'h:mm a'),
+        readyByDisplay: formatForRegion(mustBeReadyBy, RESTAURANT_TIMEZONE, 'h:mm a'),
         countdownText: minutesUntilStart < 0 
           ? `START NOW! (${Math.abs(minutesUntilStart)} min overdue)` 
           : minutesUntilStart === 0 
@@ -412,7 +418,7 @@ const KitchenOrders: React.FC<KitchenOrdersProps> = ({
         minutesLeft,
         color,
         urgency,
-        displayTime: formatForUser(readyByTime, 'h:mm a'),
+        displayTime: formatForRegion(readyByTime, RESTAURANT_TIMEZONE, 'h:mm a'),
         countdownText: minutesLeft < 0 
           ? `${Math.abs(minutesLeft)} min overdue` 
           : minutesLeft === 0 
@@ -521,7 +527,7 @@ const KitchenOrders: React.FC<KitchenOrdersProps> = ({
               }}>
                 🕐 {readyByInfo.deliveryTimeDisplay}
                 {order.scheduledWindowEnd && 
-                  ` - ${format(new Date(order.scheduledWindowEnd), 'h:mm a')}`
+                  ` - ${formatForRegion(new Date(order.scheduledWindowEnd), RESTAURANT_TIMEZONE, 'h:mm a')}`
                 }
               </div>
             </div>

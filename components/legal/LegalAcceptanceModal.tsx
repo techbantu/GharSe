@@ -51,6 +51,30 @@ export default function LegalAcceptanceModal() {
       }
       setSessionId(sid);
 
+      // FALLBACK: First check localStorage for cached acceptance
+      const cachedAcceptance = localStorage.getItem('legal-acceptance');
+      if (cachedAcceptance) {
+        try {
+          const cached = JSON.parse(cachedAcceptance);
+          // Check if cached acceptance has current versions
+          const hasCurrentVersions = 
+            cached.versions?.TERMS === LEGAL_VERSIONS.TERMS &&
+            cached.versions?.PRIVACY === LEGAL_VERSIONS.PRIVACY &&
+            cached.versions?.REFUND === LEGAL_VERSIONS.REFUND &&
+            cached.versions?.FOOD_SAFETY === LEGAL_VERSIONS.FOOD_SAFETY;
+          
+          if (hasCurrentVersions) {
+            // Already accepted current versions
+            setIsVisible(false);
+            setIsLoading(false);
+            return;
+          }
+        } catch (e) {
+          // Invalid cached data, continue to API check
+          localStorage.removeItem('legal-acceptance');
+        }
+      }
+
       // CRITICAL FIX: Always send sessionId to match what was stored in DB
       // Build query params to include both userId (if logged in) AND sessionId
       const params = new URLSearchParams();
@@ -66,11 +90,16 @@ export default function LegalAcceptanceModal() {
         const data = await response.json();
         if (data.hasAccepted) {
           setIsVisible(false);
+        } else if (data._fallback) {
+          // API returned fallback, check localStorage was already done above
+          // If we got here, localStorage didn't have valid acceptance
+          setIsVisible(true);
         } else {
           setIsVisible(true);
         }
       } else {
-        // If error, show modal to be safe (fail-safe)
+        // If error, check if we have localStorage fallback
+        // Already checked above, so show modal
         setIsVisible(true);
       }
     } catch (error) {
@@ -103,6 +132,18 @@ export default function LegalAcceptanceModal() {
       });
 
       if (response.ok) {
+        const data = await response.json();
+        
+        // FALLBACK: Store acceptance in localStorage for offline/database-unavailable scenarios
+        const legalAcceptance = {
+          acceptedAt: new Date().toISOString(),
+          versions: LEGAL_VERSIONS,
+          sessionId,
+          userId: user?.id || null,
+          _fallback: data._fallback || false,
+        };
+        localStorage.setItem('legal-acceptance', JSON.stringify(legalAcceptance));
+        
         setIsVisible(false);
       } else {
         const error = await response.json();
@@ -110,7 +151,19 @@ export default function LegalAcceptanceModal() {
       }
     } catch (error) {
       console.error('[LEGAL COMPLIANCE] Error recording acceptance:', error);
-      alert('Failed to record acceptance. Please try again.');
+      
+      // FALLBACK: Store acceptance in localStorage even if API fails
+      const legalAcceptance = {
+        acceptedAt: new Date().toISOString(),
+        versions: LEGAL_VERSIONS,
+        sessionId,
+        userId: user?.id || null,
+        _fallback: true,
+      };
+      localStorage.setItem('legal-acceptance', JSON.stringify(legalAcceptance));
+      
+      // Still allow user to proceed
+      setIsVisible(false);
     } finally {
       setIsAccepting(false);
     }

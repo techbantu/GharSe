@@ -190,4 +190,5 @@ const AdminLayoutContent: React.FC<AdminLayoutContentProps> = ({ children }) => 
   );
 };
 
+// Force rebuild - Turbopack fix
 export default AdminLayoutContent;

@@ -243,32 +243,101 @@ const AboutSection: React.FC = () => {
           </div>
         </div>
         
-        {/* Features Grid - Responsive: 2 cols mobile, 2 cols tablet, 4 cols desktop */}
+        {/* Features Grid - Premium Cards with Refined Design */}
         <div 
           data-about-features
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(2, 1fr)',
-            gap: '10px',
-            marginTop: '32px'
+            gap: '1rem',
+            marginTop: '2.5rem'
           }}
-          className="sm:gap-3 lg:gap-4"
+          className="sm:gap-5 lg:gap-6"
         >
           {features.map((feature, index) => {
             const Icon = feature.icon;
+            // Premium gradient backgrounds for each feature
+            const gradients: Record<string, string> = {
+              'text-red-500': 'linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%)',
+              'text-blue-500': 'linear-gradient(135deg, #DBEAFE 0%, #BFDBFE 100%)',
+              'text-green-500': 'linear-gradient(135deg, #D1FAE5 0%, #A7F3D0 100%)',
+              'text-primary-500': 'linear-gradient(135deg, #FFEDD5 0%, #FED7AA 100%)',
+            };
+            const iconGradient = gradients[feature.color] || gradients['text-primary-500'];
+            
             return (
               <div
                 key={index}
-                className="card text-center group hover:shadow-xl animate-slide-up p-2.5 sm:p-3"
-                style={{ animationDelay: `${index * 100}ms`, display: 'flex', flexDirection: 'column', alignItems: 'center' }}
+                className="group animate-slide-up"
+                style={{ 
+                  animationDelay: `${index * 80}ms`,
+                  background: 'white',
+                  borderRadius: '1.25rem',
+                  padding: '1.5rem 1rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.03)',
+                  border: '1px solid rgba(0, 0, 0, 0.04)',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  cursor: 'default',
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-4px)';
+                  e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04)';
+                  e.currentTarget.style.borderColor = 'rgba(249, 115, 22, 0.15)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.03)';
+                  e.currentTarget.style.borderColor = 'rgba(0, 0, 0, 0.04)';
+                }}
               >
-                <div className={`w-8 h-8 sm:w-10 sm:h-10 ${feature.bgColor} rounded-full flex items-center justify-center mb-2 group-hover:scale-110 transition-transform`} style={{ marginLeft: 'auto', marginRight: 'auto' }}>
-                  <Icon className={feature.color} size={18} style={{ width: '18px', height: '18px', display: 'block' }} />
+                {/* Premium Icon Container */}
+                <div 
+                  style={{ 
+                    width: '3.5rem',
+                    height: '3.5rem',
+                    background: iconGradient,
+                    borderRadius: '1rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: '1rem',
+                    transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)'
+                  }}
+                  className="group-hover:scale-110"
+                >
+                  <Icon className={feature.color} size={24} strokeWidth={2} />
                 </div>
-                <h3 className="text-xs sm:text-sm font-bold text-gray-900 mb-1" style={{ width: '100%', textAlign: 'center' }}>
+                
+                {/* Title */}
+                <h3 style={{
+                  fontSize: '1rem',
+                  fontWeight: 700,
+                  color: '#1d1d1f',
+                  marginBottom: '0.5rem',
+                  textAlign: 'center',
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif',
+                  letterSpacing: '-0.02em',
+                  lineHeight: '1.3'
+                }}>
                   {feature.title}
                 </h3>
-                <p className="text-[10px] sm:text-xs text-gray-600 leading-tight text-center" style={{ lineHeight: '1.4', width: '100%' }}>
+                
+                {/* Description */}
+                <p style={{
+                  fontSize: '0.8125rem',
+                  color: '#6B7280',
+                  lineHeight: '1.5',
+                  textAlign: 'center',
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif',
+                  letterSpacing: '-0.01em',
+                  fontWeight: 400
+                }}>
                   {feature.description}
                 </p>
               </div>

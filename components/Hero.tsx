@@ -325,6 +325,40 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
               gap: '8px', 
               paddingTop: '16px' 
             }} className="lg:justify-start hero-pills">
+              {/* Freshly Prepared Pill */}
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                background: 'white', 
+                borderRadius: '10px', 
+                boxShadow: '0 3px 5px rgba(0, 0, 0, 0.1)', 
+                border: '1px solid #FED7AA', 
+                gap: '6px', 
+                padding: '6px 10px',
+                transition: 'box-shadow 0.3s',
+                flex: '1 1 auto',
+                minWidth: '130px'
+              }} className="hover:shadow-lg">
+                <div style={{
+                  width: '32px',
+                  height: '32px',
+                  background: 'linear-gradient(to bottom right, #FB923C, #EA580C)',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+                  flexShrink: 0
+                }}>
+                  <Clock style={{ color: 'white' }} size={18} />
+                </div>
+                <div style={{ textAlign: 'left', lineHeight: '1.1' }}>
+                  <p style={{ fontSize: '9px', color: '#6B7280', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>Freshly Made</p>
+                  <p style={{ fontSize: '0.9375rem', fontWeight: 900, color: '#111827', whiteSpace: 'nowrap' }}>~2hr Cook Time</p>
+                </div>
+              </div>
+              
+              {/* Fast Delivery Pill */}
               <div style={{ 
                 display: 'flex', 
                 alignItems: 'center', 
@@ -349,14 +383,15 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
                   boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
                   flexShrink: 0
                 }}>
-                  <Clock style={{ color: 'white' }} size={18} />
+                  <TruckIcon style={{ color: 'white' }} size={18} />
                 </div>
                 <div style={{ textAlign: 'left', lineHeight: '1.1' }}>
-                  <p style={{ fontSize: '9px', color: '#6B7280', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>Ready in</p>
+                  <p style={{ fontSize: '9px', color: '#6B7280', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>Delivery</p>
                   <p style={{ fontSize: '0.9375rem', fontWeight: 900, color: '#111827', whiteSpace: 'nowrap' }}>30-45 mins</p>
                 </div>
               </div>
               
+              {/* Free Delivery Pill */}
               <div style={{ 
                 display: 'flex', 
                 alignItems: 'center', 
@@ -381,7 +416,7 @@ const Hero: React.FC<HeroProps> = ({ onOrderNowClick }) => {
                   boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
                   flexShrink: 0
                 }}>
-                  <TruckIcon style={{ color: 'white' }} size={18} />
+                  <span style={{ color: 'white', fontSize: '14px', fontWeight: 900 }}>₹</span>
                 </div>
                 <div style={{ textAlign: 'left', lineHeight: '1.1' }}>
                   <p style={{ fontSize: '9px', color: '#6B7280', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>Free Delivery</p>

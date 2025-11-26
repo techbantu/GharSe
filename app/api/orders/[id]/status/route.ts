@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/utils/logger';
+import { broadcastOrderUpdate } from '@/lib/websocket-server';
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -69,15 +70,16 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       }
     });
 
+    // Map DB status to OrderStatus type (e.g., PREPARING -> preparing)
+    // MOVED OUTSIDE TRY BLOCK so it's accessible for both notifications and WebSocket
+    const orderStatus = dbStatus.toLowerCase().replace(/_/g, '-') as any;
+
     // Send notifications for status changes
     try {
       console.log('[Order API] Attempting to load notification manager...');
       // Import dynamically to avoid circular dependencies
       const { notificationManager } = await import('@/lib/notifications/notification-manager');
       console.log('[Order API] Notification manager loaded successfully');
-      
-      // Map DB status to OrderStatus type (e.g., PREPARING -> preparing)
-      const orderStatus = dbStatus.toLowerCase().replace(/_/g, '-') as any;
       
       // CRITICAL: Transform Prisma order to notification manager's expected format
       const transformedOrder = {
@@ -134,6 +136,21 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     } catch (notificationError) {
       console.error('[Order API] ❌ Failed to send notifications:', notificationError);
       // Don't fail the request, just log the error
+    }
+
+    // CRITICAL FIX: Broadcast status update via WebSocket to customer's browser
+    // This ensures the customer UI updates immediately when chef confirms/updates order
+    try {
+      console.log(`[Order API] 📡 Broadcasting WebSocket update for order ${id} to status ${orderStatus}`);
+      await broadcastOrderUpdate(id, orderStatus, {
+        orderNumber: updatedOrder.orderNumber,
+        previousStatus: body.previousStatus || 'unknown',
+        updatedAt: new Date().toISOString(),
+      });
+      console.log('[Order API] ✅ WebSocket broadcast successful');
+    } catch (wsError) {
+      console.error('[Order API] ❌ WebSocket broadcast failed (order still updated):', wsError);
+      // Don't fail the request - order is already updated in DB
     }
 
     return NextResponse.json({

@@ -14,6 +14,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/utils/logger';
+import { menuItems as fallbackMenuItems } from '@/data/menuData';
 
 /**
  * GET /api/menu - Fetch menu items with smart filtering
@@ -134,14 +135,32 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Menu API error:', error);
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Failed to fetch menu items',
-        details: error instanceof Error ? error.message : String(error),
+    
+    // FALLBACK: Return static menu data when database is unavailable
+    // This ensures the app works even when Prisma/Supabase has issues
+    console.log('[Menu API] Using fallback menu data due to database error');
+    
+    const transformedFallback = fallbackMenuItems.map(item => ({
+      ...item,
+      isNew: false,
+      ingredients: [],
+      allergens: [],
+      chef: null,
+    }));
+    
+    return NextResponse.json({
+      success: true,
+      items: transformedFallback,
+      count: transformedFallback.length,
+      filters: {
+        excludeIds: [],
+        category: null,
+        chefId: null,
+        suggestions: false,
+        currentOrderCount: 0,
       },
-      { status: 500 }
-    );
+      _fallback: true, // Indicate this is fallback data
+    });
   }
 }
 

@@ -10,13 +10,20 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Search, ShoppingBag, Plus, Minus, X, ChevronDown, Filter, MapPin, UtensilsCrossed, Flame, Leaf, ChefHat, XCircle, Wheat, WheatOff, Palmtree, Store, Waves, Castle, PackageX, RefreshCw } from 'lucide-react';
 import { MenuItem, MenuCategory } from '@/types';
 import { useCart } from '@/context/CartContext';
 import { useMenu } from '@/context/MenuContext';
 import ProductDetailModal from './ProductDetailModal';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { 
+  STANDARD_CATEGORIES,
+  StandardCategory,
+  normalizeCategoryWithFallback,
+  getCategoryColors,
+  CATEGORY_COLORS
+} from '@/lib/category-utils';
 
 interface MenuSectionProps {
   onItemClick?: (item: MenuItem) => void;
@@ -76,6 +83,43 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
     window.addEventListener('resize', checkWidth);
     return () => window.removeEventListener('resize', checkWidth);
   }, []);
+  
+  // =========================================================================
+  // NORMALIZED MENU ITEMS - Single source of truth with consistent categories
+  // =========================================================================
+  const normalizedMenuItems = useMemo(() => {
+    const seenIds = new Set<string>();
+    
+    return menuItems
+      .filter(item => {
+        // Remove duplicates
+        if (seenIds.has(item.id)) return false;
+        seenIds.add(item.id);
+        return true;
+      })
+      .map(item => ({
+        ...item,
+        // Normalize category to standard form
+        category: normalizeCategoryWithFallback(item.category) as MenuCategory,
+        // Keep original for reference if needed
+        _originalCategory: item.category,
+      }));
+  }, [menuItems]);
+
+  // =========================================================================
+  // CATEGORIES - Using standard categories, only showing those with items
+  // IMPORTANT: Must be defined BEFORE useEffect that uses it
+  // =========================================================================
+  const categories = useMemo(() => {
+    // Find which standard categories have items
+    const categoriesWithItems = new Set<string>();
+    for (const item of normalizedMenuItems) {
+      categoriesWithItems.add(item.category);
+    }
+    
+    // Return 'All' plus only categories that have items, in standard order
+    return ['All', ...STANDARD_CATEGORIES.filter(cat => categoriesWithItems.has(cat))];
+  }, [normalizedMenuItems]);
 
   // Handle URL parameters for regional filtering and category filtering
   useEffect(() => {
@@ -93,14 +137,15 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
       }, 100);
     }
     
-    // Set category filter from URL parameter (wait for menu items to load)
-    if (category && menuItems.length > 0) {
+    // Set category filter from URL parameter (wait for normalized items to load)
+    if (category && normalizedMenuItems.length > 0) {
       const decodedCategory = decodeURIComponent(category);
-      // Check if this category exists in our menu by looking at menuItems
-      const availableCategories = ['All', ...Array.from(new Set(menuItems.map(item => item.category)))];
-      const categoryExists = availableCategories.some(cat => cat === decodedCategory);
-      if (categoryExists) {
-        setSelectedCategory(decodedCategory);
+      // Normalize the requested category to match our standard categories
+      const normalizedRequestedCategory = normalizeCategoryWithFallback(decodedCategory);
+      
+      // Check if this category exists in our normalized menu
+      if (categories.includes(normalizedRequestedCategory)) {
+        setSelectedCategory(normalizedRequestedCategory);
       }
       // Scroll to menu section
       setTimeout(() => {
@@ -110,7 +155,7 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
         }
       }, 100);
     }
-  }, [searchParams, menuItems]);
+  }, [searchParams, normalizedMenuItems, categories]);
   
   // 🔔 Auto-dismiss notification after 5 seconds
   useEffect(() => {
@@ -130,178 +175,142 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
     });
   }, []);
 
-  // Get unique categories from fetched items
-  const categories = ['All', ...Array.from(new Set(menuItems.map(item => item.category)))];
-  
-  // Get category counts
-  const getCategoryCount = (category: string): number => {
-    if (category === 'All') return menuItems.filter(item => item.isAvailable).length;
-    return menuItems.filter(item => item.category === category && item.isAvailable).length;
-  };
-  
-  // Get food-inspired colors for each category
-  const getCategoryColor = (category: string, isActive: boolean) => {
-    const colors: Record<string, { bg: string; hover: string; text: string; icon?: string }> = {
-      'All': { 
-        bg: isActive ? 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)' : 'linear-gradient(135deg, #fff5e6 0%, #ffe6cc 100%)',
-        hover: 'linear-gradient(135deg, #ff8c42 0%, #f97316 100%)',
-        text: isActive ? '#ffffff' : '#ea580c'
-      },
-      'Biryanis': { 
-        bg: isActive ? 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)' : 'linear-gradient(135deg, #fff5e6 0%, #ffe6cc 100%)',
-        hover: 'linear-gradient(135deg, #ff8c42 0%, #f97316 100%)',
-        text: isActive ? '#ffffff' : '#ea580c'
-      },
-      'Biryani & Rice': { 
-        bg: isActive ? 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)' : 'linear-gradient(135deg, #fff5e6 0%, #ffe6cc 100%)',
-        hover: 'linear-gradient(135deg, #ff8c42 0%, #f97316 100%)',
-        text: isActive ? '#ffffff' : '#ea580c'
-      },
-      'Appetizers': { 
-        bg: isActive ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' : 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
-        hover: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
-        text: isActive ? '#ffffff' : '#d97706'
-      },
-      'Curries': { 
-        bg: isActive ? 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)' : 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
-        hover: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-        text: isActive ? '#ffffff' : '#dc2626'
-      },
-      'Main Course': { 
-        bg: isActive ? 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)' : 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)',
-        hover: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-        text: isActive ? '#ffffff' : '#7c3aed'
-      },
-      'Tandoori': { 
-        bg: isActive ? 'linear-gradient(135deg, #ea580c 0%, #c2410c 100%)' : 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)',
-        hover: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
-        text: isActive ? '#ffffff' : '#c2410c'
-      },
-      'Rice & Breads': { 
-        bg: isActive ? 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)' : 'linear-gradient(135deg, #fef9c3 0%, #fef08a 100%)',
-        hover: 'linear-gradient(135deg, #fcd34d 0%, #fbbf24 100%)',
-        text: isActive ? '#ffffff' : '#d97706'
-      },
-      'Breads': { 
-        bg: isActive ? 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)' : 'linear-gradient(135deg, #fef9c3 0%, #fef08a 100%)',
-        hover: 'linear-gradient(135deg, #fcd34d 0%, #fbbf24 100%)',
-        text: isActive ? '#ffffff' : '#d97706'
-      },
-      'Desserts': { 
-        bg: isActive ? 'linear-gradient(135deg, #ec4899 0%, #db2777 100%)' : 'linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%)',
-        hover: 'linear-gradient(135deg, #f472b6 0%, #ec4899 100%)',
-        text: isActive ? '#ffffff' : '#db2777'
-      },
-      'Beverages': { 
-        bg: isActive ? 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)' : 'linear-gradient(135deg, #cffafe 0%, #a5f3fc 100%)',
-        hover: 'linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%)',
-        text: isActive ? '#ffffff' : '#0891b2'
-      },
-      'Specials': { 
-        bg: isActive ? 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)' : 'linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%)',
-        hover: 'linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%)',
-        text: isActive ? '#ffffff' : '#7c3aed'
-      },
-      'Thali': { 
-        bg: isActive ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)',
-        hover: 'linear-gradient(135deg, #34d399 0%, #10b981 100%)',
-        text: isActive ? '#ffffff' : '#059669'
-      }
-    };
+  // =========================================================================
+  // CATEGORY COUNTS - Accurate counts based on actual filtering
+  // =========================================================================
+  const getCategoryCount = useCallback((category: string): number => {
+    // Count items that would show for this category
+    // This must match the exact same logic as filteredItems!
+    let items = normalizedMenuItems;
     
-    return colors[category] || { 
-      bg: isActive ? 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)' : 'linear-gradient(135deg, #fff5e6 0%, #ffe6cc 100%)',
-      hover: 'linear-gradient(135deg, #ff8c42 0%, #f97316 100%)',
-      text: isActive ? '#ffffff' : '#ea580c'
-    };
-  };
+    // Apply category filter
+    if (category !== 'All') {
+      items = items.filter(item => item.category === category);
+    }
+    
+    return items.length;
+  }, [normalizedMenuItems]);
   
-  // Helper function to determine if item belongs to a region
-  const getItemRegion = (item: MenuItem): string | null => {
+  // =========================================================================
+  // CATEGORY COLORS - Using centralized color definitions
+  // =========================================================================
+  const getCategoryColor = useCallback((category: string, isActive: boolean) => {
+    const colorKey = (category as StandardCategory | 'All') in CATEGORY_COLORS 
+      ? (category as StandardCategory | 'All')
+      : 'All';
+    const colors = CATEGORY_COLORS[colorKey];
+    
+    return {
+      bg: isActive ? colors.bgActive : colors.bg,
+      hover: colors.hover,
+      text: isActive ? colors.textActive : colors.text,
+    };
+  }, []);
+  
+  // =========================================================================
+  // REGION DETECTION - Keyword-based (OPTIONAL - only as supplementary filter)
+  // NOTE: This is a soft filter. If no items match, show all items.
+  // =========================================================================
+  const getItemRegion = useCallback((item: MenuItem): string | null => {
     const name = item.name.toLowerCase();
     const desc = item.description.toLowerCase();
     const category = item.category.toLowerCase();
     
-    // North Indian keywords
-    if (name.includes('butter') || name.includes('paneer') || name.includes('dal') || 
-        name.includes('naan') || name.includes('roti') || name.includes('tikka') ||
-        desc.includes('punjabi') || desc.includes('delhi') || category.includes('tandoori')) {
+    // North Indian - very specific keywords only
+    if (name.includes('butter chicken') || name.includes('dal makhani') || 
+        name.includes('naan') || name.includes('roti') || name.includes('paratha') ||
+        desc.includes('punjabi') || desc.includes('north indian')) {
       return 'north-indian';
     }
     
-    // South Indian keywords
+    // South Indian - specific keywords
     if (name.includes('dosa') || name.includes('idli') || name.includes('sambar') ||
-        name.includes('biryani') || name.includes('vada') || name.includes('uttapam') ||
-        desc.includes('south') || desc.includes('coastal') || desc.includes('coconut')) {
+        name.includes('vada') || name.includes('uttapam') || name.includes('rasam') ||
+        desc.includes('south indian') || desc.includes('tamil') || desc.includes('kerala')) {
       return 'south-indian';
     }
     
-    // Street Food keywords
-    if (name.includes('pani puri') || name.includes('vada pav') || name.includes('chole bhature') ||
-        name.includes('chaat') || name.includes('pav bhaji') || name.includes('samosa') ||
-        desc.includes('street')) {
+    // Street Food - specific items
+    if (name.includes('pani puri') || name.includes('vada pav') || name.includes('chaat') ||
+        name.includes('pav bhaji') || name.includes('samosa') || name.includes('bhel') ||
+        desc.includes('street food')) {
       return 'street-food';
     }
     
-    // Gujarati keywords
+    // Gujarati - specific items
     if (name.includes('dhokla') || name.includes('thepla') || name.includes('undhiyu') ||
         name.includes('khandvi') || name.includes('fafda') ||
-        desc.includes('gujarati') || desc.includes('sweet and savory')) {
+        desc.includes('gujarati')) {
       return 'gujarati';
     }
     
-    // Bengali keywords
-    if (name.includes('ilish') || name.includes('mishti') || name.includes('rasgulla') ||
-        name.includes('sandesh') || name.includes('macher') ||
-        desc.includes('bengali') || desc.includes('fish')) {
+    // Bengali - specific items  
+    if (name.includes('ilish') || name.includes('mishti doi') || name.includes('rasgulla') ||
+        name.includes('sandesh') || name.includes('macher jhol') ||
+        desc.includes('bengali')) {
       return 'bengali';
     }
     
-    // Rajasthani keywords
+    // Rajasthani - specific items
     if (name.includes('dal baati') || name.includes('laal maas') || name.includes('ghewar') ||
-        name.includes('ker sangri') || desc.includes('rajasthani') || desc.includes('desert')) {
+        name.includes('ker sangri') || 
+        desc.includes('rajasthani')) {
       return 'rajasthani';
     }
     
+    // Return null - item doesn't clearly belong to a region
     return null;
-  };
+  }, []);
   
-  // Filter menu items for main display - SHOW ALL ITEMS (don't hide unavailable)
-  const filteredItems = menuItems.filter(item => {
-    // Only filter by isAvailable if item is completely removed from menu
-    // Otherwise show it with out-of-stock badge
+  // =========================================================================
+  // FILTERED ITEMS - Clean, predictable filtering logic
+  // Uses normalized categories for accurate matching
+  // =========================================================================
+  const filteredItems = useMemo(() => {
+    let items = normalizedMenuItems;
     
-    // Apply regional filter first
-    if (selectedRegion !== 'all') {
-      const itemRegion = getItemRegion(item);
-      if (itemRegion !== selectedRegion) return false;
-    }
-    
-    // If user is searching, IGNORE category filter and search everywhere
+    // 1. Apply search filter (if searching, ignore category filter)
     if (searchQuery.length > 0) {
-      const query = searchQuery.toLowerCase();
-      const matchesSearch = item.name.toLowerCase().includes(query) ||
-             item.description.toLowerCase().includes(query) ||
-             item.category.toLowerCase().includes(query);
-      
-      if (!matchesSearch) return false;
+      const query = searchQuery.toLowerCase().trim();
+      items = items.filter(item => {
+        return (
+          item.name.toLowerCase().includes(query) ||
+          item.description.toLowerCase().includes(query) ||
+          item.category.toLowerCase().includes(query)
+        );
+      });
     } else {
-      // If no search, filter by category
-      if (selectedCategory !== 'All' && item.category !== selectedCategory) {
-        return false;
+      // 2. Apply category filter (only if not searching)
+      if (selectedCategory !== 'All') {
+        items = items.filter(item => item.category === selectedCategory);
       }
     }
     
-    // Apply dietary filters
-    if (dietaryFilters.size > 0) {
-      if (dietaryFilters.has('vegetarian') && !item.isVegetarian) return false;
-      if (dietaryFilters.has('non-vegetarian') && item.isVegetarian) return false;
-      if (dietaryFilters.has('vegan') && !item.isVegan) return false;
-      if (dietaryFilters.has('spicy') && (item.spicyLevel == null || item.spicyLevel === 0)) return false;
+    // 3. Apply regional filter (only if region is selected AND matches exist)
+    if (selectedRegion !== 'all') {
+      const regionFiltered = items.filter(item => {
+        const itemRegion = getItemRegion(item);
+        return itemRegion === selectedRegion;
+      });
+      // Only apply filter if there are matches, otherwise show all
+      if (regionFiltered.length > 0) {
+        items = regionFiltered;
+      }
     }
     
-    return true;
-  });
+    // 4. Apply dietary filters
+    if (dietaryFilters.size > 0) {
+      items = items.filter(item => {
+        if (dietaryFilters.has('vegetarian') && !item.isVegetarian) return false;
+        if (dietaryFilters.has('non-vegetarian') && item.isVegetarian) return false;
+        if (dietaryFilters.has('vegan') && !item.isVegan) return false;
+        if (dietaryFilters.has('spicy') && (item.spicyLevel == null || item.spicyLevel === 0)) return false;
+        return true;
+      });
+    }
+    
+    return items;
+  }, [normalizedMenuItems, searchQuery, selectedCategory, selectedRegion, dietaryFilters, getItemRegion]);
 
   // Toggle dietary filter
   const toggleDietaryFilter = (filter: string) => {
@@ -339,21 +348,29 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
   };
   
   // Autocomplete dropdown results - only show when typing (limit to 8 items)
-  const autocompleteResults = searchQuery.length > 0 
-    ? menuItems
-        .filter(item => {
-          const query = searchQuery.toLowerCase();
-          return (
-            item.name.toLowerCase().includes(query) ||
-            item.description.toLowerCase().includes(query) ||
-            item.category.toLowerCase().includes(query)
-          );
-        })
-        .slice(0, 8)
-    : [];
+  const autocompleteResults = useMemo(() => {
+    if (searchQuery.length === 0) return [];
+    
+    const query = searchQuery.toLowerCase().trim();
+    const seenIds = new Set<string>();
+    
+    return normalizedMenuItems
+      .filter(item => {
+        // Skip duplicates
+        if (seenIds.has(item.id)) return false;
+        seenIds.add(item.id);
+        
+        return (
+          item.name.toLowerCase().includes(query) ||
+          item.description.toLowerCase().includes(query) ||
+          item.category.toLowerCase().includes(query)
+        );
+      })
+      .slice(0, 8);
+  }, [normalizedMenuItems, searchQuery]);
   
-  // Count total available items - LIVE FROM DATABASE
-  const totalAvailableItems = menuItems.filter(item => isInStock(item)).length;
+  // Count total available items - LIVE FROM DATABASE (using normalized items)
+  const totalAvailableItems = normalizedMenuItems.filter(item => isInStock(item)).length;
   const searchResultCount = filteredItems.length;
   
   // Increment quantity for a specific item in cart
@@ -1179,7 +1196,7 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
               <p className="text-gray-600 mb-6 max-w-md mx-auto">
                 {searchQuery 
                   ? `We couldn't find any dishes matching "${searchQuery}". Try different keywords or browse all dishes.`
-                  : menuItems.length === 0
+                  : normalizedMenuItems.length === 0
                   ? 'No menu items found. Please add dishes via the admin dashboard.'
                   : 'No dishes available in this category. Try selecting a different category or clearing filters.'
                 }
@@ -1194,7 +1211,7 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
                   Clear Search
                 </button>
               )}
-              {menuItems.length === 0 && (
+              {normalizedMenuItems.length === 0 && (
                 <div className="mt-6">
                   <a
                     href="/admin/dashboard"
@@ -1306,28 +1323,27 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
                     </div>
                   )}
                   
-                  {/* Price Badge - Top Left of Image - All Screen Sizes */}
-                  <div className="absolute" style={{ top: '0.75rem', left: '0.75rem', zIndex: 5 }}>
+                  {/* Price Badge - Top Left of Image - Compact on mobile */}
+                  <div className="absolute" style={{ top: '6px', left: '6px', zIndex: 5 }}>
                     <div style={{
-                      padding: isDesktop ? '0.375rem 0.625rem' : '0.25rem 0.5rem',
+                      padding: isDesktop ? '5px 10px' : '3px 6px',
                       background: 'rgba(255, 255, 255, 0.95)',
                       backdropFilter: 'blur(8px)',
-                      borderRadius: '0.5rem',
+                      borderRadius: isDesktop ? '8px' : '6px',
                       border: '1px solid rgba(251, 146, 60, 0.3)',
-                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1)',
+                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
                       display: 'inline-flex',
                       alignItems: 'center',
-                      gap: '0.125rem'
+                      gap: '1px'
                     }}>
                       <span style={{
-                        fontSize: isDesktop ? '0.6875rem' : '0.625rem',
+                        fontSize: isDesktop ? '11px' : '9px',
                         fontWeight: 600,
                         color: '#ea580c',
-                        lineHeight: 1,
-                        marginRight: '0.125rem'
+                        lineHeight: 1
                       }}>₹</span>
                       <span style={{
-                        fontSize: isDesktop ? '1rem' : '0.875rem',
+                        fontSize: isDesktop ? '15px' : '12px',
                         fontWeight: 700,
                         color: '#ea580c',
                         lineHeight: 1
@@ -1335,105 +1351,124 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
                     </div>
                   </div>
                   
-                  {/* Badge Grid - Top Right - 2x2 Grid Layout */}
-                  {/* 🔥 Clean Horizontal Badge Row - Stock + Dietary Icons as one cluster */}
+                  {/* 🔥 Responsive Badge Layout - Wraps on mobile, row on desktop */}
                   <div 
                     className="absolute"
                     style={{ 
-                      top: '8px', 
-                      right: '8px', 
+                      top: '6px', 
+                      right: '6px', 
                       display: 'flex',
-                      flexDirection: 'row',
-                      alignItems: 'center',
+                      flexDirection: 'column',
+                      alignItems: 'flex-end',
                       gap: '4px',
-                      zIndex: 5 
+                      zIndex: 5,
+                      maxWidth: isDesktop ? 'none' : 'calc(100% - 70px)' // Leave room for price badge
                     }}
                   >
-                    {/* Dietary Icons - Vegan (filled) takes priority over Vegetarian (outline) */}
-                    {item.isVegan === true ? (
-                      <div style={{
-                        width: isDesktop ? '24px' : '22px',
-                        height: isDesktop ? '24px' : '22px',
-                        background: 'rgba(255, 255, 255, 0.95)',
-                        backdropFilter: 'blur(8px)',
-                        borderRadius: '6px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.15)',
-                        flexShrink: 0
-                      }} title="Vegan (Plant-based)">
-                        <Leaf size={isDesktop ? 14 : 12} className="text-green-700" strokeWidth={2.5} fill="currentColor" />
-                      </div>
-                    ) : item.isVegetarian === true ? (
-                      <div style={{
-                        width: isDesktop ? '24px' : '22px',
-                        height: isDesktop ? '24px' : '22px',
-                        background: 'rgba(255, 255, 255, 0.95)',
-                        backdropFilter: 'blur(8px)',
-                        borderRadius: '6px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.15)',
-                        flexShrink: 0
-                      }} title="Vegetarian">
-                        <Leaf size={isDesktop ? 14 : 12} className="text-green-600" strokeWidth={2.5} />
-                      </div>
-                    ) : null}
-                    {item.isGlutenFree === true && (
-                      <div style={{
-                        width: isDesktop ? '24px' : '22px',
-                        height: isDesktop ? '24px' : '22px',
-                        background: 'rgba(255, 255, 255, 0.95)',
-                        backdropFilter: 'blur(8px)',
-                        borderRadius: '6px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.15)',
-                        flexShrink: 0
-                      }} title="Gluten-Free">
-                        <WheatOff size={isDesktop ? 14 : 12} className="text-amber-600" strokeWidth={2.5} />
-                      </div>
-                    )}
-                    
-                    {/* Spicy Level - Horizontal chilies in one badge */}
-                    {typeof item.spicyLevel === 'number' && item.spicyLevel > 0 && (
-                      <div style={{
-                        height: isDesktop ? '24px' : '22px',
-                        background: 'rgba(255, 255, 255, 0.95)',
-                        backdropFilter: 'blur(8px)',
-                        borderRadius: '6px',
-                        display: 'flex',
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '1px',
-                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.15)',
-                        padding: '0 4px',
-                        flexShrink: 0
-                      }} title={`Spicy Level: ${item.spicyLevel}`}>
-                        {Array.from({ length: Math.min(item.spicyLevel, 3) }).map((_, i) => (
-                          <Flame key={i} size={isDesktop ? 12 : 10} className="text-red-500" fill="currentColor" />
-                        ))}
-                      </div>
-                    )}
-                    
-                    {/* Stock Status Badge - rightmost */}
+                    {/* Stock Status Badge - Top (most important) */}
                     <span style={{
-                      padding: '3px 8px',
-                      borderRadius: '12px',
-                      fontSize: '10px',
+                      padding: isDesktop ? '3px 8px' : '2px 6px',
+                      borderRadius: '10px',
+                      fontSize: isDesktop ? '10px' : '9px',
                       fontWeight: 600,
                       backgroundColor: isInStock(item) ? '#dcfce7' : '#fee2e2',
                       color: isInStock(item) ? '#166534' : '#991b1b',
                       boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
-                      whiteSpace: 'nowrap',
-                      flexShrink: 0
+                      whiteSpace: 'nowrap'
                     }}>
-                      {isInStock(item) ? 'In Stock' : 'Out of Stock'}
+                      {isInStock(item) ? 'In Stock' : 'Out'}
                     </span>
+                    
+                    {/* Dietary + Spicy Icons Row - Below stock */}
+                    <div style={{
+                      display: 'flex',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: '3px',
+                      flexWrap: 'wrap',
+                      justifyContent: 'flex-end'
+                    }}>
+                      {/* Dietary Icons - Vegan (filled) takes priority over Vegetarian (outline) */}
+                      {item.isVegan === true ? (
+                        <div style={{
+                          width: isDesktop ? '22px' : '20px',
+                          height: isDesktop ? '22px' : '20px',
+                          background: 'rgba(255, 255, 255, 0.95)',
+                          backdropFilter: 'blur(8px)',
+                          borderRadius: '5px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.15)',
+                          flexShrink: 0
+                        }} title="Vegan (Plant-based)">
+                          <Leaf size={isDesktop ? 12 : 10} className="text-green-700" strokeWidth={2.5} fill="currentColor" />
+                        </div>
+                      ) : item.isVegetarian === true ? (
+                        <div style={{
+                          width: isDesktop ? '22px' : '20px',
+                          height: isDesktop ? '22px' : '20px',
+                          background: 'rgba(255, 255, 255, 0.95)',
+                          backdropFilter: 'blur(8px)',
+                          borderRadius: '5px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.15)',
+                          flexShrink: 0
+                        }} title="Vegetarian">
+                          <Leaf size={isDesktop ? 12 : 10} className="text-green-600" strokeWidth={2.5} />
+                        </div>
+                      ) : null}
+                      
+                      {/* Gluten-Free Icon - Hidden on very small screens */}
+                      {item.isGlutenFree === true && isDesktop && (
+                        <div style={{
+                          width: '22px',
+                          height: '22px',
+                          background: 'rgba(255, 255, 255, 0.95)',
+                          backdropFilter: 'blur(8px)',
+                          borderRadius: '5px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.15)',
+                          flexShrink: 0
+                        }} title="Gluten-Free">
+                          <WheatOff size={12} className="text-amber-600" strokeWidth={2.5} />
+                        </div>
+                      )}
+                      
+                      {/* Spicy Level - Single chili icon with number */}
+                      {typeof item.spicyLevel === 'number' && item.spicyLevel > 0 && (
+                        <div style={{
+                          height: isDesktop ? '22px' : '20px',
+                          background: 'rgba(255, 255, 255, 0.95)',
+                          backdropFilter: 'blur(8px)',
+                          borderRadius: '5px',
+                          display: 'flex',
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '1px',
+                          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.15)',
+                          padding: '0 3px',
+                          flexShrink: 0
+                        }} title={`Spicy Level: ${item.spicyLevel}`}>
+                          <Flame size={isDesktop ? 11 : 9} className="text-red-500" fill="currentColor" />
+                          {item.spicyLevel > 1 && (
+                            <span style={{ 
+                              fontSize: isDesktop ? '9px' : '8px', 
+                              fontWeight: 700, 
+                              color: '#EF4444',
+                              marginLeft: '1px'
+                            }}>
+                              ×{Math.min(item.spicyLevel, 3)}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                   
                   {/* Out of Stock / Not Available Overlay */}
