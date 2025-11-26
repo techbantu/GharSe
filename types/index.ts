@@ -239,13 +239,13 @@ export type PaymentMethod =
 
 /**
  * PaymentStatus - Payment transaction states
+ * Note: These match the Prisma PaymentStatus enum (uppercase)
  */
 export type PaymentStatus =
-  | 'pending'
-  | 'completed'
-  | 'failed'
-  | 'refunded'
-  | 'partially-refunded';
+  | 'PENDING'
+  | 'PAID'
+  | 'FAILED'
+  | 'REFUNDED';
 
 /**
  * ContactMethod - How customer prefers to be contacted
