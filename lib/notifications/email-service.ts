@@ -178,7 +178,7 @@ const generateOrderConfirmationHTML = (order: Order): string => {
       <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-left: 4px solid #f59e0b; padding: 14px; border-radius: 8px; margin-bottom: 0; box-shadow: 0 2px 6px rgba(245, 158, 11, 0.15);">
         <p style="margin: 0; color: #000000; font-size: 15px; font-weight: 600;">
           <strong>💳 Payment:</strong> ${order.paymentMethod === 'cash-on-delivery' ? 'Cash on Delivery' : 'Online Payment'}
-          ${order.paymentStatus === 'completed' ? ' <span style="color: #10b981; font-weight: 700;">(Paid ✓)</span>' : order.paymentMethod === 'cash-on-delivery' ? '' : ' <span style="color: #ef4444;">(Pending)</span>'}
+          ${order.paymentStatus === 'PAID' ? ' <span style="color: #10b981; font-weight: 700;">(Paid ✓)</span>' : order.paymentMethod === 'cash-on-delivery' ? '' : ' <span style="color: #ef4444;">(Pending)</span>'}
         </p>
       </div>
 
