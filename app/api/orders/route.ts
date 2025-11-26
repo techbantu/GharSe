@@ -1043,16 +1043,8 @@ export async function GET(request: NextRequest) {
       // Default to pending if status not found
       const frontendStatus = statusMap[dbOrder.status] || 'pending';
       
-      // Map payment status
-      const paymentStatusMap: Record<string, PaymentStatus> = {
-        'PENDING': 'pending',
-        'PAID': 'completed',
-        'COMPLETED': 'completed',
-        'FAILED': 'failed',
-        'REFUNDED': 'refunded',
-      };
-      
-      const frontendPaymentStatus = paymentStatusMap[dbOrder.paymentStatus] || 'pending';
+      // Payment status is now directly from DB (already uppercase: PENDING, PAID, FAILED, REFUNDED)
+      const frontendPaymentStatus: PaymentStatus = (dbOrder.paymentStatus as PaymentStatus) || 'PENDING';
       
       // Map payment method
       const paymentMethodMap: Record<string, PaymentMethod> = {
