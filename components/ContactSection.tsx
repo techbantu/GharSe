@@ -14,7 +14,7 @@ import { Phone, Mail, MessageCircle, MapPin } from 'lucide-react';
 import { restaurantInfo } from '@/data/menuData';
 
 interface ContactMethod {
-  icon: React.ComponentType<{ size: number; className?: string }>;
+  icon: React.ComponentType<{ size: number; className?: string; strokeWidth?: number }>;
   title: string;
   description: string;
   value: string;
