@@ -15,10 +15,14 @@ jest.mock('@/lib/prisma', () => ({
     $transaction: jest.fn(),
     order: {
       create: jest.fn(),
+      findUnique: jest.fn(),
     },
     menuItem: {
       findUnique: jest.fn(),
       updateMany: jest.fn(),
+    },
+    customer: {
+      update: jest.fn(),
     },
   },
 }));
@@ -123,6 +127,62 @@ describe('POST /api/orders', () => {
       await callback(tx);
       // Transaction completes successfully
     });
+    
+    // Mock order.findUnique to return the created order (called after transaction)
+    const mockOrderData = {
+      id: 'order-123',
+      orderNumber: 'BK-12345',
+      customerName: 'John Doe',
+      customerEmail: 'john@example.com',
+      customerPhone: '+91 90104 60964',
+      deliveryAddress: '123 Main St',
+      deliveryCity: 'Hyderabad',
+      deliveryZip: '501505',
+      deliveryNotes: '',
+      subtotal: 598,
+      tax: 29.9,
+      deliveryFee: 49,
+      discount: 0,
+      tip: 0,
+      total: 676.9,
+      status: 'PENDING_CONFIRMATION',
+      paymentStatus: 'PENDING',
+      paymentMethod: 'cash-on-delivery',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      gracePeriodExpiresAt: new Date(Date.now() + 15 * 60 * 1000),
+      items: [
+        {
+          id: 'item-1',
+          menuItemId: 'menu-1',
+          quantity: 2,
+          price: 299,
+          subtotal: 598,
+          specialInstructions: null,
+          menuItem: {
+            id: 'menu-1',
+            name: 'Biryani',
+            description: 'Delicious biryani',
+            price: 299,
+            originalPrice: null,
+            category: 'Main Course',
+            image: '/images/biryani.jpg',
+            isVegetarian: false,
+            isVegan: false,
+            isGlutenFree: false,
+            spicyLevel: 2,
+            preparationTime: 30,
+            isAvailable: true,
+            isPopular: true,
+            calories: null,
+            servingSize: null,
+            ingredients: [],
+            allergens: [],
+          },
+        },
+      ],
+    };
+    prisma.order.findUnique.mockResolvedValue(mockOrderData);
     
     orderStorage.addOrder.mockImplementation(() => {});
 

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { UtensilsCrossed, Plus, Edit, Trash2, Search, Image as ImageIcon, MapPin, Palmtree, Store, Wheat, Waves, Castle, Leaf, Flame, WheatOff, MilkOff, Sprout, Milk, ChefHat, Ban } from 'lucide-react';
 import EditMenuItemModal from '@/components/admin/menu/EditMenuItemModal';
 import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
+import { broadcastMenuUpdate } from '@/context/MenuContext';
 
 interface MenuItem {
   id: string;
@@ -109,13 +110,29 @@ export default function MenuPage() {
       console.log('Save response:', { status: response.status, data });
 
       if (response.ok) {
+        console.log('[Admin] ✅ Response OK, checking data.success:', data.success);
         if (data.success) {
-          fetchMenu(); // Refresh list
+          console.log('[Admin] ✅ data.success is true, broadcasting...');
+          fetchMenu(); // Refresh admin list
           setIsModalOpen(false);
+          
+          // 🔥 REAL-TIME SYNC: Broadcast update to all tabs (customer menu will update instantly)
+          const savedItem = data.item || { ...itemData, id: data.item?.id || itemData.id };
+          console.log('[Admin] 📡 Broadcasting update for:', savedItem.name);
+          
+          if (isNew) {
+            broadcastMenuUpdate({ type: 'ITEM_ADDED', item: savedItem });
+            console.log('[Admin] ✅ ITEM_ADDED broadcast sent!');
+          } else {
+            broadcastMenuUpdate({ type: 'ITEM_UPDATED', item: savedItem });
+            console.log('[Admin] ✅ ITEM_UPDATED broadcast sent!');
+          }
         } else {
+          console.log('[Admin] ❌ data.success is false:', data);
           alert(data.error || 'Failed to save item');
         }
       } else {
+        console.log('[Admin] ❌ Response NOT OK:', response.status);
         alert(data.error || `Failed to save item (${response.status})`);
       }
     } catch (error) {
@@ -153,6 +170,10 @@ export default function MenuPage() {
           // Successfully deleted (no orders)
           setMenuItems(prev => prev.filter(item => item.id !== itemId));
           
+          // 🔥 REAL-TIME SYNC: Broadcast deletion to all tabs
+          broadcastMenuUpdate({ type: 'ITEM_DELETED', itemId });
+          console.log('[Admin] Item deletion broadcasted:', itemId);
+          
           // Show success modal
           setDeleteModal({
             ...deleteModal,
@@ -177,10 +198,8 @@ export default function MenuPage() {
         // Mark item as unavailable
         const item = menuItems.find(i => i.id === itemId);
         if (item) {
-          await handleSave({
-            ...item,
-            isAvailable: false,
-          });
+          const updatedItem = { ...item, isAvailable: false };
+          await handleSave(updatedItem);
           
           // Close modal and show success message
           setDeleteModal({
@@ -211,6 +230,10 @@ export default function MenuPage() {
           if (forceResponse.ok && forceData.success) {
             // Remove from list
             setMenuItems(prev => prev.filter(item => item.id !== itemId));
+            
+            // 🔥 REAL-TIME SYNC: Broadcast deletion to all tabs
+            broadcastMenuUpdate({ type: 'ITEM_DELETED', itemId });
+            console.log('[Admin] Force deletion broadcasted:', itemId);
             
             // Show success modal
             setDeleteModal({

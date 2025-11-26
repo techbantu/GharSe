@@ -69,13 +69,22 @@ export class KitchenMonitor {
    */
   async getCurrentCapacity(): Promise<KitchenCapacityData> {
     // Count active orders (orders being worked on)
-    const activeOrders = await prisma.order.count({
-      where: {
-        chefId: this.restaurantId === 'default' ? null : this.restaurantId,
-        status: {
-          in: ['CONFIRMED', 'PREPARING', 'READY'],
-        },
+    const whereClause: any = {
+      status: {
+        in: ['CONFIRMED', 'PREPARING', 'READY'],
       },
+    };
+
+    // If default, look for orders with no specific chef (null)
+    // Otherwise filter by specific chef ID
+    if (this.restaurantId === 'default') {
+      whereClause.chefId = null;
+    } else {
+      whereClause.chefId = this.restaurantId;
+    }
+
+    const activeOrders = await prisma.order.count({
+      where: whereClause,
     });
 
     // Calculate utilization

@@ -32,16 +32,10 @@ const AdminLayoutContent: React.FC<AdminLayoutContentProps> = ({ children }) => 
         return;
       }
 
-      const token = localStorage.getItem('adminToken');
-      const storedUser = localStorage.getItem('adminUser');
-
-      if (!token) {
-        console.log('🔒 No admin token found, redirecting to login...');
-        router.push('/admin/login');
-        return;
-      }
-
-      // Optimistically set user from storage to avoid flash
+      // SECURITY FIX: No longer check localStorage for token
+      // Token is now stored in httpOnly cookie only (sent automatically with requests)
+      // Optimistically load user from sessionStorage (non-sensitive display data only)
+      const storedUser = sessionStorage.getItem('adminUser');
       if (storedUser) {
         try {
           const parsedUser = JSON.parse(storedUser);
@@ -56,11 +50,11 @@ const AdminLayoutContent: React.FC<AdminLayoutContentProps> = ({ children }) => 
       }
 
       try {
-        // Validate token with backend
+        // Validate session with backend using httpOnly cookie (sent automatically)
+        // SECURITY FIX: No more Authorization header with localStorage token
         const response = await fetch('/api/admin/me', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+          credentials: 'include', // Include httpOnly cookies
+          cache: 'no-store',
         });
 
         if (response.ok) {
@@ -72,8 +66,13 @@ const AdminLayoutContent: React.FC<AdminLayoutContentProps> = ({ children }) => 
               email: data.admin.email,
               role: data.admin.role
             });
-            // Update stored user
-            localStorage.setItem('adminUser', JSON.stringify(data.admin));
+            // Store user display data in sessionStorage (not the token!)
+            // SECURITY: Only non-sensitive display data, cleared on browser close
+            sessionStorage.setItem('adminUser', JSON.stringify({
+              name: data.admin.name,
+              email: data.admin.email,
+              role: data.admin.role
+            }));
           } else {
             throw new Error('Invalid session');
           }
@@ -82,9 +81,8 @@ const AdminLayoutContent: React.FC<AdminLayoutContentProps> = ({ children }) => 
         }
       } catch (error) {
         console.error('❌ Admin session validation failed:', error);
-        // Clear invalid session
-        localStorage.removeItem('adminToken');
-        localStorage.removeItem('adminUser');
+        // Clear display data (token is in httpOnly cookie, can't be cleared from JS)
+        sessionStorage.removeItem('adminUser');
         router.push('/admin/login');
       } finally {
         setIsLoading(false);

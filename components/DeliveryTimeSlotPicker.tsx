@@ -20,6 +20,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Calendar, Clock, AlertCircle, CheckCircle2, Zap, MapPin, ChefHat, Truck } from 'lucide-react';
 import { format, addDays, startOfDay, isToday, isTomorrow } from 'date-fns';
+import { format as formatTz } from 'date-fns-tz';
 import {
   getUserRegion,
   generateTimeSlots,
@@ -509,7 +510,7 @@ export const DeliveryTimeSlotPicker: React.FC<DeliveryTimeSlotPickerProps> = ({
                           color: isSelected ? '#ea580c' : '#111827',
                         }}
                       >
-                        {format(slot.startTime, 'h:mm a')}
+                        {formatTz(slot.startTime, 'h:mm a', { timeZone: userRegion.timezone })}
                       </div>
 
                       {/* Sublabel (In 2h 30m) */}
@@ -618,9 +619,9 @@ export const DeliveryTimeSlotPicker: React.FC<DeliveryTimeSlotPickerProps> = ({
               Delivery Scheduled
             </h4>
             <p style={{ fontSize: '13px', color: '#166534', margin: 0, lineHeight: 1.5 }}>
-              {format(selectedSlot.startTime, 'EEEE, MMMM d')} between{' '}
-              <strong>{format(selectedSlot.startTime, 'h:mm a')}</strong> -{' '}
-              <strong>{format(selectedSlot.endTime, 'h:mm a')}</strong>
+              {formatTz(selectedSlot.startTime, 'EEEE, MMMM d', { timeZone: userRegion.timezone })} between{' '}
+              <strong>{formatTz(selectedSlot.startTime, 'h:mm a', { timeZone: userRegion.timezone })}</strong> -{' '}
+              <strong>{formatTz(selectedSlot.endTime, 'h:mm a', { timeZone: userRegion.timezone })}</strong>
               {' '}({userRegion.timezone})
             </p>
           </div>

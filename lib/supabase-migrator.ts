@@ -95,12 +95,13 @@ class SupabaseMigrator {
           success: true,
         };
 
-        // Save to database_changes table
+        // SECURITY FIX: Use parameterized query to prevent SQL injection
+        // Previous implementation used string interpolation which was vulnerable
         try {
-          await prisma.$executeRawUnsafe(`
+          await prisma.$executeRaw`
             INSERT INTO "database_changes" ("id", "type", "table", "sql", "description", "executedAt", "success")
-            VALUES ('${changeId}', '${changeType}', '${tableName}', ${JSON.stringify(change.sql).replace(/'/g, "''")}, ${description ? `'${description.replace(/'/g, "''")}'` : 'NULL'}, '${change.executedAt.toISOString()}', true)
-          `);
+            VALUES (${changeId}, ${changeType}, ${tableName}, ${change.sql}, ${description || null}, ${change.executedAt}, true)
+          `;
         } catch (trackError: any) {
           // If tracking fails, log but continue
           console.warn('⚠️ Could not track change in database_changes:', trackError.message);
@@ -121,12 +122,12 @@ class SupabaseMigrator {
           error: error.message,
         };
 
-        // Save failed change
+        // SECURITY FIX: Use parameterized query to prevent SQL injection
         try {
-          await prisma.$executeRawUnsafe(`
+          await prisma.$executeRaw`
             INSERT INTO "database_changes" ("id", "type", "table", "sql", "description", "executedAt", "success", "error")
-            VALUES ('${changeId}', '${changeType}', '${tableName}', ${JSON.stringify(change.sql).replace(/'/g, "''")}, ${description ? `'${description.replace(/'/g, "''")}'` : 'NULL'}, '${change.executedAt.toISOString()}', false, ${JSON.stringify(error.message).replace(/'/g, "''")})
-          `);
+            VALUES (${changeId}, ${changeType}, ${tableName}, ${change.sql}, ${description || null}, ${change.executedAt}, false, ${error.message})
+          `;
         } catch (trackError: any) {
           console.warn('⚠️ Could not track failed change:', trackError.message);
         }
@@ -203,15 +204,16 @@ class SupabaseMigrator {
   /**
    * Get migration history
    */
-  async getHistory(limit = 50): Promise<DatabaseChange[]> {
+  async getHistory(historyLimit = 50): Promise<DatabaseChange[]> {
     await this.initialize();
 
     try {
-      const result = await prisma.$queryRawUnsafe(`
+      // SECURITY FIX: Use parameterized query
+      const result = await prisma.$queryRaw`
         SELECT * FROM "database_changes"
         ORDER BY "executedAt" DESC
-        LIMIT ${limit}
-      `) as any[];
+        LIMIT ${historyLimit}
+      ` as any[];
 
       return result.map((row: any) => ({
         id: row.id,
@@ -231,29 +233,36 @@ class SupabaseMigrator {
 
   /**
    * Check if a table exists
+   * SECURITY FIX: Use parameterized queries to prevent SQL injection
    */
   async tableExists(tableName: string): Promise<boolean> {
+    // Validate table name to prevent injection (only allow alphanumeric and underscore)
+    if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(tableName)) {
+      console.error('Invalid table name format:', tableName);
+      return false;
+    }
+    
     try {
       // Check database provider from Prisma schema
       // PostgreSQL is used for Supabase
-      const result = await prisma.$queryRawUnsafe(`
+      const result = await prisma.$queryRaw`
         SELECT EXISTS (
           SELECT 1 FROM information_schema.tables 
           WHERE table_schema = 'public' 
-          AND table_name = '${tableName}'
+          AND table_name = ${tableName}
         ) as exists;
-      `) as any[];
+      ` as any[];
 
       return result[0]?.exists === true;
     } catch (error: any) {
       // Fallback for SQLite (local development)
       try {
-        const result = await prisma.$queryRawUnsafe(`
+        const result = await prisma.$queryRaw`
           SELECT name FROM sqlite_master 
-          WHERE type='table' AND name='${tableName}';
-        `) as any[];
+          WHERE type='table' AND name = ${tableName};
+        ` as any[];
 
-        return result[0]?.exists === true;
+        return result.length > 0;
       } catch {
         return false;
       }

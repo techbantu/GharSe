@@ -61,7 +61,7 @@ model Chef {
   orders    Order[]
   analytics ChefAnalytics[]
   payouts   Payout[]
-  
+
   // Multi-Tenant Support (optional)
   tenantId String?
   tenant   Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)

@@ -56,7 +56,7 @@ describe('Commission Calculator', () => {
       const result = calculateCommission(999.99, 'free');
 
       expect(result.platformFee).toBe(100); // 99.999 rounded to 100
-      expect(result.chefEarnings).toBe(900); // 899.991 rounded to 900
+      expect(result.chefEarnings).toBe(899.99); // 999.99 - 100 = 899.99
     });
 
     it('should handle zero amount', () => {

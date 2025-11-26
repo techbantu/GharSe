@@ -9,9 +9,13 @@
  * - Separate admin authentication (different from customer auth)
  * - JWT token generation for admin
  * - Session tracking
- * - Rate limiting
+ * - Rate limiting (SECURITY FIX: Now implemented!)
  * 
- * Security: bcrypt verification, session tracking
+ * Security: 
+ * - bcrypt verification
+ * - Session tracking
+ * - IP-based rate limiting (5 attempts per 15 minutes)
+ * - Account lockout after failed attempts
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -21,6 +25,98 @@ import { logger } from '@/lib/logger';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+
+/**
+ * RATE LIMITING: In-memory store for login attempts
+ * SECURITY: Prevents brute force attacks
+ * 
+ * In production, use Redis for distributed rate limiting
+ */
+interface RateLimitEntry {
+  attempts: number;
+  firstAttempt: number;
+  lockedUntil: number | null;
+}
+
+const loginAttempts = new Map<string, RateLimitEntry>();
+const MAX_ATTEMPTS = 5;
+const WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+const LOCKOUT_MS = 30 * 60 * 1000; // 30 minutes lockout
+
+// Cleanup old entries every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of loginAttempts.entries()) {
+    if (now - entry.firstAttempt > WINDOW_MS && !entry.lockedUntil) {
+      loginAttempts.delete(key);
+    } else if (entry.lockedUntil && now > entry.lockedUntil) {
+      loginAttempts.delete(key);
+    }
+  }
+}, 5 * 60 * 1000);
+
+/**
+ * Check if IP is rate limited
+ */
+function checkRateLimit(ip: string): { allowed: boolean; retryAfter?: number; remainingAttempts?: number } {
+  const now = Date.now();
+  const entry = loginAttempts.get(ip);
+  
+  if (!entry) {
+    return { allowed: true, remainingAttempts: MAX_ATTEMPTS };
+  }
+  
+  // Check if locked out
+  if (entry.lockedUntil && now < entry.lockedUntil) {
+    const retryAfter = Math.ceil((entry.lockedUntil - now) / 1000);
+    return { allowed: false, retryAfter };
+  }
+  
+  // Check if window expired
+  if (now - entry.firstAttempt > WINDOW_MS) {
+    loginAttempts.delete(ip);
+    return { allowed: true, remainingAttempts: MAX_ATTEMPTS };
+  }
+  
+  // Check attempts
+  if (entry.attempts >= MAX_ATTEMPTS) {
+    // Lock out
+    entry.lockedUntil = now + LOCKOUT_MS;
+    const retryAfter = Math.ceil(LOCKOUT_MS / 1000);
+    return { allowed: false, retryAfter };
+  }
+  
+  return { allowed: true, remainingAttempts: MAX_ATTEMPTS - entry.attempts };
+}
+
+/**
+ * Record a failed login attempt
+ */
+function recordFailedAttempt(ip: string): void {
+  const now = Date.now();
+  const entry = loginAttempts.get(ip);
+  
+  if (!entry) {
+    loginAttempts.set(ip, {
+      attempts: 1,
+      firstAttempt: now,
+      lockedUntil: null,
+    });
+  } else {
+    entry.attempts++;
+    if (entry.attempts >= MAX_ATTEMPTS) {
+      entry.lockedUntil = now + LOCKOUT_MS;
+      logger.warn('Admin login locked due to too many attempts', { ip, attempts: entry.attempts });
+    }
+  }
+}
+
+/**
+ * Clear login attempts on successful login
+ */
+function clearAttempts(ip: string): void {
+  loginAttempts.delete(ip);
+}
 
 /**
  * CRITICAL SECURITY: Admin JWT Secret must be set in environment variables
@@ -53,6 +149,30 @@ const AdminLoginSchema = z.object({
  */
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
+  
+  // Get client IP for rate limiting
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() 
+    || request.headers.get('x-real-ip') 
+    || 'unknown';
+  
+  // SECURITY: Check rate limit before processing
+  const rateLimitCheck = checkRateLimit(ip);
+  if (!rateLimitCheck.allowed) {
+    logger.warn('Admin login rate limited', { ip, retryAfter: rateLimitCheck.retryAfter });
+    return NextResponse.json(
+      {
+        success: false,
+        error: `Too many login attempts. Please try again in ${Math.ceil((rateLimitCheck.retryAfter || 0) / 60)} minutes.`,
+        retryAfter: rateLimitCheck.retryAfter,
+      },
+      { 
+        status: 429,
+        headers: {
+          'Retry-After': String(rateLimitCheck.retryAfter || 1800),
+        },
+      }
+    );
+  }
   
   try {
     // Parse request body
@@ -168,10 +288,14 @@ export async function POST(request: NextRequest) {
     });
 
     if (!isPasswordValid) {
+      // SECURITY: Record failed attempt for rate limiting
+      recordFailedAttempt(ip);
+      
       logger.warn('Admin login failed - incorrect password', {
         adminId: admin.id,
         email: normalizedEmail.substring(0, 3) + '***',
         passwordLength: passwordToCompare.length,
+        ip,
       });
 
       return NextResponse.json(
@@ -212,6 +336,9 @@ export async function POST(request: NextRequest) {
       { expiresIn: JWT_EXPIRES_IN }
     );
     
+    // SECURITY: Clear rate limit attempts on successful login
+    clearAttempts(ip);
+    
     // Update last login
     await (prisma.admin.update as any)({
       where: { id: admin.id },
@@ -227,6 +354,7 @@ export async function POST(request: NextRequest) {
       email: admin.email.substring(0, 3) + '***',
       role: admin.role,
       duration,
+      ip,
     });
     
     // Return success with token

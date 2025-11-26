@@ -19,10 +19,15 @@ afterEach(() => {
   }
 });
 
-// Memory leak detection helper
+// Memory leak detection helper (Babel-compatible, no TypeScript assertions)
 export const detectMemoryLeaks = () => {
-  if (typeof performance !== 'undefined' && performance.memory) {
-    const memory = (performance as any).memory;
+  if (typeof performance === 'undefined') return null;
+  
+  // Access memory using bracket notation only (no TypeScript syntax)
+  // Performance.memory exists in Chrome but not in standard types
+  const memory = (performance as Record<string, unknown>)['memory'] as { usedJSHeapSize: number; totalJSHeapSize: number; jsHeapSizeLimit: number } | undefined;
+  
+  if (memory) {
     return {
       used: memory.usedJSHeapSize,
       total: memory.totalJSHeapSize,

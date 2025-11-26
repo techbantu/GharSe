@@ -16,32 +16,73 @@ const createJestConfig = nextJest({
   dir: './',
 });
 
-const config: Config = {
-  // Test environment
-  testEnvironment: 'jest-environment-jsdom',
-  
-  // Setup files
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
-  
-  // Module paths
-  moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/$1',
-  },
-  
-  // Test match patterns (exclude E2E tests - they run separately)
-  testMatch: [
-    '**/__tests__/**/*.[jt]s?(x)',
-    '**/?(*.)+(spec|test).[jt]s?(x)',
+// Base config that nextJest will transform
+const baseConfig: Config = {
+  // Multi-project setup: Separate browser and Node.js test environments
+  projects: [
+    // Browser/React tests (jsdom environment)
+    {
+      displayName: 'browser',
+      testEnvironment: 'jest-environment-jsdom',
+      setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
+      moduleNameMapper: {
+        '^@/(.*)$': '<rootDir>/$1',
+      },
+      testMatch: [
+        '**/__tests__/**/*.tsx',
+        '**/__tests__/context/**/*.ts',
+        '**/__tests__/memory-leaks.test.tsx',
+      ],
+      testPathIgnorePatterns: [
+        '/node_modules/',
+        '/.next/',
+        '/e2e/',
+      ],
+      transformIgnorePatterns: [
+        '/node_modules/',
+        '^.+\\.module\\.(css|sass|scss)$',
+      ],
+    },
+    // Node.js/API tests (node environment for Prisma)
+    {
+      displayName: 'node',
+      testEnvironment: 'node',
+      preset: 'ts-jest', // Explicit TypeScript transformation for Node.js tests
+      setupFilesAfterEnv: ['<rootDir>/jest.setup.node.ts'],
+      moduleNameMapper: {
+        '^@/(.*)$': '<rootDir>/$1',
+      },
+      testMatch: [
+        '**/__tests__/**/*.test.ts',
+        '**/__tests__/api/**/*.ts',
+        '**/__tests__/integration/**/*.ts',
+        '**/__tests__/security/**/*.ts',
+        '**/__tests__/concurrency/**/*.ts',
+        '!**/__tests__/**/*.tsx',
+        '!**/__tests__/context/**/*.ts',
+        '!**/__tests__/memory-leaks.test.tsx',
+      ],
+      testPathIgnorePatterns: [
+        '/node_modules/',
+        '/.next/',
+        '/e2e/',
+      ],
+      transformIgnorePatterns: [
+        '/node_modules/',
+      ],
+      // TypeScript transformation config
+      transform: {
+        '^.+\\.tsx?$': ['ts-jest', {
+          tsconfig: {
+            jsx: 'react',
+            esModuleInterop: true,
+          },
+        }],
+      },
+    },
   ],
   
-  // Exclude E2E tests from Jest
-  testPathIgnorePatterns: [
-    '/node_modules/',
-    '/.next/',
-    '/e2e/',
-  ],
-  
-  // Coverage configuration
+  // Shared coverage configuration
   collectCoverageFrom: [
     'app/**/*.{js,jsx,ts,tsx}',
     'components/**/*.{js,jsx,ts,tsx}',
@@ -64,13 +105,7 @@ const config: Config = {
     },
   },
   
-  // Transform ignore patterns
-  transformIgnorePatterns: [
-    '/node_modules/',
-    '^.+\\.module\\.(css|sass|scss)$',
-  ],
-  
-  // Test timeout (for memory leak tests)
+  // Test timeout (for memory leak tests) - root level only
   testTimeout: 30000,
   
   // Verbose output
@@ -86,5 +121,7 @@ const config: Config = {
   resetModules: true,
 };
 
-export default createJestConfig(config);
+// Apply nextJest transformation to the config
+const finalConfig = createJestConfig(baseConfig);
+export default finalConfig;
 

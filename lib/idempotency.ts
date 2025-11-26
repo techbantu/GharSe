@@ -28,8 +28,71 @@ interface IdempotencyResult<T = any> {
   timestamp: number;
 }
 
+/**
+ * LRU Cache Implementation with max size bounds
+ * Prevents memory leaks by evicting oldest entries when full
+ */
+class LRUCache<K, V> {
+  private cache = new Map<K, V>();
+  private maxSize: number;
+
+  constructor(maxSize: number) {
+    this.maxSize = maxSize;
+  }
+
+  get(key: K): V | undefined {
+    const value = this.cache.get(key);
+    if (value !== undefined) {
+      // Move to end (most recently used)
+      this.cache.delete(key);
+      this.cache.set(key, value);
+    }
+    return value;
+  }
+
+  set(key: K, value: V): void {
+    // Delete first if exists (to update position)
+    if (this.cache.has(key)) {
+      this.cache.delete(key);
+    }
+    // Evict oldest if at capacity
+    while (this.cache.size >= this.maxSize) {
+      const firstKey = this.cache.keys().next().value;
+      if (firstKey !== undefined) {
+        this.cache.delete(firstKey);
+        console.log(`[LRU Cache] Evicted oldest entry to maintain max size of ${this.maxSize}`);
+      }
+    }
+    this.cache.set(key, value);
+  }
+
+  delete(key: K): boolean {
+    return this.cache.delete(key);
+  }
+
+  has(key: K): boolean {
+    return this.cache.has(key);
+  }
+
+  get size(): number {
+    return this.cache.size;
+  }
+
+  entries(): IterableIterator<[K, V]> {
+    return this.cache.entries();
+  }
+
+  clear(): void {
+    this.cache.clear();
+  }
+}
+
 // In-memory cache fallback (when Redis unavailable)
-const inMemoryCache = new Map<string, { data: IdempotencyResult; expiresAt: number }>();
+// SECURITY FIX: Using LRU cache with max 10,000 entries to prevent memory leaks
+const MAX_CACHE_SIZE = 10000;
+const MAX_PROCESSING_KEYS = 1000;
+
+const inMemoryCache = new LRUCache<string, { data: IdempotencyResult; expiresAt: number }>(MAX_CACHE_SIZE);
 const processingKeys = new Set<string>(); // Track in-flight requests
 
 // Metrics tracking
@@ -40,6 +103,7 @@ let metricsData = {
   invalidKeys: 0,
   concurrentDuplicates: 0,
   redisErrors: 0,
+  evictions: 0,
 };
 
 /**
@@ -143,20 +207,27 @@ export async function storeIdempotencyResult<T = any>(
 
 /**
  * Cleanup expired entries from in-memory cache
- * Called automatically when cache grows too large
+ * Called periodically to remove stale entries (LRU handles size limits)
  */
 function cleanupInMemoryCache(): void {
   const now = Date.now();
   let cleaned = 0;
+  const keysToDelete: string[] = [];
   
   for (const [key, value] of inMemoryCache.entries()) {
     if (value.expiresAt < now) {
-      inMemoryCache.delete(key);
-      cleaned++;
+      keysToDelete.push(key);
     }
   }
   
-  console.log(`[Idempotency] Cleaned up ${cleaned} expired cache entries`);
+  for (const key of keysToDelete) {
+    inMemoryCache.delete(key);
+    cleaned++;
+  }
+  
+  if (cleaned > 0) {
+    console.log(`[Idempotency] Cleaned up ${cleaned} expired cache entries`);
+  }
 }
 
 /**
@@ -290,7 +361,16 @@ export async function withIdempotency<T = any>(
     );
   }
   
-  // Mark as processing
+  // Mark as processing (with size limit to prevent memory leak)
+  if (processingKeys.size >= MAX_PROCESSING_KEYS) {
+    // Clear oldest entries (Set maintains insertion order)
+    const iterator = processingKeys.values();
+    for (let i = 0; i < 100 && processingKeys.size > MAX_PROCESSING_KEYS - 100; i++) {
+      const oldest = iterator.next().value;
+      if (oldest) processingKeys.delete(oldest);
+    }
+    console.warn(`[Idempotency] Processing keys exceeded ${MAX_PROCESSING_KEYS}, cleared oldest entries`);
+  }
   processingKeys.add(idempotencyKey);
   
   try {
@@ -431,6 +511,7 @@ export function resetIdempotencyMetrics(): void {
     invalidKeys: 0,
     concurrentDuplicates: 0,
     redisErrors: 0,
+    evictions: 0,
   };
   console.log('[Idempotency] Metrics reset');
 }

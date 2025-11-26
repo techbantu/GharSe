@@ -17,7 +17,14 @@ import {
   storeIdempotencyResult,
   resetIdempotencyMetrics,
   getIdempotencyMetrics,
+  generateIdempotencyKey,
 } from '@/lib/idempotency';
+
+// Helper to generate valid UUID v4 keys for testing
+const generateTestKey = (suffix?: string): string => {
+  const uuid = generateIdempotencyKey();
+  return uuid; // Return valid UUID v4
+};
 
 describe('Idempotency - Concurrency & Race Conditions', () => {
   beforeEach(() => {
@@ -26,7 +33,7 @@ describe('Idempotency - Concurrency & Race Conditions', () => {
 
   describe('Double-Submit Prevention', () => {
     test('Same idempotency key returns cached result (not duplicate)', async () => {
-      const idempotencyKey = 'test-order-12345';
+      const idempotencyKey = generateTestKey();
       let executionCount = 0;
 
       // Create a mock handler that increments counter
@@ -79,12 +86,12 @@ describe('Idempotency - Concurrency & Race Conditions', () => {
 
       const request1 = new Request('https://test.com/api/orders', {
         method: 'POST',
-        headers: { 'Idempotency-Key': 'key-1' },
+        headers: { 'Idempotency-Key': generateTestKey() },
       });
 
       const request2 = new Request('https://test.com/api/orders', {
         method: 'POST',
-        headers: { 'Idempotency-Key': 'key-2' },
+        headers: { 'Idempotency-Key': generateTestKey() },
       });
 
       await withIdempotency(request1, handler);
@@ -96,7 +103,7 @@ describe('Idempotency - Concurrency & Race Conditions', () => {
 
   describe('Concurrent Request Protection', () => {
     test('Concurrent requests with same key only execute once', async () => {
-      const idempotencyKey = 'concurrent-test-001';
+      const idempotencyKey = generateTestKey();
       let executionCount = 0;
 
       // Slow handler to simulate processing time
@@ -138,7 +145,7 @@ describe('Idempotency - Concurrency & Race Conditions', () => {
     });
 
     test('Concurrent requests wait for first to complete', async () => {
-      const idempotencyKey = 'wait-test-001';
+      const idempotencyKey = generateTestKey();
       const startTimes: number[] = [];
       const endTimes: number[] = [];
 
@@ -176,7 +183,7 @@ describe('Idempotency - Concurrency & Race Conditions', () => {
 
   describe('Race Condition Handling', () => {
     test('Two tabs submitting simultaneously only create one order', async () => {
-      const idempotencyKey = 'race-condition-001';
+      const idempotencyKey = generateTestKey();
       const createdOrders: string[] = [];
 
       // Simulate order creation with race condition
@@ -216,7 +223,7 @@ describe('Idempotency - Concurrency & Race Conditions', () => {
     });
 
     test('Rapid succession requests are deduplicated', async () => {
-      const idempotencyKey = 'rapid-fire-001';
+      const idempotencyKey = generateTestKey();
       let dbInsertCount = 0;
 
       const handler = async () => {
@@ -256,7 +263,7 @@ describe('Idempotency - Concurrency & Race Conditions', () => {
   describe('Cache Failure Scenarios', () => {
     test('In-memory fallback works when Redis fails', async () => {
       // This tests the in-memory cache fallback
-      const idempotencyKey = 'fallback-test-001';
+      const idempotencyKey = generateTestKey();
       let executionCount = 0;
 
       const handler = async () => {
@@ -291,7 +298,7 @@ describe('Idempotency - Concurrency & Race Conditions', () => {
 
   describe('Error Handling Under Concurrency', () => {
     test('Failed requests are not cached', async () => {
-      const idempotencyKey = 'error-test-001';
+      const idempotencyKey = generateTestKey();
       let attemptCount = 0;
 
       const handler = async () => {
@@ -354,7 +361,7 @@ describe('Idempotency - Concurrency & Race Conditions', () => {
 
   describe('Performance Under Load', () => {
     test('System handles 100 concurrent requests efficiently', async () => {
-      const uniqueKeys = Array.from({ length: 100 }, (_, i) => `load-test-${i}`);
+      const uniqueKeys = Array.from({ length: 100 }, () => generateTestKey());
       let executionCount = 0;
 
       const handler = async () => {

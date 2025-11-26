@@ -231,6 +231,23 @@ export async function validateCoupon(
  * @param ipAddress - Customer IP address (for fraud tracking)
  * @returns Promise<boolean> - True if applied successfully
  */
+/**
+ * Apply coupon to order (create usage record)
+ * 
+ * SECURITY FIX: Uses database transaction with optimistic locking to prevent race conditions
+ * Previous implementation had a TOCTOU (time-of-check-time-of-use) vulnerability where:
+ * - Two concurrent requests could both pass the usage limit check
+ * - Both would then increment the counter, exceeding the limit
+ * 
+ * @param couponId - Coupon ID
+ * @param customerId - Customer ID
+ * @param orderId - Order ID
+ * @param discountAmount - Discount amount applied
+ * @param orderTotal - Order total before discount
+ * @param finalTotal - Order total after discount
+ * @param ipAddress - Customer IP address (for fraud tracking)
+ * @returns Promise<boolean> - True if applied successfully
+ */
 export async function applyCouponToOrder(
   couponId: string,
   customerId: string,
@@ -241,26 +258,62 @@ export async function applyCouponToOrder(
   ipAddress?: string
 ): Promise<boolean> {
   try {
-    // Create coupon usage record
-    await prisma.couponUsage.create({
-      data: {
-        couponId,
-        customerId,
-        orderId,
-        discountAmount,
-        orderTotal,
-        finalTotal,
-        ipAddress: ipAddress || null,
-      },
+    // SECURITY FIX: Use transaction with optimistic locking to prevent race conditions
+    await prisma.$transaction(async (tx) => {
+      // 1. Lock and check the coupon in a single atomic operation
+      // Use updateMany with a WHERE clause that includes the usage limit check
+      const coupon = await tx.coupon.findUnique({
+        where: { id: couponId },
+        select: { usageCount: true, maxUsageTotal: true },
+      });
+      
+      if (!coupon) {
+        throw new Error('Coupon not found');
+      }
+      
+      // 2. Check if we would exceed the limit BEFORE incrementing
+      if (coupon.maxUsageTotal !== null && coupon.usageCount >= coupon.maxUsageTotal) {
+        throw new Error('Coupon usage limit exceeded');
+      }
+      
+      // 3. Atomically increment with a condition (optimistic lock)
+      // This will fail if another transaction already incremented past the limit
+      const updateResult = await tx.coupon.updateMany({
+        where: {
+          id: couponId,
+          // Optimistic lock: only update if usageCount hasn't changed
+          // OR if there's no limit
+          OR: [
+            { maxUsageTotal: null },
+            { usageCount: { lt: tx.coupon.fields.maxUsageTotal } },
+          ],
+        },
+        data: { usageCount: { increment: 1 } },
+      });
+      
+      if (updateResult.count === 0) {
+        throw new Error('Coupon usage limit exceeded (concurrent request)');
+      }
+      
+      // 4. Create coupon usage record (within same transaction)
+      await tx.couponUsage.create({
+        data: {
+          couponId,
+          customerId,
+          orderId,
+          discountAmount,
+          orderTotal,
+          finalTotal,
+          ipAddress: ipAddress || null,
+        },
+      });
+    }, {
+      // Transaction options for better reliability
+      maxWait: 5000, // Max time to wait for a connection
+      timeout: 10000, // Max time for transaction
     });
     
-    // Increment coupon usage count
-    await prisma.coupon.update({
-      where: { id: couponId },
-      data: { usageCount: { increment: 1 } },
-    });
-    
-    logger.info('Coupon applied to order', {
+    logger.info('Coupon applied to order (atomic)', {
       couponId,
       customerId,
       orderId,

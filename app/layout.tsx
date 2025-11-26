@@ -17,10 +17,12 @@ import { AuthProvider } from "@/context/AuthContext";
 import { ToastProvider } from "@/context/ToastContext";
 import { CartProvider } from "@/context/CartContext";
 import { ActiveOrderProvider } from "@/context/ActiveOrderContext";
+import { MenuProvider } from "@/context/MenuContext";
 // import CacheBuster from "@/components/CacheBuster"; // Temporarily disabled due to HMR issues
 import LegalAcceptanceModal from "@/components/legal/LegalAcceptanceModal";
 import CookieConsentBanner from "@/components/legal/CookieConsentBanner";
 import { restaurantInfo } from "@/data/menuData";
+import PWAInstaller from "@/components/PWAInstaller";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -295,13 +297,16 @@ export default function RootLayout({
         <ToastProvider>
           <AuthProvider>
             <ActiveOrderProvider>
-              <CartProvider>
-                <ChatProvider>
-                  <LegalAcceptanceModal />
-                  <CookieConsentBanner />
-                  {children}
-                </ChatProvider>
-              </CartProvider>
+              <MenuProvider>
+                <CartProvider>
+                  <ChatProvider>
+                    <LegalAcceptanceModal />
+                    <CookieConsentBanner />
+                    <PWAInstaller />
+                    {children}
+                  </ChatProvider>
+                </CartProvider>
+              </MenuProvider>
             </ActiveOrderProvider>
           </AuthProvider>
         </ToastProvider>

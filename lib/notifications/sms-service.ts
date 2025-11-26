@@ -14,6 +14,7 @@
 import { Order } from '@/types';
 import { logger } from '@/utils/logger';
 import { restaurantInfo } from '@/data/menuData';
+import { formatForRegion } from '@/lib/timezone-service';
 
 // Twilio configuration
 const TWILIO_CONFIG = {
@@ -26,11 +27,7 @@ const TWILIO_CONFIG = {
 
 // SMS templates
 const generateOrderConfirmationSMS = (order: Order): string => {
-  const estimatedTime = new Date(order.estimatedReadyTime).toLocaleTimeString('en-IN', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true,
-  });
+  const estimatedTime = formatForRegion(order.estimatedReadyTime, 'IN', 'h:mm a');
 
   return `✓ Order Confirmed!
 
@@ -49,7 +46,7 @@ Call: ${restaurantInfo.contact.phone}
 
 const generateStatusUpdateSMS = (order: Order, newStatus: string): string => {
   const statusMessages: Record<string, string> = {
-    confirmed: `Order ${order.orderNumber} confirmed! We're preparing your food. Ready by ${new Date(order.estimatedReadyTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}.`,
+    confirmed: `Order ${order.orderNumber} confirmed! We're preparing your food. Ready by ${formatForRegion(order.estimatedReadyTime, 'IN', 'h:mm a')}.`,
     preparing: `Your order ${order.orderNumber} is being prepared! 👨‍🍳`,
     ready: `Order ${order.orderNumber} is ready! ${order.orderType === 'delivery' ? 'Out for delivery soon.' : 'Ready for pickup.'}`,
     'out-for-delivery': `Order ${order.orderNumber} is on the way! 🛵`,

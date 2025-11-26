@@ -19,6 +19,27 @@
  * ```
  */
 
+// Helper to check both NEXT_PUBLIC_ and regular env vars (client & server compatible)
+const getEnvFlag = (key: string): boolean => {
+  // For client-side, NEXT_PUBLIC_ prefixed vars are inlined at build time
+  // For server-side, both work
+  const publicKey = `NEXT_PUBLIC_${key}`;
+  
+  // Check NEXT_PUBLIC_ version first (works on client)
+  if (typeof process !== 'undefined' && process.env) {
+    // @ts-ignore - Dynamic env access
+    const publicValue = process.env[publicKey];
+    if (publicValue !== undefined) {
+      return publicValue === 'true';
+    }
+    // Fall back to regular env var (server-side only)
+    // @ts-ignore - Dynamic env access
+    const regularValue = process.env[key];
+    return regularValue === 'true';
+  }
+  return false;
+};
+
 // Feature flag definitions
 export const FEATURE_FLAGS = {
   // === MULTI-CHEF PLATFORM ===
@@ -28,28 +49,28 @@ export const FEATURE_FLAGS = {
    * When disabled: Only default Bantu's Kitchen chef is active
    * When enabled: Platform supports multiple independent chefs
    */
-  MULTI_CHEF_ENABLED: process.env.MULTI_CHEF_ENABLED === 'true',
+  MULTI_CHEF_ENABLED: getEnvFlag('MULTI_CHEF_ENABLED') || process.env.NEXT_PUBLIC_MULTI_CHEF_ENABLED === 'true' || process.env.MULTI_CHEF_ENABLED === 'true',
   
   /**
    * Allow new chefs to register
    * When disabled: Only existing chefs can operate
    * When enabled: New chefs can submit registration applications
    */
-  CHEF_REGISTRATION: process.env.ALLOW_CHEF_REGISTRATION === 'true',
+  CHEF_REGISTRATION: getEnvFlag('ALLOW_CHEF_REGISTRATION') || process.env.NEXT_PUBLIC_ALLOW_CHEF_REGISTRATION === 'true' || process.env.ALLOW_CHEF_REGISTRATION === 'true',
   
   /**
    * Show chef discovery page to customers
    * When disabled: Only default restaurant menu is shown
    * When enabled: Customers can browse and order from multiple chefs
    */
-  CHEF_DISCOVERY: process.env.SHOW_CHEF_DISCOVERY === 'true',
+  CHEF_DISCOVERY: getEnvFlag('SHOW_CHEF_DISCOVERY') || process.env.NEXT_PUBLIC_SHOW_CHEF_DISCOVERY === 'true' || process.env.SHOW_CHEF_DISCOVERY === 'true',
   
   /**
    * Allow items from multiple chefs in single cart
    * When disabled: Cart can only contain items from one chef
    * When enabled: Cart can mix items from different chefs (separate delivery fees)
    */
-  MULTI_CHEF_CART: process.env.MULTI_CHEF_CART === 'true',
+  MULTI_CHEF_CART: getEnvFlag('MULTI_CHEF_CART') || process.env.NEXT_PUBLIC_MULTI_CHEF_CART === 'true' || process.env.MULTI_CHEF_CART === 'true',
   
   /**
    * Enable chef analytics dashboard

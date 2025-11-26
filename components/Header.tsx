@@ -44,10 +44,26 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
   
   // Track client-side hydration to prevent SSR/CSR mismatch
   const [isMounted, setIsMounted] = useState(false);
+  // Track if we're on desktop (>= 1024px) - initialize to true to prevent flash
+  const [isDesktop, setIsDesktop] = useState(true);
   
   // Mark as mounted after hydration (prevents hydration errors)
   useEffect(() => {
+    // Check desktop BEFORE setting mounted to prevent flash of hamburger
+    const isLargeScreen = window.innerWidth >= 1024;
+    console.log('[Header] Window width:', window.innerWidth, 'isLargeScreen:', isLargeScreen);
+    setIsDesktop(isLargeScreen);
     setIsMounted(true);
+    
+    // Listen for resize events
+    const checkDesktop = () => {
+      const newIsDesktop = window.innerWidth >= 1024;
+      console.log('[Header] Resize - Window width:', window.innerWidth, 'isDesktop:', newIsDesktop);
+      setIsDesktop(newIsDesktop);
+    };
+    
+    window.addEventListener('resize', checkDesktop);
+    return () => window.removeEventListener('resize', checkDesktop);
   }, []);
   
   // Handle scroll effect for sticky header
@@ -536,48 +552,51 @@ const Header: React.FC<HeaderProps> = ({ onCartClick }) => {
                 </div>
               </button>
               
-              {/* Mobile Menu Toggle Button */}
-              <button
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
-                style={{
-                  height: '44px',
-                  width: '44px',
-                  minWidth: '44px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background: 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  borderRadius: '12px',
-                  transition: 'all 0.2s',
-                  color: '#374151',
-                  flexShrink: 0,
-                }}
-                className="lg:hidden"
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(249, 115, 22, 0.1)';
-                  e.currentTarget.style.color = '#f97316';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'transparent';
-                  e.currentTarget.style.color = '#374151';
-                }}
-              >
-                {isMobileMenuOpen ? (
-                  <X size={22} strokeWidth={2.5} />
-                ) : (
-                  <Menu size={22} strokeWidth={2.5} />
-                )}
-              </button>
+              {/* Mobile/Tablet Menu Toggle Button - Only rendered on client after hydration, hidden on desktop */}
+              {isMounted && !isDesktop && (
+                <button
+                  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                  aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+                  data-mobile-menu-toggle="true"
+                  className="flex items-center justify-center"
+                  style={{
+                    height: '44px',
+                    width: '44px',
+                    minWidth: '44px',
+                    background: isMobileMenuOpen ? 'rgba(249, 115, 22, 0.15)' : 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    borderRadius: '12px',
+                    transition: 'all 0.2s',
+                    color: isMobileMenuOpen ? '#f97316' : '#374151',
+                    flexShrink: 0,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(249, 115, 22, 0.1)';
+                    e.currentTarget.style.color = '#f97316';
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isMobileMenuOpen) {
+                      e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.color = '#374151';
+                    }
+                  }}
+                >
+                  {isMobileMenuOpen ? (
+                    <X size={22} strokeWidth={2.5} />
+                  ) : (
+                    <Menu size={22} strokeWidth={2.5} />
+                  )}
+                </button>
+              )}
             </div>
           </div>
           
-          {/* Mobile Menu Dropdown - Compact & Clean */}
+          {/* Mobile Menu Dropdown - Compact & Clean - Shows on screens smaller than lg (1024px) */}
           {isMobileMenuOpen && (
             <div 
               data-mobile-menu
+              className="lg:hidden"
               style={{
                 display: 'block',
                 marginTop: '16px',

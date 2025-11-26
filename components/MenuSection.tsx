@@ -10,10 +10,11 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Search, ShoppingBag, Plus, Minus, X, ChevronDown, Filter, MapPin, UtensilsCrossed, Flame, Leaf, ChefHat, XCircle, Wheat, WheatOff, Palmtree, Store, Waves, Castle, PackageX } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Search, ShoppingBag, Plus, Minus, X, ChevronDown, Filter, MapPin, UtensilsCrossed, Flame, Leaf, ChefHat, XCircle, Wheat, WheatOff, Palmtree, Store, Waves, Castle, PackageX, RefreshCw } from 'lucide-react';
 import { MenuItem, MenuCategory } from '@/types';
 import { useCart } from '@/context/CartContext';
+import { useMenu } from '@/context/MenuContext';
 import ProductDetailModal from './ProductDetailModal';
 import { useSearchParams, useRouter } from 'next/navigation';
 
@@ -33,11 +34,11 @@ const REGIONAL_CUISINES = [
 
 const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
   const { addItem, cart, updateQuantity, removeItem } = useCart();
+  const { menuItems, isLoading: contextLoading, error: contextError, hasNewUpdate, clearUpdateFlag, refreshMenu } = useMenu();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  
+  // UI state
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [selectedRegion, setSelectedRegion] = useState<string>('all');
   const [dietaryFilters, setDietaryFilters] = useState<Set<string>>(new Set());
@@ -50,6 +51,11 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [recentlyAdded, setRecentlyAdded] = useState<Record<string, number>>({});
   const [isDesktop, setIsDesktop] = useState(false);
+  // Note: showUpdateNotification now comes from context as hasNewUpdate
+  
+  // Derived state from context
+  const loading = contextLoading && menuItems.length === 0;
+  const error = contextError;
   
   // Get actual quantity from cart for each item
   const getCartQuantity = (itemId: string): number => {
@@ -106,119 +112,22 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
     }
   }, [searchParams, menuItems]);
   
-  // Fetch menu items from database
+  // 🔔 Auto-dismiss notification after 5 seconds
   useEffect(() => {
-    let isInitialLoad = true;
-    
-    const fetchMenuItems = async (isRefresh = false) => {
-      try {
-        // Only show loading on initial load, not on refresh
-        if (!isRefresh) {
-        setLoading(true);
-        }
-        setError(null);
-        
-        // First ensure database is initialized (only on initial load)
-        if (isInitialLoad) {
-        try {
-          await fetch('/api/database/init');
-        } catch (initErr) {
-          console.warn('Database init warning:', initErr);
-          // Continue anyway - might already be initialized
-          }
-        }
-        
-        const response = await fetch('/api/menu'); // Get ALL items
-        
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error || `API returned ${response.status}: ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-
-        if (data.success) {
-          // Transform database items to MenuItem format
-          const transformedItems: MenuItem[] = (data.items || []).map((item: any) => ({
-            id: item.id,
-            name: item.name,
-            description: item.description,
-            price: item.price,
-            originalPrice: item.originalPrice,
-            category: item.category,
-            image: item.image,
-            isVegetarian: item.isVegetarian,
-            isVegan: item.isVegan,
-            isGlutenFree: item.isGlutenFree,
-            spicyLevel: item.spicyLevel,
-            preparationTime: item.preparationTime,
-            isAvailable: item.isAvailable,
-            isPopular: item.isPopular,
-            calories: item.calories,
-            servingSize: item.servingSize,
-            // NEW: Inventory fields
-            inventoryEnabled: item.inventoryEnabled || false,
-            inventory: item.inventory ?? null,
-            outOfStockMessage: item.outOfStockMessage || null,
-          }));
-          
-          // Only update if data actually changed (prevent unnecessary re-renders)
-          setMenuItems(prevItems => {
-            const prevIds = new Set(prevItems.map(i => i.id));
-            const newIds = new Set(transformedItems.map(i => i.id));
-            
-            // Check if items changed
-            const itemsChanged = 
-              prevItems.length !== transformedItems.length ||
-              ![...prevIds].every(id => newIds.has(id)) ||
-              transformedItems.some((item, idx) => {
-                const prevItem = prevItems[idx];
-                return !prevItem || 
-                  prevItem.inventory !== item.inventory ||
-                  prevItem.isAvailable !== item.isAvailable ||
-                  prevItem.price !== item.price;
-              });
-            
-            // Only update if something actually changed
-            return itemsChanged ? transformedItems : prevItems;
-          });
-          
-          // Show helpful message if no items found (only on initial load)
-          if (isInitialLoad && transformedItems.length === 0) {
-            setError('No menu items found in database. Please add items via the admin dashboard.');
-          }
-        } else {
-          throw new Error(data.error || 'Failed to fetch menu items');
-        }
-      } catch (err: any) {
-        console.error('Error fetching menu items:', err);
-        
-        // Only show error on initial load, not on silent refresh
-        if (!isRefresh) {
-        let errorMessage = 'Failed to load menu items';
-        
-        if (err.message) {
-          errorMessage = err.message;
-        } else if (err.name === 'TypeError' && err.message?.includes('fetch')) {
-          errorMessage = 'Network error: Unable to connect to server. Please check your internet connection.';
-        } else {
-          errorMessage = 'Failed to load menu items. Please check your database connection and try again.';
-        }
-        
-        setError(errorMessage);
-        }
-      } finally {
-        if (!isRefresh) {
-        setLoading(false);
-      }
-        isInitialLoad = false;
-      }
-    };
-
-    fetchMenuItems(false); // Initial load
-    // Auto-refresh every 60 seconds (reduced from 30) to get latest inventory - silent refresh
-    const interval = setInterval(() => fetchMenuItems(true), 60000);
-    return () => clearInterval(interval);
+    if (hasNewUpdate) {
+      console.log('[MenuSection] 🔔 Real admin update detected - showing notification');
+      const timer = setTimeout(() => {
+        clearUpdateFlag();
+      }, 5000); // Auto-hide after 5 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [hasNewUpdate, clearUpdateFlag]);
+  
+  // Initialize database on first load (one-time)
+  useEffect(() => {
+    fetch('/api/database/init').catch(() => {
+      // Ignore - might already be initialized
+    });
   }, []);
 
   // Get unique categories from fetched items
@@ -539,7 +448,56 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
             margin-bottom: 0.75rem !important;
           }
         }
+        @keyframes slideInFromTop {
+          from {
+            transform: translateY(-100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+        @keyframes fadeOut {
+          from {
+            opacity: 1;
+          }
+          to {
+            opacity: 0;
+          }
+        }
+        .menu-update-notification {
+          animation: slideInFromTop 0.3s ease-out, fadeOut 0.3s ease-in 2.7s;
+        }
       `}} />
+      
+      {/* Real-time Update Notification - only shows on REAL admin updates */}
+      {hasNewUpdate && (
+        <div 
+          className="menu-update-notification"
+          style={{
+            position: 'fixed',
+            top: '80px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 1000,
+            background: 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)',
+            color: 'white',
+            padding: '12px 24px',
+            borderRadius: '12px',
+            boxShadow: '0 10px 40px rgba(34, 197, 94, 0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            fontWeight: 600,
+            fontSize: '14px',
+          }}
+        >
+          <RefreshCw size={18} className="animate-spin" style={{ animationDuration: '2s' }} />
+          Menu updated! Showing latest items.
+        </div>
+      )}
+      
       <section id="menu" className="section bg-white py-16 md:py-20 lg:py-24 menu-section" suppressHydrationWarning>
       <div className="container-custom">
         {/* Section Header - Perfectly Centered */}
@@ -1378,21 +1336,92 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
                   </div>
                   
                   {/* Badge Grid - Top Right - 2x2 Grid Layout */}
+                  {/* 🔥 Clean Horizontal Badge Row - Stock + Dietary Icons as one cluster */}
                   <div 
-                    className="absolute" 
+                    className="absolute"
                     style={{ 
                       top: '8px', 
                       right: '8px', 
-                      display: 'grid', 
-                      gridTemplateColumns: 'repeat(2, auto)', 
+                      display: 'flex',
+                      flexDirection: 'row',
+                      alignItems: 'center',
                       gap: '4px',
-                      maxWidth: '70px',
                       zIndex: 5 
                     }}
                   >
-                    {/* Stock Status Badge - Full Width at Top */}
+                    {/* Dietary Icons - Vegan (filled) takes priority over Vegetarian (outline) */}
+                    {item.isVegan === true ? (
+                      <div style={{
+                        width: isDesktop ? '24px' : '22px',
+                        height: isDesktop ? '24px' : '22px',
+                        background: 'rgba(255, 255, 255, 0.95)',
+                        backdropFilter: 'blur(8px)',
+                        borderRadius: '6px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.15)',
+                        flexShrink: 0
+                      }} title="Vegan (Plant-based)">
+                        <Leaf size={isDesktop ? 14 : 12} className="text-green-700" strokeWidth={2.5} fill="currentColor" />
+                      </div>
+                    ) : item.isVegetarian === true ? (
+                      <div style={{
+                        width: isDesktop ? '24px' : '22px',
+                        height: isDesktop ? '24px' : '22px',
+                        background: 'rgba(255, 255, 255, 0.95)',
+                        backdropFilter: 'blur(8px)',
+                        borderRadius: '6px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.15)',
+                        flexShrink: 0
+                      }} title="Vegetarian">
+                        <Leaf size={isDesktop ? 14 : 12} className="text-green-600" strokeWidth={2.5} />
+                      </div>
+                    ) : null}
+                    {item.isGlutenFree === true && (
+                      <div style={{
+                        width: isDesktop ? '24px' : '22px',
+                        height: isDesktop ? '24px' : '22px',
+                        background: 'rgba(255, 255, 255, 0.95)',
+                        backdropFilter: 'blur(8px)',
+                        borderRadius: '6px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.15)',
+                        flexShrink: 0
+                      }} title="Gluten-Free">
+                        <WheatOff size={isDesktop ? 14 : 12} className="text-amber-600" strokeWidth={2.5} />
+                      </div>
+                    )}
+                    
+                    {/* Spicy Level - Horizontal chilies in one badge */}
+                    {typeof item.spicyLevel === 'number' && item.spicyLevel > 0 && (
+                      <div style={{
+                        height: isDesktop ? '24px' : '22px',
+                        background: 'rgba(255, 255, 255, 0.95)',
+                        backdropFilter: 'blur(8px)',
+                        borderRadius: '6px',
+                        display: 'flex',
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '1px',
+                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.15)',
+                        padding: '0 4px',
+                        flexShrink: 0
+                      }} title={`Spicy Level: ${item.spicyLevel}`}>
+                        {Array.from({ length: Math.min(item.spicyLevel, 3) }).map((_, i) => (
+                          <Flame key={i} size={isDesktop ? 12 : 10} className="text-red-500" fill="currentColor" />
+                        ))}
+                      </div>
+                    )}
+                    
+                    {/* Stock Status Badge - rightmost */}
                     <span style={{
-                      gridColumn: '1 / -1',
                       padding: '3px 8px',
                       borderRadius: '12px',
                       fontSize: '10px',
@@ -1400,78 +1429,11 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
                       backgroundColor: isInStock(item) ? '#dcfce7' : '#fee2e2',
                       color: isInStock(item) ? '#166534' : '#991b1b',
                       boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
-                      textAlign: 'center',
-                      whiteSpace: 'nowrap'
+                      whiteSpace: 'nowrap',
+                      flexShrink: 0
                     }}>
                       {isInStock(item) ? 'In Stock' : 'Out of Stock'}
                     </span>
-                    
-                    {/* Dietary Badges - 2x2 Grid Below */}
-                    {item.isVegetarian === true && (
-                      <div style={{
-                        width: isDesktop ? '28px' : '24px',
-                        height: isDesktop ? '28px' : '24px',
-                        background: 'rgba(255, 255, 255, 0.95)',
-                        backdropFilter: 'blur(8px)',
-                        borderRadius: '6px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.15)',
-                        padding: '4px'
-                      }} title="Vegetarian">
-                        <Leaf size={isDesktop ? 16 : 14} className="text-green-600" strokeWidth={2.5} />
-                      </div>
-                    )}
-                    {item.isVegan === true && (
-                      <div style={{
-                        width: isDesktop ? '28px' : '24px',
-                        height: isDesktop ? '28px' : '24px',
-                        background: 'rgba(255, 255, 255, 0.95)',
-                        backdropFilter: 'blur(8px)',
-                        borderRadius: '6px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.15)',
-                        padding: '4px'
-                      }} title="Vegan">
-                        <Leaf size={isDesktop ? 16 : 14} className="text-green-800" strokeWidth={2.5} fill="currentColor" />
-                      </div>
-                    )}
-                    {item.isGlutenFree === true && (
-                      <div style={{
-                        width: isDesktop ? '28px' : '24px',
-                        height: isDesktop ? '28px' : '24px',
-                        background: 'rgba(255, 255, 255, 0.95)',
-                        backdropFilter: 'blur(8px)',
-                        borderRadius: '6px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.15)',
-                        padding: '4px'
-                      }} title="Gluten-Free">
-                        <WheatOff size={isDesktop ? 16 : 14} className="text-amber-600" strokeWidth={2.5} />
-                      </div>
-                    )}
-                    {typeof item.spicyLevel === 'number' && item.spicyLevel > 0 && (
-                      <div style={{
-                        width: isDesktop ? '28px' : '24px',
-                        height: isDesktop ? '28px' : '24px',
-                        background: 'rgba(255, 255, 255, 0.95)',
-                        backdropFilter: 'blur(8px)',
-                        borderRadius: '6px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.15)',
-                        padding: '2px',
-                        fontSize: isDesktop ? '10px' : '9px'
-                      }} title={`Spicy Level: ${item.spicyLevel}`}>
-                        {'🌶️'.repeat(Math.min(item.spicyLevel, 3))}
-                      </div>
-                    )}
                   </div>
                   
                   {/* Out of Stock / Not Available Overlay */}

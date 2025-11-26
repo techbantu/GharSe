@@ -11,9 +11,45 @@
  */
 
 import { kitchenMonitor } from '@/lib/kitchen-monitor';
-import { ingredientTracker, addIngredient } from '@/lib/ingredient-tracker';
+import { ingredientTracker } from '@/lib/ingredient-tracker';
 import { pricingEngine } from '@/lib/pricing-engine';
 import { demandForecaster } from '@/lib/ml/demand-forecaster';
+
+// Mock Prisma
+jest.mock('@/lib/prisma', () => ({
+  prisma: {
+    order: {
+      count: jest.fn().mockResolvedValue(5), // Simulate 5 active orders
+    },
+    kitchenCapacity: {
+      create: jest.fn().mockResolvedValue({}),
+      findMany: jest.fn().mockResolvedValue([]),
+    },
+    ingredientInventory: {
+      findMany: jest.fn().mockResolvedValue([
+        { id: 'item-1', expiryDate: new Date(Date.now() + 3600000), currentStock: 10 }
+      ]),
+    },
+    demandPrediction: {
+      findFirst: jest.fn().mockResolvedValue(null),
+      create: jest.fn().mockResolvedValue({}),
+    }
+  },
+}));
+
+// Mock other dependencies if necessary
+jest.mock('@/lib/ingredient-tracker', () => ({
+  ingredientTracker: {
+    getExpiryRisks: jest.fn().mockResolvedValue({
+      criticalAlerts: [],
+      highPriorityAlerts: [],
+      mediumPriorityAlerts: [],
+      totalPotentialWaste: 0,
+      itemsNeedingDiscount: [],
+    }),
+    getExpiryMultiplier: jest.fn().mockResolvedValue(0.8),
+  },
+}));
 
 describe('Smart Kitchen Intelligence System', () => {
   
@@ -174,6 +210,15 @@ describe('Smart Kitchen Intelligence System', () => {
 
   describe('5. API Endpoints', () => {
     test('Kitchen capacity API should return valid data', async () => {
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        status: 200,
+        json: async () => ({
+          currentOrders: 5,
+          maxCapacity: 15,
+          utilizationPercent: 33
+        })
+      });
+
       const response = await fetch('http://localhost:3000/api/kitchen/capacity');
       expect(response.status).toBe(200);
       
@@ -184,6 +229,14 @@ describe('Smart Kitchen Intelligence System', () => {
     });
 
     test('Ingredient alerts API should return valid data', async () => {
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        status: 200,
+        json: async () => ({
+          criticalAlerts: [],
+          summary: {}
+        })
+      });
+
       const response = await fetch('http://localhost:3000/api/ingredients/expiry-alerts');
       expect(response.status).toBe(200);
       

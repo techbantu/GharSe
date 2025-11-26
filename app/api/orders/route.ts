@@ -918,9 +918,16 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * GET /api/orders - Get all orders (with optional filters)
+ * GET /api/orders - Get all orders (with optional filters and pagination)
  * 
- * Note: In production, add authentication and pagination.
+ * Query Parameters:
+ * - status: Filter by order status (comma-separated for multiple)
+ * - customerId: Filter by customer ID
+ * - includePendingConfirmation: Include pending confirmation orders
+ * - page: Page number (default: 1)
+ * - limit: Items per page (default: 50, max: 200)
+ * 
+ * SECURITY FIX: Added pagination to prevent memory exhaustion
  */
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
@@ -930,6 +937,12 @@ export async function GET(request: NextRequest) {
     const statusParam = searchParams.get('status');
     const customerId = searchParams.get('customerId');
     const includePendingConfirmation = searchParams.get('includePendingConfirmation') === 'true';
+    
+    // SECURITY FIX: Add pagination to prevent loading all orders into memory
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+    const requestedLimit = parseInt(searchParams.get('limit') || '50', 10);
+    const limit = Math.min(Math.max(1, requestedLimit), 200); // Max 200 items per page
+    const skip = (page - 1) * limit;
     
     // Handle multiple statuses (comma-separated)
     let statusFilter: string | undefined;
@@ -988,26 +1001,30 @@ export async function GET(request: NextRequest) {
       whereClause.status = { not: 'PENDING_CONFIRMATION' };
     }
     
-    // Fetch all orders first, then filter out sample/test orders
-    const allDbOrders = await (prisma.order.findMany as any)({
-      where: whereClause,
-      include: {
-        items: {
-          include: {
-            menuItem: true,
+    // SECURITY FIX: Fetch orders with pagination to prevent memory exhaustion
+    // Also get total count for pagination metadata
+    const [dbOrders, totalCount] = await Promise.all([
+      (prisma.order.findMany as any)({
+        where: whereClause,
+        include: {
+          items: {
+            include: {
+              menuItem: true,
+            },
           },
         },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+        orderBy: {
+          createdAt: 'desc',
+        },
+        skip,
+        take: limit,
+      }),
+      (prisma.order.count as any)({
+        where: whereClause,
+      }),
+    ]);
     
-    // SIMPLIFIED FILTERING: Show ALL orders for now to fix "missing history" issue
-    // The previous filter was too aggressive and hid valid test orders
-    const dbOrders = allDbOrders;
-    
-    logger.info(`Fetched ${dbOrders.length} orders from database`);
+    logger.info(`Fetched ${dbOrders.length} orders (page ${page}, total ${totalCount})`);
     
     // Transform database orders to frontend Order format
     const transformedOrders: Order[] = dbOrders.map((dbOrder: any) => {
@@ -1141,8 +1158,13 @@ export async function GET(request: NextRequest) {
     
     const duration = Date.now() - startTime;
     
+    const totalPages = Math.ceil(totalCount / limit);
+    
     logger.debug('Orders retrieved', {
       count: filteredOrders.length,
+      page,
+      totalPages,
+      totalCount,
       filters: { status: statusParam, customerId },
       duration,
     });
@@ -1151,6 +1173,15 @@ export async function GET(request: NextRequest) {
       success: true,
       orders: filteredOrders,
       count: filteredOrders.length,
+      // SECURITY FIX: Added pagination metadata
+      pagination: {
+        page,
+        limit,
+        totalCount,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
     });
     
   } catch (error) {

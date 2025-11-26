@@ -1371,6 +1371,38 @@ body::after {
   [data-mobile-menu] {
     display: none !important;
   }
+  
+  /* Hide hamburger menu toggle on desktop - NUCLEAR OPTION with maximum specificity */
+  [data-mobile-menu-toggle],
+  [data-mobile-menu-toggle="true"],
+  button[data-mobile-menu-toggle],
+  button[data-mobile-menu-toggle="true"],
+  .hamburger-menu-btn,
+  button.hamburger-menu-btn,
+  button[aria-label="Open menu"],
+  button[aria-label="Close menu"],
+  /* Target the hamburger by its position in the header */
+  header nav > div > div:last-child > button:last-child,
+  [role="banner"] nav > div > div:last-child > button:last-child {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    width: 0 !important;
+    height: 0 !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    max-width: 0 !important;
+    max-height: 0 !important;
+    overflow: hidden !important;
+    position: absolute !important;
+    pointer-events: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    clip: rect(0, 0, 0, 0) !important;
+    -webkit-clip-path: inset(100%) !important;
+    clip-path: inset(100%) !important;
+  }
 }
 
 /* ===== AI CHAT POSITIONING - FORCE RIGHT SIDE ===== */

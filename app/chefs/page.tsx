@@ -178,7 +178,7 @@ export default function ChefDiscoveryPage() {
                 onFocus={(e) => e.target.style.borderColor = '#f97316'}
                 onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
               />
-            </div>
+              </div>
 
             <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
               {/* Cuisine Filter */}
@@ -287,7 +287,7 @@ export default function ChefDiscoveryPage() {
               gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
               gap: '32px'
             }}>
-              {filteredChefs.map((chef) => (
+            {filteredChefs.map((chef) => (
                 <ChefCard key={chef.id} chef={chef} router={router} getCuisines={getCuisines} />
               ))}
             </div>
@@ -318,20 +318,20 @@ function ChefCard({ chef, router, getCuisines }: { chef: Chef; router: any; getC
       e.currentTarget.style.transform = 'translateY(0)';
       e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
     }}>
-      {/* Cover Image */}
+                {/* Cover Image */}
       <div style={{ position: 'relative', height: '192px', background: 'linear-gradient(135deg, #fecaca 0%, #fde68a 100%)' }}>
-        {chef.coverImage ? (
-          <img
-            src={chef.coverImage}
-            alt={chef.businessName}
+                  {chef.coverImage ? (
+                    <img
+                      src={chef.coverImage}
+                      alt={chef.businessName}
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-          />
-        ) : (
+                    />
+                  ) : (
           <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <ChefHat style={{ width: '80px', height: '80px', color: '#fb923c' }} />
-          </div>
-        )}
-        
+                    </div>
+                  )}
+
         {chef.isVerified && (
           <div style={{
             position: 'absolute',
@@ -350,20 +350,20 @@ function ChefCard({ chef, router, getCuisines }: { chef: Chef; router: any; getC
           }}>
             <Award style={{ width: '14px', height: '14px' }} />
             Verified
-          </div>
-        )}
-      </div>
+                    </div>
+                  )}
+                </div>
 
-      {/* Content */}
+                {/* Content */}
       <div style={{ padding: '24px' }}>
         <h3 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1f2937', marginBottom: '4px' }}>{chef.businessName}</h3>
         <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '16px' }}>by {chef.name}</p>
 
-        {/* Cuisines */}
+                  {/* Cuisines */}
         {cuisines.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
             {cuisines.slice(0, 3).map((cuisine, idx) => (
-              <span
+                        <span
                 key={idx}
                 style={{
                   padding: '4px 12px',
@@ -373,10 +373,10 @@ function ChefCard({ chef, router, getCuisines }: { chef: Chef; router: any; getC
                   fontSize: '0.8125rem',
                   fontWeight: '500'
                 }}
-              >
-                {cuisine}
-              </span>
-            ))}
+                        >
+                          {cuisine}
+                        </span>
+                      ))}
             {cuisines.length > 3 && (
               <span style={{
                 padding: '4px 12px',
@@ -389,17 +389,17 @@ function ChefCard({ chef, router, getCuisines }: { chef: Chef; router: any; getC
                 +{cuisines.length - 3} more
               </span>
             )}
-          </div>
-        )}
+                    </div>
+                  )}
 
-        {/* Bio */}
-        {chef.bio && (
+                  {/* Bio */}
+                  {chef.bio && (
           <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '16px', lineHeight: '1.5', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
             {chef.bio}
           </p>
-        )}
+                  )}
 
-        {/* Stats */}
+                  {/* Stats */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px', fontSize: '0.875rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#6b7280' }}>
             <MapPin style={{ width: '16px', height: '16px' }} />
@@ -408,11 +408,11 @@ function ChefCard({ chef, router, getCuisines }: { chef: Chef; router: any; getC
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#6b7280' }}>
             <span style={{ fontSize: '1rem' }}>₹</span>
             <span>Min ₹{chef.minOrderAmount}</span>
-          </div>
-        </div>
+                    </div>
+                  </div>
 
         {/* CTA Button */}
-        <button
+                  <button
           onClick={() => router.push(`/?chef=${chef.slug}`)}
           style={{
             width: '100%',
@@ -439,10 +439,10 @@ function ChefCard({ chef, router, getCuisines }: { chef: Chef; router: any; getC
             e.currentTarget.style.transform = 'scale(1)';
             e.currentTarget.style.boxShadow = '0 4px 12px rgba(249, 115, 22, 0.3)';
           }}
-        >
+                  >
           View Menu & Order
           <ArrowRight style={{ width: '20px', height: '20px' }} />
-        </button>
+                  </button>
       </div>
     </div>
   );

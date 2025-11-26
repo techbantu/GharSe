@@ -337,7 +337,8 @@ export function generateTimeSlots(
         date,
         startTime: slotStart,
         endTime: slotEnd,
-        label: `${format(slotStart, 'h:mm a')} - ${format(slotEnd, 'h:mm a')}`,
+        // FIX: Format labels in the target timezone, not server timezone
+        label: `${format(slotStart, 'h:mm a', { timeZone: regionConfig.timezone })} - ${format(slotEnd, 'h:mm a', { timeZone: regionConfig.timezone })}`,
         sublabel: getSlotSublabel(slotStart, regionConfig),
         isAvailable,
         bookedSlots: bookedCount,

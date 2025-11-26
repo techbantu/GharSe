@@ -16,7 +16,20 @@ import { Admin, AdminRole } from '@prisma/client';
 // Re-export AdminRole for use in other modules
 export { AdminRole };
 
-const JWT_SECRET = process.env.ADMIN_JWT_SECRET || process.env.JWT_SECRET || 'change-this-secret-key-in-production';
+/**
+ * CRITICAL SECURITY: JWT Secret must be set in environment variables
+ * Never use default secrets in production - this would allow anyone to forge tokens
+ * The application will fail fast if JWT_SECRET is not configured
+ */
+const JWT_SECRET = process.env.ADMIN_JWT_SECRET || process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+  throw new Error(
+    'CRITICAL SECURITY ERROR: JWT_SECRET or ADMIN_JWT_SECRET environment variable is not set. ' +
+    'This is required for authentication. Please add JWT_SECRET to your .env file. ' +
+    'Generate a secure secret using: openssl rand -base64 64'
+  );
+}
 const JWT_EXPIRES_IN: string | number = process.env.JWT_EXPIRES_IN || '7d';
 
 export interface AuthTokenPayload {
@@ -59,7 +72,7 @@ export function generateToken(admin: Admin): string {
  */
 export function verifyToken(token: string): AuthTokenPayload | null {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as AuthTokenPayload;
+    const decoded = jwt.verify(token, JWT_SECRET as string) as unknown as AuthTokenPayload;
     return decoded;
   } catch (error) {
     return null;
