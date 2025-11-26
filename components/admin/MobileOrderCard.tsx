@@ -189,7 +189,7 @@ const MobileOrderCard: React.FC<MobileOrderCardProps> = ({
           
           <div className="mt-3 pt-2 border-t border-gray-200 flex justify-between text-sm font-medium">
             <span className="text-gray-500">Payment</span>
-            <span className={order.paymentStatus === 'completed' ? 'text-green-600' : 'text-orange-600'}>
+            <span className={order.paymentStatus === 'PAID' ? 'text-green-600' : 'text-orange-600'}>
               {order.paymentStatus} ({order.paymentMethod})
             </span>
           </div>

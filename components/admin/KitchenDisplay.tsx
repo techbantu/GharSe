@@ -244,7 +244,7 @@ const KitchenDisplay: React.FC<KitchenOrdersProps> = ({
     
   // Compact Kitchen Ticket Card
   const KitchenTicket = ({ order, column }: { order: Order; column: 'new' | 'confirmed' | 'cooking' | 'ready' }) => {
-    const isPaid = order.paymentStatus?.toLowerCase() === 'paid' || order.paymentStatus?.toLowerCase() === 'completed';
+    const isPaid = order.paymentStatus === 'PAID';
     const isUPI = order.paymentMethod?.toLowerCase().includes('upi') || 
                   order.paymentMethod?.toLowerCase().includes('gpay') || 
                   order.paymentMethod?.toLowerCase().includes('phonepe');

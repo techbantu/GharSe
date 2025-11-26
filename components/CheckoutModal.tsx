@@ -3311,7 +3311,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
             orderNumber: orderNumber,
             total: orderTotal,
             status: orderStatus,
-            paymentStatus: 'pending',
+            paymentStatus: 'PENDING',
             customerName: formData.name || 'Customer',
           }}
           cancelledBy="customer"
@@ -3954,7 +3954,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                       if (currentOrder) {
                         setCurrentOrder({
                           ...currentOrder,
-                          paymentStatus: 'completed',
+                          paymentStatus: 'PAID',
                         });
                       }
                     } else {

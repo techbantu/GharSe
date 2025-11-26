@@ -82,7 +82,7 @@ export default function CancelOrderModal({
                            order.paymentMethod === 'cash-on-delivery';
   
   const isPaidOnline = (order.paymentStatus?.toLowerCase() === 'paid' || 
-                        order.paymentStatus?.toLowerCase() === 'pending') && 
+                        order.paymentStatus === 'PENDING') && 
                        !isCashOnDelivery;
   
   const shouldRefund = isPaidOnline;
