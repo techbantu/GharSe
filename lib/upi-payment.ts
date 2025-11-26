@@ -286,7 +286,7 @@ export async function verifyUPIPayment(
       return {
         success: false,
         verified: false,
-        message: validationResult.error.errors[0]?.message || 'Invalid verification request',
+        message: validationResult.error.issues?.[0]?.message || 'Invalid verification request',
       };
     }
     
