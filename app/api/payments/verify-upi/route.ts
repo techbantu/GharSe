@@ -47,11 +47,12 @@ export async function POST(request: NextRequest) {
     const validationResult = VerifyUPISchema.safeParse(body);
     
     if (!validationResult.success) {
-      const firstError = validationResult.error.errors[0];
+      const errors = validationResult.error.errors;
+      const errorMessage = errors.length > 0 ? errors[0].message : 'Invalid request data';
       return NextResponse.json(
         {
           success: false,
-          error: firstError?.message || 'Invalid request data',
+          error: errorMessage,
           code: 'VALIDATION_ERROR',
         },
         { status: 400 }
