@@ -86,9 +86,16 @@ async function uploadToCloudinary(
         folder: 'bantus-kitchen/menu-items',
         public_id: `${itemId}-${Date.now()}`,
         resource_type: 'image',
-        // Optimization settings
+        // AUTO-COMPRESSION: Handles large iPhone/Android photos (up to 20MB)
+        // Cloudinary automatically compresses to ~1-2MB while maintaining quality
         transformation: [
-          { quality: 'auto:good', fetch_format: 'auto' }, // Auto quality and format (WebP when supported)
+          { 
+            width: 1200, 
+            height: 1200, 
+            crop: 'limit', // Don't upscale, only downscale if larger
+            quality: 'auto:good', 
+            fetch_format: 'auto' // WebP when supported
+          },
         ],
         // Generate thumbnails
         eager: [
@@ -251,16 +258,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
+    // Validate file size (max 20MB - supports iPhone/Android photos)
+    // Note: Large images will be auto-compressed by Cloudinary
+    if (file.size > 20 * 1024 * 1024) {
       return NextResponse.json(
         {
           success: false,
-          error: 'File too large. Maximum size is 10MB.',
+          error: 'File too large. Maximum size is 20MB.',
         },
         { status: 400 }
       );
     }
+    
+    // Log file size for monitoring
+    logger.info('Image upload received', {
+      filename: file.name,
+      size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+      type: file.type,
+    });
 
     // Convert file to buffer
     const bytes = await file.arrayBuffer();

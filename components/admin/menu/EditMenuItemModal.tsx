@@ -73,6 +73,74 @@ export default function EditMenuItemModal({ isOpen, onClose, item, onSave }: Edi
     }
   };
 
+  // AUTO-COMPRESS: Compress large images client-side before upload
+  // Handles iPhone/Android photos (5-15MB) without quality loss
+  const compressImage = async (file: File, maxSizeMB: number = 2): Promise<File> => {
+    // If file is already small enough, return as-is
+    if (file.size <= maxSizeMB * 1024 * 1024) {
+      return file;
+    }
+
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          
+          // Calculate new dimensions (max 1600px on longest side)
+          let { width, height } = img;
+          const maxDimension = 1600;
+          
+          if (width > maxDimension || height > maxDimension) {
+            if (width > height) {
+              height = (height / width) * maxDimension;
+              width = maxDimension;
+            } else {
+              width = (width / height) * maxDimension;
+              height = maxDimension;
+            }
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            reject(new Error('Failed to get canvas context'));
+            return;
+          }
+          
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // Convert to blob with quality adjustment
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) {
+                reject(new Error('Failed to compress image'));
+                return;
+              }
+              
+              const compressedFile = new File([blob], file.name, {
+                type: 'image/jpeg',
+                lastModified: Date.now(),
+              });
+              
+              console.log(`[Image Compression] Original: ${(file.size / 1024 / 1024).toFixed(2)}MB → Compressed: ${(compressedFile.size / 1024 / 1024).toFixed(2)}MB`);
+              resolve(compressedFile);
+            },
+            'image/jpeg',
+            0.85 // 85% quality - good balance of size and quality
+          );
+        };
+        img.onerror = () => reject(new Error('Failed to load image'));
+      };
+      reader.onerror = () => reject(new Error('Failed to read file'));
+    });
+  };
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -83,17 +151,20 @@ export default function EditMenuItemModal({ isOpen, onClose, item, onSave }: Edi
       return;
     }
 
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Image size must be less than 5MB');
+    // Increased limit to 20MB (will be auto-compressed)
+    if (file.size > 20 * 1024 * 1024) {
+      alert('Image size must be less than 20MB');
       return;
     }
 
     setIsUploading(true);
     
     try {
+      // AUTO-COMPRESS: Compress large images before upload
+      const fileToUpload = await compressImage(file);
+      
       const formDataUpload = new FormData();
-      formDataUpload.append('file', file);
+      formDataUpload.append('file', fileToUpload);
       
       const response = await fetch('/api/upload-image', {
         method: 'POST',

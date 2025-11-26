@@ -64,7 +64,9 @@ export default function MenuPage() {
 
   const fetchMenu = async () => {
     try {
-      const response = await fetch('/api/menu');
+      // IMPORTANT: Admin needs ALL items including unavailable ones
+      // includeUnavailable=true ensures we see items marked "Out of Stock"
+      const response = await fetch('/api/menu?includeUnavailable=true');
       if (response.ok) {
         const data = await response.json();
         if (data.success) {

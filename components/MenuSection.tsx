@@ -326,23 +326,32 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
   };
   
   // Helper function to check if item is in stock
+  // IMPORTANT: isAvailable=false means "Out of Stock" (temporarily unavailable)
+  // NOT deleted - item should still be visible but disabled
   const isInStock = (item: MenuItem): boolean => {
-    if (!item.isAvailable) return false; // Item removed from menu
-    if (!item.inventoryEnabled) return true; // Inventory not tracked = always available
-    if (item.inventory === null || item.inventory === undefined) return true; // Unlimited
-    return item.inventory > 0; // Check stock count
+    // If admin marked as unavailable, item is out of stock
+    if (!item.isAvailable) return false;
+    // If inventory tracking is disabled, always available
+    if (!item.inventoryEnabled) return true;
+    // If inventory is null/undefined, unlimited stock
+    if (item.inventory === null || item.inventory === undefined) return true;
+    // Check actual stock count
+    return item.inventory > 0;
   };
 
   // Helper function to get stock message
   const getStockMessage = (item: MenuItem): string => {
-    if (!item.isAvailable) return 'Not on menu';
+    // IMPORTANT: "Out of Stock" is a TEMPORARY state, not deletion
+    if (!item.isAvailable) {
+      return '🚫 Out of Stock';
+    }
     if (!item.inventoryEnabled) return '';
     if (item.inventory === null || item.inventory === undefined) return '';
     if (item.inventory === 0) {
-      return item.outOfStockMessage || 'Out of stock - Check back later!';
+      return item.outOfStockMessage || '🚫 Out of Stock';
     }
     if (item.inventory <= 3) {
-      return `Only ${item.inventory} left!`;
+      return `🔥 Only ${item.inventory} left!`;
     }
     return '';
   };

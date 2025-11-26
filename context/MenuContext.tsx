@@ -205,7 +205,9 @@ export function MenuProvider({ children }: { children: ReactNode }) {
     setError(null);
 
     try {
-      const response = await fetch('/api/menu?limit=100');
+      // IMPORTANT: Fetch ALL items including unavailable ones
+      // Customer menu will show unavailable items with "Out of Stock" label
+      const response = await fetch('/api/menu?limit=100&includeUnavailable=true');
       
       if (!response.ok) {
         throw new Error(`API returned ${response.status}`);

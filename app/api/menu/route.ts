@@ -33,9 +33,13 @@ export async function GET(request: NextRequest) {
     const excludeIds = searchParams.get('excludeIds')?.split(',').filter(Boolean) || [];
     const category = searchParams.get('category');
     const chefId = searchParams.get('chefId'); // null for restaurant default
-    const limit = parseInt(searchParams.get('limit') || '20');
+    const limit = parseInt(searchParams.get('limit') || '100'); // Increased default limit
     const suggestions = searchParams.get('suggestions') === 'true';
     const currentOrder = searchParams.get('currentOrder');
+    
+    // IMPORTANT: Admin dashboard needs ALL items (including unavailable)
+    // Customer-facing pages will filter unavailable items on the frontend
+    const includeUnavailable = searchParams.get('includeUnavailable') === 'true';
 
     let currentOrderIds: string[] = [];
     if (currentOrder) {
@@ -47,9 +51,15 @@ export async function GET(request: NextRequest) {
     }
 
     // Build where clause
-    const where: any = {
-      isAvailable: true,
-    };
+    // NOTE: We now include ALL items by default. The isAvailable field is used
+    // to show "Out of Stock" on customer menu, NOT to hide items.
+    const where: any = {};
+    
+    // Only filter by availability if NOT including unavailable items
+    // This is for cart/checkout flows where we need only available items
+    if (!includeUnavailable && searchParams.get('availableOnly') === 'true') {
+      where.isAvailable = true;
+    }
 
     // Exclude specified IDs
     if (excludeIds.length > 0) {
