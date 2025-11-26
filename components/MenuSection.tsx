@@ -342,16 +342,17 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
   // Helper function to get stock message
   const getStockMessage = (item: MenuItem): string => {
     // IMPORTANT: "Out of Stock" is a TEMPORARY state, not deletion
+    // Use consistent messaging: "Currently Unavailable" or "Out of Stock"
     if (!item.isAvailable) {
-      return '🚫 Out of Stock';
+      return 'Currently Unavailable';
     }
     if (!item.inventoryEnabled) return '';
     if (item.inventory === null || item.inventory === undefined) return '';
     if (item.inventory === 0) {
-      return item.outOfStockMessage || '🚫 Out of Stock';
+      return item.outOfStockMessage || 'Out of Stock';
     }
     if (item.inventory <= 3) {
-      return `🔥 Only ${item.inventory} left!`;
+      return `Only ${item.inventory} left!`;
     }
     return '';
   };
@@ -1376,16 +1377,16 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
                   >
                     {/* Stock Status Badge - Top (most important) */}
                     <span style={{
-                      padding: isDesktop ? '3px 8px' : '2px 6px',
+                      padding: isDesktop ? '4px 10px' : '3px 8px',
                       borderRadius: '10px',
-                      fontSize: isDesktop ? '10px' : '9px',
-                      fontWeight: 600,
+                      fontSize: isDesktop ? '11px' : '10px',
+                      fontWeight: 700,
                       backgroundColor: isInStock(item) ? '#dcfce7' : '#fee2e2',
-                      color: isInStock(item) ? '#166534' : '#991b1b',
+                      color: isInStock(item) ? '#166534' : '#dc2626',
                       boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
                       whiteSpace: 'nowrap'
                     }}>
-                      {isInStock(item) ? 'In Stock' : 'Out'}
+                      {isInStock(item) ? 'In Stock' : 'Out of Stock'}
                     </span>
                     
                     {/* Dietary + Spicy Icons Row - Below stock */}
@@ -1584,92 +1585,94 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
                     
                     {/* Mobile: Separate Quantity Controls and Add Button */}
                     <div className="md:hidden flex flex-col items-center" style={{ gap: '0.5rem', width: '100%' }}>
-                      {/* Quantity Controls - Top Row (Mobile Only) */}
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '0.75rem',
-                          width: '100%',
-                          maxWidth: '200px'
-                        }}
-                      >
-                        {/* Minus Button */}
-                        <button
-                          onClick={(e) => decrementQuantity(item, e)}
-                          disabled={getCartQuantity(item.id) <= 0}
+                      {/* Quantity Controls - Top Row (Mobile Only) - HIDE when unavailable */}
+                      {isInStock(item) && (
+                        <div
                           style={{
-                            width: '36px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '0.75rem',
+                            width: '100%',
+                            maxWidth: '200px'
+                          }}
+                        >
+                          {/* Minus Button */}
+                          <button
+                            onClick={(e) => decrementQuantity(item, e)}
+                            disabled={getCartQuantity(item.id) <= 0}
+                            style={{
+                              width: '36px',
+                              height: '36px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              background: getCartQuantity(item.id) <= 0
+                                ? 'rgba(249, 115, 22, 0.2)'
+                                : 'linear-gradient(to right, #F97316, #EA580C)',
+                              border: 'none',
+                              borderRadius: '0.5rem',
+                              cursor: getCartQuantity(item.id) <= 0 ? 'not-allowed' : 'pointer',
+                              color: 'white',
+                              opacity: getCartQuantity(item.id) <= 0 ? 0.5 : 1,
+                              transition: 'all 0.15s',
+                              boxShadow: getCartQuantity(item.id) <= 0 ? 'none' : '0 2px 4px rgba(249, 115, 22, 0.3)'
+                            }}
+                            className="hover:shadow-md active:scale-95"
+                            type="button"
+                          >
+                            <Minus size={18} strokeWidth={2.5} />
+                          </button>
+
+                          {/* Quantity Display */}
+                          <div style={{
+                            minWidth: '40px',
                             height: '36px',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            background: getCartQuantity(item.id) <= 0
-                              ? 'rgba(249, 115, 22, 0.2)'
-                              : 'linear-gradient(to right, #F97316, #EA580C)',
-                            border: 'none',
+                            background: '#fff7ed',
                             borderRadius: '0.5rem',
-                            cursor: getCartQuantity(item.id) <= 0 ? 'not-allowed' : 'pointer',
-                            color: 'white',
-                            opacity: getCartQuantity(item.id) <= 0 ? 0.5 : 1,
-                            transition: 'all 0.15s',
-                            boxShadow: getCartQuantity(item.id) <= 0 ? 'none' : '0 2px 4px rgba(249, 115, 22, 0.3)'
-                          }}
-                          className="hover:shadow-md active:scale-95"
-                          type="button"
-                        >
-                          <Minus size={18} strokeWidth={2.5} />
-                        </button>
-
-                        {/* Quantity Display */}
-                        <div style={{
-                          minWidth: '40px',
-                          height: '36px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          background: '#fff7ed',
-                          borderRadius: '0.5rem',
-                          border: '2px solid rgba(249, 115, 22, 0.2)'
-                        }}>
-                          <span style={{
-                            fontWeight: 700,
-                            fontSize: '1rem',
-                            color: '#ea580c',
-                            userSelect: 'none'
+                            border: '2px solid rgba(249, 115, 22, 0.2)'
                           }}>
-                            {getCartQuantity(item.id)}
-                          </span>
-                        </div>
+                            <span style={{
+                              fontWeight: 700,
+                              fontSize: '1rem',
+                              color: '#ea580c',
+                              userSelect: 'none'
+                            }}>
+                              {getCartQuantity(item.id)}
+                            </span>
+                          </div>
 
-                        {/* Plus Button */}
-                        <button
-                          onClick={(e) => incrementQuantity(item, e)}
-                          disabled={getCartQuantity(item.id) >= 10}
-                          style={{
-                            width: '36px',
-                            height: '36px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            background: getCartQuantity(item.id) >= 10
-                              ? 'rgba(249, 115, 22, 0.2)'
-                              : 'linear-gradient(to right, #F97316, #EA580C)',
-                            border: 'none',
-                            borderRadius: '0.5rem',
-                            cursor: getCartQuantity(item.id) >= 10 ? 'not-allowed' : 'pointer',
-                            color: 'white',
-                            opacity: getCartQuantity(item.id) >= 10 ? 0.5 : 1,
-                            transition: 'all 0.15s',
-                            boxShadow: getCartQuantity(item.id) >= 10 ? 'none' : '0 2px 4px rgba(249, 115, 22, 0.3)'
-                          }}
-                          className="hover:shadow-md active:scale-95"
-                          type="button"
-                        >
-                          <Plus size={18} strokeWidth={2.5} />
-                        </button>
-                      </div>
+                          {/* Plus Button */}
+                          <button
+                            onClick={(e) => incrementQuantity(item, e)}
+                            disabled={getCartQuantity(item.id) >= 10}
+                            style={{
+                              width: '36px',
+                              height: '36px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              background: getCartQuantity(item.id) >= 10
+                                ? 'rgba(249, 115, 22, 0.2)'
+                                : 'linear-gradient(to right, #F97316, #EA580C)',
+                              border: 'none',
+                              borderRadius: '0.5rem',
+                              cursor: getCartQuantity(item.id) >= 10 ? 'not-allowed' : 'pointer',
+                              color: 'white',
+                              opacity: getCartQuantity(item.id) >= 10 ? 0.5 : 1,
+                              transition: 'all 0.15s',
+                              boxShadow: getCartQuantity(item.id) >= 10 ? 'none' : '0 2px 4px rgba(249, 115, 22, 0.3)'
+                            }}
+                            className="hover:shadow-md active:scale-95"
+                            type="button"
+                          >
+                            <Plus size={18} strokeWidth={2.5} />
+                          </button>
+                        </div>
+                      )}
 
                       {/* Add Button - Bottom Row (Mobile Only) */}
                       {!isInStock(item) ? (
@@ -1678,32 +1681,22 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            gap: '0.25rem',
+                            gap: '0.375rem',
                             borderRadius: '0.5rem',
-                            fontWeight: 600,
-                            fontSize: '0.7rem',
-                            padding: '0.5rem 0.75rem',
-                            border: '1.5px solid #EF4444',
+                            fontWeight: 700,
+                            fontSize: '0.8rem',
+                            padding: '0.75rem 1rem',
+                            border: '2px solid #fecaca',
                             cursor: 'not-allowed',
-                            background: '#FEF2F2',
-                            color: '#DC2626',
+                            background: '#fef2f2',
+                            color: '#dc2626',
                             width: '100%',
                             maxWidth: '200px',
-                            minHeight: '36px',
-                            opacity: 0.8
+                            minHeight: '44px',
                           }}
                         >
-                          {!item.isAvailable ? (
-                            <>
-                              <XCircle size={14} strokeWidth={2.5} />
-                              <span>Unavailable</span>
-                            </>
-                          ) : (
-                            <>
-                              <PackageX size={14} strokeWidth={2.5} />
-                              <span>Sold Out</span>
-                            </>
-                          )}
+                          <XCircle size={16} strokeWidth={2.5} />
+                          <span>Currently Unavailable</span>
                         </div>
                       ) : (
                         <button
@@ -1762,36 +1755,26 @@ const MenuSection: React.FC<MenuSectionProps> = ({ onItemClick }) => {
                           // Out of Stock Button (disabled) - Proper Size
                           <div
                             style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '0.25rem',
-                              borderRadius: '0.5rem',
-                              fontWeight: 600,
-                              fontSize: '0.7rem',
-                              padding: '0.5rem 0.75rem',
-                              border: '1.5px solid #EF4444',
-                              cursor: 'not-allowed',
-                              background: '#FEF2F2',
-                              color: '#DC2626',
-                              width: '100%',
-                              maxWidth: '200px',
-                              minHeight: '36px',
-                              opacity: 0.8
-                            }}
-                          >
-                            {!item.isAvailable ? (
-                              <>
-                                <XCircle size={14} strokeWidth={2.5} />
-                                <span>Unavailable</span>
-                              </>
-                            ) : (
-                              <>
-                                <PackageX size={14} strokeWidth={2.5} />
-                                <span>Sold Out</span>
-                              </>
-                            )}
-                          </div>
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '0.375rem',
+                            borderRadius: '0.5rem',
+                            fontWeight: 700,
+                            fontSize: '0.8rem',
+                            padding: '0.75rem 1rem',
+                            border: '2px solid #fecaca',
+                            cursor: 'not-allowed',
+                            background: '#fef2f2',
+                            color: '#dc2626',
+                            width: '100%',
+                            maxWidth: '200px',
+                            minHeight: '44px',
+                          }}
+                        >
+                          <XCircle size={16} strokeWidth={2.5} />
+                          <span>Currently Unavailable</span>
+                        </div>
                         ) : (
                           // Beautiful Centered Add to Cart Button - Proper Size
                           <button

@@ -3,12 +3,15 @@
  * 
  * Purpose: Shows beautiful product details in an interactive modal when items are clicked
  * Features: Full product info, images, reviews, add to cart functionality
+ * 
+ * IMPORTANT: Items marked as unavailable (isAvailable=false) cannot be ordered.
+ * The modal shows "Currently Unavailable" and disables all ordering controls.
  */
 
 'use client';
 
 import React, { useState } from 'react';
-import { X, Plus, Minus, Star, Flame, Leaf, WheatOff, Clock, Utensils, Scale } from 'lucide-react';
+import { X, Plus, Minus, Star, Flame, Leaf, WheatOff, Clock, Utensils, Scale, Ban } from 'lucide-react';
 import { MenuItem } from '@/types';
 import { useCart } from '@/context/CartContext';
 
@@ -29,7 +32,23 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
   if (!isOpen || !item) return null;
 
+  // Check if item is available for ordering
+  // isAvailable=false means "Out of Stock" (temporarily unavailable)
+  const isItemAvailable = item.isAvailable !== false;
+  
+  // Also check inventory if tracking is enabled
+  const hasStock = !item.inventoryEnabled || 
+                   item.inventory === null || 
+                   item.inventory === undefined || 
+                   item.inventory > 0;
+  
+  // Item can be ordered only if available AND has stock
+  const canOrder = isItemAvailable && hasStock;
+
   const handleAddToCart = () => {
+    // CRITICAL: Prevent ordering unavailable items
+    if (!canOrder) return;
+    
     addItem(item, quantity);
     setQuantity(1);
     onClose();
@@ -120,6 +139,49 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               <X size={20} style={{ color: '#374151' }} />
             </button>
 
+            {/* OUT OF STOCK OVERLAY - Shows when item is unavailable */}
+            {!canOrder && (
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  background: 'rgba(0, 0, 0, 0.7)',
+                  backdropFilter: 'blur(4px)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 5,
+                }}
+              >
+                <div
+                  style={{
+                    width: '64px',
+                    height: '64px',
+                    background: '#dc2626',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: '12px',
+                    boxShadow: '0 4px 12px rgba(220, 38, 38, 0.4)',
+                  }}
+                >
+                  <Ban size={32} style={{ color: '#ffffff' }} />
+                </div>
+                <span
+                  style={{
+                    color: '#ffffff',
+                    fontSize: '18px',
+                    fontWeight: 700,
+                    textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
+                  }}
+                >
+                  Currently Unavailable
+                </span>
+              </div>
+            )}
+
             {/* Icon Badges - Top Left, Circular */}
             <div 
               style={{
@@ -128,7 +190,8 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 left: '12px',
                 display: 'flex',
                 gap: '8px',
-                flexWrap: 'wrap'
+                flexWrap: 'wrap',
+                zIndex: 6,
               }}
             >
               {item.isVegetarian && (
@@ -294,112 +357,136 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               )}
             </div>
 
-            {/* Quantity Selector & Add to Cart */}
-            <div style={{
-              display: 'flex',
-              gap: '12px',
-              marginBottom: '16px'
-            }}>
-              {/* Quantity Selector */}
+            {/* Quantity Selector & Add to Cart - OR Unavailable Message */}
+            {canOrder ? (
               <div style={{
                 display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                background: '#f3f4f6',
-                borderRadius: '12px',
-                padding: '8px 12px',
-                minWidth: '120px'
+                gap: '12px',
+                marginBottom: '16px'
               }}>
-                <button
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  style={{
-                    width: '32px',
-                    height: '32px',
-                    background: 'transparent',
-                    border: 'none',
-                    borderRadius: '8px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = '#e5e7eb';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'transparent';
-                  }}
-                >
-                  <Minus size={18} style={{ color: '#374151' }} />
-                </button>
-                <span style={{
-                  fontSize: '18px',
-                  fontWeight: 700,
-                  color: '#1f2937',
-                  minWidth: '24px',
-                  textAlign: 'center'
-                }}>
-                  {quantity}
-                </span>
-                <button
-                  onClick={() => setQuantity(quantity + 1)}
-                  style={{
-                    width: '32px',
-                    height: '32px',
-                    background: 'transparent',
-                    border: 'none',
-                    borderRadius: '8px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = '#e5e7eb';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'transparent';
-                  }}
-                >
-                  <Plus size={18} style={{ color: '#374151' }} />
-                </button>
-              </div>
-
-              {/* Add to Cart Button */}
-              <button
-                onClick={handleAddToCart}
-                style={{
-                  flex: 1,
-                  background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
-                  color: '#ffffff',
-                  fontWeight: 700,
-                  fontSize: '16px',
-                  padding: '12px 24px',
-                  borderRadius: '12px',
-                  border: 'none',
-                  cursor: 'pointer',
+                {/* Quantity Selector */}
+                <div style={{
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(249, 115, 22, 0.4)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(249, 115, 22, 0.3)';
-                }}
-              >
-                <Plus size={20} />
-                <span>Add to Cart</span>
-              </button>
-            </div>
+                  justifyContent: 'space-between',
+                  background: '#f3f4f6',
+                  borderRadius: '12px',
+                  padding: '8px 12px',
+                  minWidth: '120px'
+                }}>
+                  <button
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    style={{
+                      width: '32px',
+                      height: '32px',
+                      background: 'transparent',
+                      border: 'none',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = '#e5e7eb';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                    }}
+                  >
+                    <Minus size={18} style={{ color: '#374151' }} />
+                  </button>
+                  <span style={{
+                    fontSize: '18px',
+                    fontWeight: 700,
+                    color: '#1f2937',
+                    minWidth: '24px',
+                    textAlign: 'center'
+                  }}>
+                    {quantity}
+                  </span>
+                  <button
+                    onClick={() => setQuantity(quantity + 1)}
+                    style={{
+                      width: '32px',
+                      height: '32px',
+                      background: 'transparent',
+                      border: 'none',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = '#e5e7eb';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                    }}
+                  >
+                    <Plus size={18} style={{ color: '#374151' }} />
+                  </button>
+                </div>
+
+                {/* Add to Cart Button */}
+                <button
+                  onClick={handleAddToCart}
+                  style={{
+                    flex: 1,
+                    background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+                    color: '#ffffff',
+                    fontWeight: 700,
+                    fontSize: '16px',
+                    padding: '12px 24px',
+                    borderRadius: '12px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(249, 115, 22, 0.4)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(249, 115, 22, 0.3)';
+                  }}
+                >
+                  <Plus size={20} />
+                  <span>Add to Cart</span>
+                </button>
+              </div>
+            ) : (
+              /* UNAVAILABLE STATE - No ordering allowed */
+              <div style={{
+                marginBottom: '16px',
+                padding: '16px',
+                background: '#fef2f2',
+                border: '2px solid #fecaca',
+                borderRadius: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '10px',
+              }}>
+                <Ban size={20} style={{ color: '#dc2626' }} />
+                <span style={{
+                  color: '#dc2626',
+                  fontWeight: 700,
+                  fontSize: '16px',
+                }}>
+                  Currently Unavailable
+                </span>
+              </div>
+            )}
 
             {/* Additional Info - Compact */}
             <div style={{
