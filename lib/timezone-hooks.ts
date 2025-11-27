@@ -1,143 +1,191 @@
 'use client';
 
 /**
- * TIMEZONE REACT HOOKS
+ * TIMEZONE REACT HOOKS - IP GEOLOCATION BASED
  *
- * Client-side only React hooks for timezone handling.
+ * BULLETPROOF timezone detection that NEVER trusts the device clock.
  *
- * KEY PRINCIPLE:
- * - Restaurant operates in ONE timezone (India/IST)
- * - ALL customers see times in THEIR OWN browser timezone
- * - Business hours are restaurant's hours, displayed in user's timezone
- * - When user picks "2 PM", it means 2 PM in THEIR timezone
+ * Detection chain:
+ * 1. Server-side IP geolocation (Vercel headers) - Most accurate
+ * 2. Fallback to restaurant timezone (India) - Always safe
+ *
+ * WHY NOT TRUST THE BROWSER?
+ * - User's laptop might be set to wrong timezone
+ * - Someone in Hyderabad with Pacific time device would corrupt all orders
+ * - Emails, chef prep times, delivery windows would all be wrong
+ *
+ * THIS APPROACH:
+ * - Detects timezone from user's IP address (physical location)
+ * - Works even if device clock is completely wrong
+ * - Restaurant gets correct times, customers get correct times
  *
  * @author THE ARCHITECT
- * @version 2.0.0
+ * @version 3.0.0 - IP Geolocation Edition
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   RegionConfig,
   getRestaurantRegion,
   RESTAURANT_TIMEZONE,
-  REGIONS,
 } from './timezone-service';
 
+interface GeoTimezoneResponse {
+  success: boolean;
+  timezone: string;
+  displayName: string;
+  detectionMethod: string;
+  confidence: 'high' | 'medium' | 'low';
+  geo?: {
+    country: string | null;
+    city: string | null;
+    region: string | null;
+  };
+  restaurantTimezone: string;
+  error?: string;
+}
+
 /**
- * Get the user's ACTUAL browser timezone
- * This is the real timezone from the device, no mapping or caching
+ * Fetch timezone from server-side IP geolocation
  */
-function getBrowserTimezoneDirectly(): string {
-  if (typeof window === 'undefined') {
-    return RESTAURANT_TIMEZONE; // SSR fallback
-  }
+async function fetchGeoTimezone(): Promise<GeoTimezoneResponse> {
   try {
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    console.log(`[Timezone] Browser timezone detected: ${tz}`);
-    return tz || RESTAURANT_TIMEZONE;
-  } catch {
-    console.warn('[Timezone] Failed to detect browser timezone, using restaurant timezone');
-    return RESTAURANT_TIMEZONE;
+    const response = await fetch('/api/geo/timezone', {
+      method: 'GET',
+      headers: {
+        'Cache-Control': 'no-cache',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Geo API returned ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('[Timezone] Geo detection result:', data);
+    return data;
+  } catch (error) {
+    console.error('[Timezone] Geo detection failed:', error);
+    // Return fallback response
+    return {
+      success: false,
+      timezone: RESTAURANT_TIMEZONE,
+      displayName: 'India',
+      detectionMethod: 'fetch-error-fallback',
+      confidence: 'low',
+      restaurantTimezone: RESTAURANT_TIMEZONE,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
   }
 }
 
 /**
- * Create a user-specific region config based on their browser timezone
- * Uses restaurant's business hours but with user's display timezone
+ * Create a user-specific region config based on geo-detected timezone
  */
-function createUserRegionConfig(browserTimezone: string): RegionConfig {
+function createUserRegionConfig(
+  geoTimezone: string,
+  displayName: string
+): RegionConfig {
   const restaurantRegion = getRestaurantRegion();
 
-  // Create a custom region for this user that:
-  // - Uses the restaurant's business hours (when the kitchen is open)
-  // - But displays times in the user's timezone
   return {
     ...restaurantRegion,
-    id: 'USER',
-    name: getTimezoneDisplayName(browserTimezone),
-    timezone: browserTimezone, // Use user's actual timezone for display
+    id: 'GEO',
+    name: displayName,
+    timezone: geoTimezone,
     // Keep restaurant's business hours, minimumLeadTime, etc.
   };
 }
 
 /**
- * Get a friendly display name for a timezone
- */
-function getTimezoneDisplayName(timezone: string): string {
-  // Map common timezones to friendly names
-  const timezoneNames: Record<string, string> = {
-    'Asia/Kolkata': 'India',
-    'Asia/Calcutta': 'India',
-    'Asia/Mumbai': 'India',
-    'Asia/Chennai': 'India',
-    'Asia/Delhi': 'India',
-    'America/Los_Angeles': 'USA (Pacific)',
-    'America/New_York': 'USA (Eastern)',
-    'America/Chicago': 'USA (Central)',
-    'America/Denver': 'USA (Mountain)',
-    'Europe/London': 'United Kingdom',
-    'Europe/Paris': 'France',
-    'Europe/Berlin': 'Germany',
-    'Asia/Tokyo': 'Japan',
-    'Asia/Singapore': 'Singapore',
-    'Asia/Dubai': 'UAE',
-    'Australia/Sydney': 'Australia (Sydney)',
-  };
-
-  if (timezoneNames[timezone]) {
-    return timezoneNames[timezone];
-  }
-
-  // Extract region from timezone string (e.g., "Asia/Kolkata" -> "Kolkata")
-  const parts = timezone.split('/');
-  if (parts.length > 1) {
-    return parts[parts.length - 1].replace(/_/g, ' ');
-  }
-
-  return timezone;
-}
-
-/**
- * REACT HOOK: Use user's region with proper SSR handling
+ * REACT HOOK: Use user's region based on IP geolocation
  *
- * IMPORTANT: This hook now:
- * 1. Always uses the restaurant's business hours (India)
- * 2. Always displays times in the user's ACTUAL browser timezone
- * 3. No region mapping - just direct timezone detection
+ * This hook:
+ * 1. Calls the geo API to detect timezone from IP (not device)
+ * 2. Creates a region config with the detected timezone
+ * 3. Falls back to restaurant timezone if detection fails
  *
- * @returns { region: RegionConfig, isLoaded: boolean, browserTimezone: string }
+ * NEVER trusts the browser's reported timezone.
+ *
+ * @returns { region, isLoaded, browserTimezone, geoInfo }
  */
 export function useUserRegion(): {
   region: RegionConfig;
   isLoaded: boolean;
   browserTimezone: string;
+  geoInfo: {
+    detectionMethod: string;
+    confidence: 'high' | 'medium' | 'low';
+    country: string | null;
+    city: string | null;
+  } | null;
 } {
   // Start with restaurant region for SSR consistency
   const [region, setRegion] = useState<RegionConfig>(getRestaurantRegion());
   const [browserTimezone, setBrowserTimezone] = useState<string>(RESTAURANT_TIMEZONE);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [geoInfo, setGeoInfo] = useState<{
+    detectionMethod: string;
+    confidence: 'high' | 'medium' | 'low';
+    country: string | null;
+    city: string | null;
+  } | null>(null);
 
   useEffect(() => {
-    // Always detect the ACTUAL browser timezone - no caching, no mapping
-    const actualTimezone = getBrowserTimezoneDirectly();
-    setBrowserTimezone(actualTimezone);
+    let isMounted = true;
 
-    // Create a region config that uses user's timezone for display
-    // but keeps restaurant's business hours
-    const userRegion = createUserRegionConfig(actualTimezone);
-    setRegion(userRegion);
+    async function detectTimezone() {
+      try {
+        // Fetch timezone from server-side IP geolocation
+        const geoResult = await fetchGeoTimezone();
 
-    console.log(`[Timezone] User region set: ${userRegion.name} (${actualTimezone})`);
-    setIsLoaded(true);
+        if (!isMounted) return;
+
+        // Use the geo-detected timezone
+        const timezone = geoResult.timezone;
+        const displayName = geoResult.displayName;
+
+        setBrowserTimezone(timezone);
+
+        // Create region config with geo-detected timezone
+        const userRegion = createUserRegionConfig(timezone, displayName);
+        setRegion(userRegion);
+
+        // Store geo info for debugging/display
+        setGeoInfo({
+          detectionMethod: geoResult.detectionMethod,
+          confidence: geoResult.confidence,
+          country: geoResult.geo?.country || null,
+          city: geoResult.geo?.city || null,
+        });
+
+        console.log(
+          `[Timezone] Region set via ${geoResult.detectionMethod}: ${displayName} (${timezone})`
+        );
+      } catch (error) {
+        console.error('[Timezone] Detection failed:', error);
+        // Keep restaurant defaults (already set in initial state)
+      } finally {
+        if (isMounted) {
+          setIsLoaded(true);
+        }
+      }
+    }
+
+    detectTimezone();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  return { region, isLoaded, browserTimezone };
+  return { region, isLoaded, browserTimezone, geoInfo };
 }
 
 /**
- * REACT HOOK: Get browser timezone with SSR safety
+ * REACT HOOK: Get timezone with SSR safety
  *
- * Returns the user's ACTUAL browser timezone, not a mapped region timezone
+ * Returns the IP-detected timezone, not the browser's reported timezone.
  *
  * @returns { timezone: string, isLoaded: boolean }
  */
@@ -146,24 +194,53 @@ export function useBrowserTimezone(): { timezone: string; isLoaded: boolean } {
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    const actualTimezone = getBrowserTimezoneDirectly();
-    setTimezone(actualTimezone);
-    setIsLoaded(true);
+    let isMounted = true;
+
+    async function detectTimezone() {
+      try {
+        const geoResult = await fetchGeoTimezone();
+        if (isMounted) {
+          setTimezone(geoResult.timezone);
+        }
+      } catch {
+        // Keep restaurant default
+      } finally {
+        if (isMounted) {
+          setIsLoaded(true);
+        }
+      }
+    }
+
+    detectTimezone();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   return { timezone, isLoaded };
 }
 
 /**
- * Clear any cached timezone data
- * Call this if user reports timezone issues
+ * Force refresh timezone detection
+ * Useful if user reports incorrect timezone
  */
-export function clearTimezoneCache(): void {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.removeItem('user_region_cache');
-    console.log('[Timezone] Cache cleared');
-  } catch {
-    // Ignore
-  }
+export function useRefreshTimezone() {
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const refresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      // Clear any cached data
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('user_region_cache');
+      }
+      // Force a page reload to re-detect
+      window.location.reload();
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, []);
+
+  return { refresh, isRefreshing };
 }
