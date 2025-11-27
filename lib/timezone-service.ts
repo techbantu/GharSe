@@ -126,6 +126,13 @@ export const DEFAULT_REGION_ID = 'IN';
  * Returns: IANA timezone string (e.g., "America/New_York")
  */
 export function detectUserTimezone(): string {
+  // SSR Check: Return safe default during server-side rendering
+  // The browser timezone will be detected client-side after hydration
+  if (typeof window === 'undefined') {
+    console.log('[Timezone] SSR detected, deferring to client-side detection');
+    return 'UTC';
+  }
+
   // Method 1: Intl.DateTimeFormat (most reliable)
   try {
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -177,11 +184,42 @@ export function mapTimezoneToRegion(timezone: string): RegionConfig {
 
 /**
  * Auto-detects user's region based on browser timezone
- * 
+ *
  * This is the MAGIC function that makes everything "just work"
  */
 export function detectUserRegion(): RegionConfig {
   const timezone = detectUserTimezone();
+  return mapTimezoneToRegion(timezone);
+}
+
+// ===== BROWSER-ONLY FUNCTIONS (with SSR guards) =====
+
+/**
+ * BROWSER-ONLY: Detects user's timezone from browser
+ * Returns null on server to signal "timezone unknown"
+ *
+ * Use this when you need explicit null handling for SSR scenarios
+ */
+export function detectBrowserTimezone(): string | null {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * BROWSER-ONLY: Gets user region based on browser timezone
+ * Returns null on server, caller must handle default
+ *
+ * Use this for explicit SSR handling in components
+ */
+export function detectBrowserRegion(): RegionConfig | null {
+  const timezone = detectBrowserTimezone();
+  if (!timezone) return null;
   return mapTimezoneToRegion(timezone);
 }
 
@@ -425,8 +463,12 @@ export function getCachedUserRegion(): RegionConfig | null {
 
 /**
  * Gets user region with caching (performance-optimized)
- * 
- * This is the function you should use in your components
+ *
+ * @deprecated Use useUserRegion() hook in React components for proper SSR handling.
+ *             Use getRestaurantRegion() for server-side code.
+ *
+ * WARNING: This function may return wrong timezone during SSR because it
+ * detects the server's timezone, not the user's browser timezone.
  */
 export function getUserRegion(): RegionConfig {
   // Try cache first (fast)
@@ -435,20 +477,18 @@ export function getUserRegion(): RegionConfig {
     return cached;
   }
 
-  // Detect from browser (slower)
-  const detected = detectUserRegion();
-  cacheUserRegion(detected);
-  return detected;
+  // Fallback: try browser detection (may return wrong timezone during SSR)
+  const detected = detectBrowserRegion();
+  if (detected) {
+    cacheUserRegion(detected);
+    return detected;
+  }
+
+  // Safe fallback for SSR
+  return getRestaurantRegion();
 }
 
 // ===== EXPORT CONVENIENCE FUNCTIONS =====
-
-/**
- * ONE-LINER for components: Get current user's timezone-aware config
- */
-export function useUserRegion() {
-  return getUserRegion();
-}
 
 /**
  * Formats a UTC date for display to user (auto-detects their timezone)

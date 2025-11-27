@@ -22,16 +22,15 @@ import { Calendar, Clock, AlertCircle, CheckCircle2, Zap, MapPin, ChefHat, Truck
 import { format, addDays, startOfDay } from 'date-fns';
 import { format as formatTz } from 'date-fns-tz';
 import {
-  getUserRegion,
   generateTimeSlots,
   getAvailableDeliveryDatesForBrowser,
   isTodayInBrowserTz,
   isTomorrowInBrowserTz,
   formatForBrowser,
-  getBrowserTimezone,
   type RegionConfig,
   type TimeSlot,
 } from '@/lib/timezone-service';
+import { useUserRegion, useBrowserTimezone } from '@/lib/timezone-hooks';
 
 interface DeliveryTimeSlotPickerProps {
   onSelectSlot: (slot: {
@@ -51,7 +50,10 @@ export const DeliveryTimeSlotPicker: React.FC<DeliveryTimeSlotPickerProps> = ({
   className = '',
   showRegionSelector = false,
 }) => {
-  const [userRegion, setUserRegion] = useState<RegionConfig>(getUserRegion());
+  // Use hooks for SSR-safe region/timezone detection
+  const { region: userRegion, isLoaded: isRegionLoaded } = useUserRegion();
+  const { timezone: browserTimezone } = useBrowserTimezone();
+
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
   const [slotAvailabilityMap, setSlotAvailabilityMap] = useState<Map<string, number>>(new Map());
@@ -183,10 +185,43 @@ export const DeliveryTimeSlotPicker: React.FC<DeliveryTimeSlotPickerProps> = ({
 
   // ===== RENDER =====
 
+  // Show loading state until timezone is detected (prevents hydration mismatch)
+  if (!isRegionLoaded) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }} className={className}>
+        <div style={{
+          padding: '32px 24px',
+          background: 'linear-gradient(to right, #f9fafb, #f3f4f6)',
+          border: '1px solid #e5e7eb',
+          borderRadius: '12px',
+          textAlign: 'center',
+        }}>
+          <div style={{
+            width: '24px',
+            height: '24px',
+            border: '3px solid #e5e7eb',
+            borderTopColor: '#f97316',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto 12px',
+          }} />
+          <p style={{ color: '#6b7280', fontSize: '14px', margin: 0 }}>
+            Detecting your location...
+          </p>
+        </div>
+        <style>{`
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }} className={className}>
       {/* Region Info Banner */}
-      <div 
+      <div
         style={{
           display: 'flex',
           alignItems: 'flex-start',
@@ -213,7 +248,7 @@ export const DeliveryTimeSlotPicker: React.FC<DeliveryTimeSlotPickerProps> = ({
             Delivering to: {userRegion.name}
           </h4>
           <p style={{ fontSize: '13px', color: '#1e40af', margin: 0, lineHeight: 1.5 }}>
-            All times shown in <strong>your local timezone</strong> ({getBrowserTimezone()}). Business hours:{' '}
+            All times shown in <strong>your local timezone</strong> ({browserTimezone}). Business hours:{' '}
             <strong>{userRegion.businessHours.openTime.hour}:00 AM - {userRegion.businessHours.closeTime.hour}:00 PM</strong>
           </p>
         </div>
