@@ -30,7 +30,7 @@ import {
   type RegionConfig,
   type TimeSlot,
 } from '@/lib/timezone-service';
-import { useUserRegion, useBrowserTimezone } from '@/lib/timezone-hooks';
+import { useUserRegion } from '@/lib/timezone-hooks';
 
 interface DeliveryTimeSlotPickerProps {
   onSelectSlot: (slot: {
@@ -50,9 +50,9 @@ export const DeliveryTimeSlotPicker: React.FC<DeliveryTimeSlotPickerProps> = ({
   className = '',
   showRegionSelector = false,
 }) => {
-  // Use hooks for SSR-safe region/timezone detection
-  const { region: userRegion, isLoaded: isRegionLoaded } = useUserRegion();
-  const { timezone: browserTimezone } = useBrowserTimezone();
+  // Use hook for SSR-safe region/timezone detection
+  // This always uses restaurant business hours but displays in user's timezone
+  const { region: userRegion, isLoaded: isRegionLoaded, browserTimezone } = useUserRegion();
 
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<TimeSlot | null>(null);
