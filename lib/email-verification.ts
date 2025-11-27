@@ -163,17 +163,23 @@ export async function sendVerificationEmail(
  */
 export async function sendPasswordResetEmail(
   email: string
-): Promise<{ success: boolean; message: string }> {
+): Promise<{ success: boolean; message: string; emailExists?: boolean }> {
   try {
     const customer = await prisma.customer.findUnique({
       where: { email },
     });
-    
+
     if (!customer) {
-      // Don't reveal if email exists (security best practice)
+      // CHANGED: Now explicitly tell user email doesn't exist
+      // User requested clear feedback instead of ambiguous security message
+      logger.info('Password reset attempted for non-existent email', {
+        email: email.substring(0, 3) + '***' + email.substring(email.indexOf('@')),
+      });
+
       return {
-        success: true,
-        message: 'If an account exists with that email, a password reset link has been sent.',
+        success: false,
+        emailExists: false,
+        message: 'No account found with this email address. Please register to create an account.',
       };
     }
     
@@ -200,15 +206,16 @@ export async function sendPasswordResetEmail(
     });
     
     if (emailSent) {
-    logger.info('Password reset email sent', {
-      customerId: customer.id,
-      email: email.substring(0, 3) + '***' + email.substring(email.indexOf('@')),
-    });
-    
-    return {
-      success: true,
-      message: 'If an account exists with that email, a password reset link has been sent.',
-    };
+      logger.info('Password reset email sent', {
+        customerId: customer.id,
+        email: email.substring(0, 3) + '***' + email.substring(email.indexOf('@')),
+      });
+
+      return {
+        success: true,
+        emailExists: true,
+        message: 'Password reset link has been sent to your email address.',
+      };
     } else {
       logger.warn('Password reset email failed to send', {
         customerId: customer.id,
@@ -217,6 +224,7 @@ export async function sendPasswordResetEmail(
 
       return {
         success: false,
+        emailExists: true,
         message: 'Failed to send password reset email. Please try again.',
       };
     }

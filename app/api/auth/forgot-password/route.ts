@@ -88,10 +88,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Return appropriate response based on email success
+    // Include emailExists flag so frontend can show "Register" option
     return NextResponse.json(
       {
         success: result.success,
         message: result.message,
+        emailExists: result.emailExists,
         ...(resetUrl && {
           development: {
             resetUrl,
@@ -100,7 +102,8 @@ export async function POST(request: NextRequest) {
           }
         }),
       },
-      { status: result.success ? 200 : 500 }
+      // Return 404 for non-existent email, 500 for other errors, 200 for success
+      { status: result.success ? 200 : (result.emailExists === false ? 404 : 500) }
     );
     
   } catch (error) {

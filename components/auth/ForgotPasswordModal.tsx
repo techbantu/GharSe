@@ -20,9 +20,10 @@ interface ForgotPasswordModalProps {
   isOpen: boolean;
   onClose: () => void;
   onBackToLogin: () => void;
+  onRegister?: () => void; // Navigate to registration
 }
 
-export function ForgotPasswordModal({ isOpen, onClose, onBackToLogin }: ForgotPasswordModalProps) {
+export function ForgotPasswordModal({ isOpen, onClose, onBackToLogin, onRegister }: ForgotPasswordModalProps) {
   const toast = useToast();
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
@@ -30,10 +31,12 @@ export function ForgotPasswordModal({ isOpen, onClose, onBackToLogin }: ForgotPa
   const [emailSent, setEmailSent] = useState(false);
   const [resetUrl, setResetUrl] = useState<string | null>(null);
   const [isDevelopment, setIsDevelopment] = useState(false);
+  const [emailNotFound, setEmailNotFound] = useState(false); // NEW: Track if email doesn't exist
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setEmailNotFound(false);
     setIsLoading(true);
 
     try {
@@ -59,14 +62,23 @@ export function ForgotPasswordModal({ isOpen, onClose, onBackToLogin }: ForgotPa
             'Click the link below to reset your password. This only works in development.'
           );
         } else {
-        toast.success(
-          'Reset Link Sent! 📧',
-          'Check your email for a link to reset your password. The link will expire in 1 hour.'
-        );
+          toast.success(
+            'Reset Link Sent! 📧',
+            'Check your email for a link to reset your password. The link will expire in 1 hour.'
+          );
         }
       } else {
+        // Check if email doesn't exist - show Register option
+        if (data.emailExists === false) {
+          setEmailNotFound(true);
+          setError(data.message || 'No account found with this email address.');
+          toast.error(
+            'Account Not Found',
+            'No account exists with this email. Please register to create one.'
+          );
+        }
         // Email sending failed - still provide development link if available
-        if (data.development?.resetUrl) {
+        else if (data.development?.resetUrl) {
           setEmailSent(true);
           setResetUrl(data.development.resetUrl);
           setIsDevelopment(true);
@@ -93,6 +105,7 @@ export function ForgotPasswordModal({ isOpen, onClose, onBackToLogin }: ForgotPa
     setEmailSent(false);
     setResetUrl(null);
     setIsDevelopment(false);
+    setEmailNotFound(false);
     onClose();
   };
 
@@ -342,17 +355,54 @@ export function ForgotPasswordModal({ isOpen, onClose, onBackToLogin }: ForgotPa
                 {/* Error Message */}
                 {error && (
                   <div style={{
-                    background: '#fee2e2',
-                    border: '1px solid #ef4444',
+                    background: emailNotFound ? '#fef3c7' : '#fee2e2',
+                    border: `1px solid ${emailNotFound ? '#f59e0b' : '#ef4444'}`,
                     borderRadius: '8px',
                     padding: '12px',
                     marginBottom: '16px',
-                    display: 'flex',
-                    gap: '8px',
-                    alignItems: 'start',
                   }}>
-                    <AlertCircle size={20} color="#dc2626" style={{ flexShrink: 0, marginTop: '2px' }} />
-                    <span style={{ fontSize: '14px', color: '#991b1b' }}>{error}</span>
+                    <div style={{
+                      display: 'flex',
+                      gap: '8px',
+                      alignItems: 'start',
+                    }}>
+                      <AlertCircle size={20} color={emailNotFound ? '#d97706' : '#dc2626'} style={{ flexShrink: 0, marginTop: '2px' }} />
+                      <span style={{ fontSize: '14px', color: emailNotFound ? '#92400e' : '#991b1b' }}>{error}</span>
+                    </div>
+
+                    {/* Register Button - shown when email doesn't exist */}
+                    {emailNotFound && onRegister && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleClose();
+                          onRegister();
+                        }}
+                        style={{
+                          width: '100%',
+                          marginTop: '12px',
+                          padding: '12px',
+                          background: 'linear-gradient(135deg, #10b981, #059669)',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '8px',
+                          fontSize: '15px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          transition: 'transform 0.2s, box-shadow 0.2s',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = 'translateY(-2px)';
+                          e.currentTarget.style.boxShadow = '0 6px 12px rgba(16, 185, 129, 0.3)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = 'translateY(0)';
+                          e.currentTarget.style.boxShadow = 'none';
+                        }}
+                      >
+                        Create New Account
+                      </button>
+                    )}
                   </div>
                 )}
 
