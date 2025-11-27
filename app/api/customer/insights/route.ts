@@ -102,6 +102,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch orders with items
+    // Include all non-cancelled orders for pattern analysis
     let orders: any[];
     try {
       orders = await (prisma.order.findMany as any)({
@@ -126,12 +127,18 @@ export async function GET(request: NextRequest) {
       orders = [];
     }
 
-    // Calculate monthly spending (last 6 months)
+    // CRITICAL FIX: Calculate spending from DELIVERED orders only
+    // Previously used customer.totalSpent which was never being updated
+    const deliveredOrders = orders.filter((order: any) => order.status === 'DELIVERED');
+    const totalSpentFromOrders = deliveredOrders.reduce((sum: number, order: any) => sum + (order.total || 0), 0);
+    const deliveredOrderCount = deliveredOrders.length;
+
+    // Calculate monthly spending (last 6 months) - use all non-cancelled orders for trends
     const monthlySpending = calculateMonthlySpending(orders);
 
-    // Calculate average order value
-    const averageOrderValue = customer.totalOrders > 0 
-      ? customer.totalSpent / customer.totalOrders 
+    // Calculate average order value from delivered orders only
+    const averageOrderValue = deliveredOrderCount > 0
+      ? totalSpentFromOrders / deliveredOrderCount
       : 0;
 
     // Calculate savings
@@ -149,7 +156,7 @@ export async function GET(request: NextRequest) {
     const insights: Insights = {
       monthlySpending,
       averageOrderValue,
-      totalSpent: customer.totalSpent,
+      totalSpent: totalSpentFromOrders, // Use calculated value from DELIVERED orders
       savings,
       categoryExploration,
       favoriteTimeOfDay,
@@ -158,7 +165,13 @@ export async function GET(request: NextRequest) {
       nextOrderPrediction,
     };
 
-    logger.info('Insights generated successfully', { customerId });
+    logger.info('Insights generated successfully', {
+      customerId,
+      totalOrders: orders.length,
+      deliveredOrders: deliveredOrderCount,
+      totalSpent: totalSpentFromOrders,
+      averageOrderValue,
+    });
 
     return NextResponse.json({
       success: true,
