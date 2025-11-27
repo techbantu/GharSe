@@ -23,6 +23,7 @@ import {
   Clock,
   CheckCircle,
   X,
+  XCircle,
   RefreshCw,
   Package,
   Bell,
@@ -64,7 +65,10 @@ const KitchenDisplay: React.FC<KitchenOrdersProps> = ({
       setIsRefreshing(true);
       setError(null);
 
-      const response = await fetch('/api/orders?status=pending-confirmation,pending,confirmed,preparing,ready&includePendingConfirmation=true', {
+      // CRITICAL: Kitchen should ONLY see orders AFTER customer confirms
+      // Do NOT include 'pending-confirmation' - those are still in customer review window
+      // Include 'cancelled' so chef has context on what was cancelled (not just disappear)
+      const response = await fetch('/api/orders?status=pending,confirmed,preparing,ready,cancelled', {
         credentials: 'include',
         cache: 'no-store'
       });
@@ -237,13 +241,22 @@ const KitchenDisplay: React.FC<KitchenOrdersProps> = ({
   };
 
   // Group orders by status
-  const newOrders = orders.filter(o => ['pending', 'pending-confirmation'].includes(o.status));
+  // NOTE: Kitchen only sees 'pending' orders - 'pending-confirmation' stays invisible
+  // until customer confirms (via finalize endpoint)
+  const newOrders = orders.filter(o => o.status === 'pending');
   const confirmedOrders = orders.filter(o => o.status === 'confirmed');
   const cookingOrders = orders.filter(o => o.status === 'preparing');
   const readyOrders = orders.filter(o => o.status === 'ready');
+  // Show recently cancelled orders (within last 2 hours) so chef has context
+  const cancelledOrders = orders.filter(o => {
+    if (o.status !== 'cancelled') return false;
+    // Only show cancelled orders from last 2 hours
+    const twoHoursAgo = Date.now() - (2 * 60 * 60 * 1000);
+    return o.updatedAt.getTime() > twoHoursAgo;
+  });
     
   // Compact Kitchen Ticket Card
-  const KitchenTicket = ({ order, column }: { order: Order; column: 'new' | 'confirmed' | 'cooking' | 'ready' }) => {
+  const KitchenTicket = ({ order, column }: { order: Order; column: 'new' | 'confirmed' | 'cooking' | 'ready' | 'cancelled' }) => {
     const isPaid = order.paymentStatus === 'PAID';
     const isUPI = order.paymentMethod?.toLowerCase().includes('upi') || 
                   order.paymentMethod?.toLowerCase().includes('gpay') || 
@@ -299,6 +312,7 @@ const KitchenDisplay: React.FC<KitchenOrdersProps> = ({
       confirmed: { accent: '#8B5CF6', bg: '#F5F3FF', border: '#C4B5FD' },
       cooking: { accent: '#F97316', bg: '#FFF7ED', border: '#FDBA74' },
       ready: { accent: '#10B981', bg: '#ECFDF5', border: '#6EE7B7' },
+      cancelled: { accent: '#DC2626', bg: '#FEF2F2', border: '#FECACA' },
     };
     
     const style = columnStyles[column];
@@ -334,11 +348,14 @@ const KitchenDisplay: React.FC<KitchenOrdersProps> = ({
             onClick: () => handlePickedUp(order.id),
             color: '#10B981'
       };
+        case 'cancelled':
+          // No action for cancelled orders
+          return null;
     }
   };
 
     const action = getNextAction();
-    const ActionIcon = action.icon;
+    const ActionIcon = action?.icon;
     
     return (
       <div
@@ -516,7 +533,8 @@ const KitchenDisplay: React.FC<KitchenOrdersProps> = ({
           </div>
         </div>
 
-        {/* Action Button - Full Width */}
+        {/* Action Button - Full Width (only for non-cancelled orders) */}
+        {action && ActionIcon && (
             <button
           onClick={action.onClick}
               style={{
@@ -544,9 +562,10 @@ const KitchenDisplay: React.FC<KitchenOrdersProps> = ({
           <ActionIcon size={14} />
           {action.label}
               </button>
+        )}
 
-        {/* Cancel option for non-ready orders */}
-        {column !== 'ready' && (
+        {/* Cancel option for non-ready and non-cancelled orders */}
+        {column !== 'ready' && column !== 'cancelled' && (
               <button
                 onClick={() => updateOrderStatus(order.id, 'cancelled')}
                 style={{
@@ -564,6 +583,21 @@ const KitchenDisplay: React.FC<KitchenOrdersProps> = ({
             ✕ Cancel
               </button>
         )}
+        {/* Show cancellation reason for cancelled orders */}
+        {column === 'cancelled' && (
+          <div style={{
+            width: '100%',
+            padding: '6px 8px',
+            background: '#FEF2F2',
+            color: '#991B1B',
+            fontSize: '10px',
+            fontWeight: 600,
+            borderTop: '1px solid #FECACA',
+            textAlign: 'center',
+          }}>
+            {(order as any).rejectionReason || 'Cancelled'}
+          </div>
+        )}
       </div>
     );
   };
@@ -576,11 +610,11 @@ const KitchenDisplay: React.FC<KitchenOrdersProps> = ({
     column, 
     icon: Icon, 
     color 
-  }: { 
-    title: string; 
-    count: number; 
-    orders: Order[]; 
-    column: 'new' | 'confirmed' | 'cooking' | 'ready';
+  }: {
+    title: string;
+    count: number;
+    orders: Order[];
+    column: 'new' | 'confirmed' | 'cooking' | 'ready' | 'cancelled';
     icon: any;
     color: string;
   }) => (
@@ -670,6 +704,7 @@ const KitchenDisplay: React.FC<KitchenOrdersProps> = ({
               {column === 'confirmed' && <ThumbsUp size={24} style={{ color, opacity: 0.7 }} />}
               {column === 'cooking' && <Flame size={24} style={{ color, opacity: 0.7 }} />}
               {column === 'ready' && <UtensilsCrossed size={24} style={{ color, opacity: 0.7 }} />}
+              {column === 'cancelled' && <XCircle size={24} style={{ color, opacity: 0.7 }} />}
             </div>
             <span style={{ color: '#9CA3AF', fontWeight: 500 }}>No orders</span>
           </div>
@@ -905,14 +940,25 @@ const KitchenDisplay: React.FC<KitchenOrdersProps> = ({
             icon={Flame}
             color="#F97316"
           />
-          <Column 
-            title="Ready" 
-            count={readyOrders.length} 
-            orders={readyOrders} 
+          <Column
+            title="Ready"
+            count={readyOrders.length}
+            orders={readyOrders}
             column="ready"
             icon={CheckCircle}
             color="#10B981"
           />
+          {/* Cancelled column - shows recently cancelled orders for audit trail */}
+          {cancelledOrders.length > 0 && (
+            <Column
+              title="Cancelled"
+              count={cancelledOrders.length}
+              orders={cancelledOrders}
+              column="cancelled"
+              icon={XCircle}
+              color="#DC2626"
+            />
+          )}
             </div>
 
         {/* Quick Stats Row */}

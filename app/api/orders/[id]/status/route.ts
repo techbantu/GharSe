@@ -56,10 +56,40 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
     console.log(`[Order API] Updating status for order ${id} to ${dbStatus}`);
 
+    // Build timestamp updates based on status - CRITICAL for audit trail
+    const timestampUpdates: Record<string, Date | null> = {};
+    const now = new Date();
+
+    switch (dbStatus) {
+      case 'CONFIRMED':
+        timestampUpdates.confirmedAt = now;
+        break;
+      case 'PREPARING':
+        timestampUpdates.preparingAt = now;
+        break;
+      case 'READY':
+        timestampUpdates.readyAt = now;
+        break;
+      case 'OUT_FOR_DELIVERY':
+        // No specific timestamp, but could add if needed
+        break;
+      case 'DELIVERED':
+        timestampUpdates.deliveredAt = now;
+        break;
+      case 'CANCELLED':
+        timestampUpdates.cancelledAt = now;
+        break;
+    }
+
+    console.log(`[Order API] Setting timestamps:`, timestampUpdates);
+
     // CRITICAL: Include customer relation for notifications
     const updatedOrder = await prisma.order.update({
       where: { id },
-      data: { status: dbStatus as any },
+      data: {
+        status: dbStatus as any,
+        ...timestampUpdates, // Set audit trail timestamps
+      },
       include: {
         customer: true, // Include customer for notifications
         items: {

@@ -215,6 +215,13 @@ const generateOrderConfirmationHTML = (order: Order): string => {
 
 const generateStatusUpdateHTML = (order: Order, newStatus: string): string => {
   const statusMessages: Record<string, { title: string; message: string; color: string }> = {
+    // PENDING = Order Received (customer confirmed, awaiting kitchen)
+    pending: {
+      title: 'Order Received! 🎉',
+      message: 'We\'ve received your order and sent it to our home kitchen! The chef will review and confirm shortly. You\'ll receive another email once your order is confirmed and cooking begins.',
+      color: '#f59e0b', // Amber - waiting
+    },
+    // CONFIRMED = Chef confirmed (now cooking)
     confirmed: {
       title: 'Your Ghar (Home) Kitchen is Ready!',
       message: 'Your order has been confirmed! Our home chef is rolling up their sleeves and getting the stove ready. Authentic flavors from our home to yours!',
@@ -239,6 +246,12 @@ const generateStatusUpdateHTML = (order: Order, newStatus: string): string => {
       title: 'Delivered! Enjoy Your Home-Cooked Meal!',
       message: 'Your order has been delivered! Time to dig into delicious, authentic home-cooked food. Enjoy every bite and feel the warmth of "ghar ka khana"!',
       color: '#10b981',
+    },
+    // CANCELLED = Order cancelled by kitchen or customer
+    cancelled: {
+      title: 'Order Cancelled',
+      message: 'We\'re sorry, but your order has been cancelled. If you were charged, a refund will be processed within 3-5 business days. We apologize for any inconvenience.',
+      color: '#dc2626', // Red
     },
   };
 

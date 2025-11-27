@@ -610,27 +610,16 @@ async function createOrderLogic(body: unknown): Promise<Result<{
       // Save to in-memory storage ONLY after DB success
       addOrder(order);
       
-      // Broadcast new order to admin room via WebSocket (real-time notification)
-      try {
-        await broadcastNewOrderToAdmin({
-          id: order.id,
-          orderNumber: order.orderNumber,
-          customer: order.customer,
-          pricing: order.pricing,
-          status: order.status,
-          createdAt: order.createdAt,
-          items: order.items.map((item: any) => ({
-            menuItem: { name: item.menuItem?.name || 'Unknown Item' },
-            quantity: item.quantity,
-          })),
-        });
-      } catch (wsError) {
-        // Don't fail order creation if WebSocket fails (graceful degradation)
-        logger.warn('Failed to broadcast new order to admin via WebSocket', {
-          orderId,
-          error: wsError instanceof Error ? wsError.message : String(wsError),
-        });
-      }
+      // CRITICAL FIX: Do NOT broadcast to admin/kitchen yet!
+      // Order is in PENDING_CONFIRMATION status = customer review window
+      // Kitchen should NEVER see orders until customer explicitly confirms
+      // Broadcast will happen in /api/orders/finalize when customer confirms
+      logger.info('Order created in PENDING_CONFIRMATION - NOT broadcasting to kitchen yet', {
+        orderId,
+        orderNumber,
+        status: 'PENDING_CONFIRMATION',
+        note: 'Kitchen will see this order after customer confirms via /api/orders/finalize',
+      });
       
       // SEND "ORDER RECEIVED" EMAIL TO CUSTOMER IMMEDIATELY
       // This confirms the order was placed and is awaiting chef approval
@@ -641,66 +630,30 @@ async function createOrderLogic(body: unknown): Promise<Result<{
         customerEmail: data.customer.email.substring(0, 3) + '***',
       });
       
-      try {
-        // Create order object for notification
-        const notificationOrder = {
-          ...order,
-          customer: data.customer,
-          estimatedReadyTime: order.estimatedReadyTime,
-          deliveryAddress: data.deliveryAddress ? {
-            street: data.deliveryAddress.street,
-            city: data.deliveryAddress.city,
-            zipCode: data.deliveryAddress.zipCode,
-            state: data.deliveryAddress.state,
-            country: data.deliveryAddress.country || 'India',
-          } : undefined,
-          items: order.items.map(item => ({
-            id: item.id,
-            menuItem: item.menuItem,
-            quantity: item.quantity,
-            subtotal: item.subtotal,
-            specialInstructions: item.specialInstructions,
-          })),
-          contactPreference: ['email'] as any, // Only send email, not SMS for initial receipt
-          notifications: [],
-        };
-        
-        // Send order placement acknowledgment
-        notificationResult = await notificationManager.sendOrderConfirmation(
-          notificationOrder as any, 
-          { via: ['email'] } // Only email for initial receipt
-        );
-        
-        logger.info('Order received notification sent', {
-          orderId: order.id,
-          emailSuccess: notificationResult.email?.success,
-        });
-      } catch (notifError) {
-        logger.error('Failed to send order received notification', {
-          orderId: order.id,
-          error: notifError instanceof Error ? notifError.message : String(notifError),
-        });
-        // Don't fail the order if notification fails - order is still created
-        notificationResult = {
-          email: { 
-            success: false, 
-            error: notifError instanceof Error ? notifError.message : 'Failed to send email'
-          },
-          sms: { 
-            success: false, 
-            skipped: true
-          },
-          overall: false,
-        };
-      }
-      
-      logger.info('Order created - sent "Order Received" email, awaiting chef confirmation', {
+      // CRITICAL FIX: Do NOT send any email at order creation!
+      // Order is in PENDING_CONFIRMATION status - customer is still on review page
+      // Email flow:
+      // 1. Customer clicks "Confirm & Send to Kitchen" → Send "Order Received" email
+      // 2. Chef clicks "Confirm" → Send "Order Confirmed" email
+      //
+      // This prevents:
+      // - Premature "confirmed" emails before anyone confirms
+      // - Duplicate emails (one at creation, one at chef confirmation)
+      // - Customer confusion about order status
+
+      logger.info('Order created in PENDING_CONFIRMATION - NO EMAIL SENT YET', {
         orderId: order.id,
         orderNumber: order.orderNumber,
         status: 'PENDING_CONFIRMATION',
-        emailSent: notificationResult.email?.success,
-        note: 'Full confirmation will be sent when chef confirms the order'
+        note: 'Email will be sent when customer confirms (via /api/orders/modify with finalize=true)',
       });
+
+      // Set notification result to indicate no email was sent (intentionally)
+      notificationResult = {
+        email: { success: true, skipped: true },
+        sms: { success: true, skipped: true },
+        overall: true,
+      };
       
       // Mark first-order discount as used (async, don't block response)
       if (firstOrderDiscountApplied && data.customerId) {

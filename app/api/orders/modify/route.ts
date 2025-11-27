@@ -25,6 +25,7 @@ import { prisma } from '@/lib/prisma';
 import { logger } from '@/utils/logger';
 import { restaurantInfo } from '@/data/menuData';
 import { broadcastOrderUpdate } from '@/lib/websocket-server';
+import { notificationManager } from '@/lib/notifications/notification-manager';
 
 // ===== VALIDATION SCHEMAS =====
 
@@ -249,8 +250,10 @@ export async function POST(request: NextRequest) {
         )
       );
       
-      // Update order - NO AUTO-CONFIRMATION! Status stays the same, chef must manually confirm
-      // Even if finalize=true, order stays in PENDING_CONFIRMATION until chef clicks confirm in Kitchen Display
+      // CRITICAL: If finalize=true, customer is clicking "Confirm & Send to Kitchen"
+      // This is the ONLY way to move from PENDING_CONFIRMATION → PENDING (visible to kitchen)
+      const shouldFinalize = data.finalize === true;
+
       const updated = await tx.order.update({
         where: { id: order.id },
         data: {
@@ -259,10 +262,15 @@ export async function POST(request: NextRequest) {
           deliveryFee: pricing.deliveryFee,
           total: pricing.total,
           modificationCount: order.modificationCount + 1,
-          gracePeriodExpiresAt: newGracePeriodExpiry, // Keep grace period active
           lastModifiedAt: new Date(),
-          // status: NEVER AUTO-CHANGE! Chef must manually confirm in Kitchen Display
-          // confirmedAt: Only set when chef clicks confirm button
+          // FINALIZE: If customer confirms, change status to PENDING so kitchen sees it
+          // Otherwise keep PENDING_CONFIRMATION (still in review window)
+          ...(shouldFinalize ? {
+            status: 'PENDING', // NOW visible to kitchen!
+            gracePeriodExpiresAt: null, // Review window ended
+          } : {
+            gracePeriodExpiresAt: newGracePeriodExpiry, // Still in review window
+          }),
         },
         include: {
           items: {
@@ -282,33 +290,123 @@ export async function POST(request: NextRequest) {
       newGracePeriodExpiry.getTime() - Date.now()
     );
     
-    logger.info('Order modified successfully - awaiting chef confirmation', {
+    // Determine if this was a finalization (customer confirmed)
+    const wasFinalized = data.finalize === true;
+
+    logger.info(wasFinalized ? 'Order FINALIZED - now visible to kitchen' : 'Order modified - still in review window', {
       orderId: order.id,
       orderNumber: order.orderNumber,
       modificationCount: updatedOrder.modificationCount,
       itemCount: validItems.length,
       newTotal: pricing.total,
-      gracePeriodExpiresAt: newGracePeriodExpiry.toISOString(),
-      timeRemainingMs: timeRemaining,
+      gracePeriodExpiresAt: wasFinalized ? null : newGracePeriodExpiry.toISOString(),
+      timeRemainingMs: wasFinalized ? 0 : timeRemaining,
       status: updatedOrder.status,
-      note: 'Auto-confirmation disabled - chef must manually confirm'
+      wasFinalized,
     });
 
-    // Broadcast real-time update to kitchen and customer
+    // Broadcast real-time update
     (async () => {
       try {
-        await broadcastOrderUpdate(order.id, updatedOrder.status, {
-          modificationType: 'item_update',
-          newItemCount: validItems.length,
-          totalChanged: pricing.total !== order.total,
-          newTotal: pricing.total,
-          awaitingConfirmation: true, // Order still needs chef approval
-        });
-        logger.info('Order modification broadcasted - still awaiting chef confirmation', {
-          orderId: order.id,
-          orderNumber: order.orderNumber,
-          status: updatedOrder.status,
-        });
+        if (wasFinalized) {
+          // FINALIZED: Broadcast NEW ORDER to kitchen - this is when chef first sees it
+          const { broadcastNewOrderToAdmin } = await import('@/lib/websocket-server');
+          await broadcastNewOrderToAdmin({
+            id: updatedOrder.id,
+            orderNumber: updatedOrder.orderNumber,
+            customer: {
+              name: updatedOrder.customerName,
+              email: updatedOrder.customerEmail,
+              phone: updatedOrder.customerPhone,
+            },
+            pricing: {
+              total: parseFloat(updatedOrder.total?.toString() || '0'),
+            },
+            status: 'pending', // Frontend expects lowercase
+            createdAt: updatedOrder.createdAt,
+            items: updatedOrder.items.map((item: any) => ({
+              menuItem: {
+                name: item.menuItem?.name || 'Unknown Item',
+              },
+              quantity: item.quantity,
+            })),
+          });
+          logger.info('Order FINALIZED and broadcasted to kitchen - Chef can now see it!', {
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+          });
+
+          // Send "Order Received" email to customer (NOT "Order Confirmed" - that comes when chef confirms)
+          try {
+            const notificationOrder = {
+              id: updatedOrder.id,
+              orderNumber: updatedOrder.orderNumber,
+              customer: {
+                name: updatedOrder.customerName,
+                email: updatedOrder.customerEmail,
+                phone: updatedOrder.customerPhone,
+              },
+              pricing: {
+                subtotal: parseFloat(updatedOrder.subtotal?.toString() || '0'),
+                tax: parseFloat(updatedOrder.tax?.toString() || '0'),
+                deliveryFee: parseFloat(updatedOrder.deliveryFee?.toString() || '0'),
+                discount: parseFloat(updatedOrder.discount?.toString() || '0'),
+                tip: parseFloat(updatedOrder.tip?.toString() || '0'),
+                total: parseFloat(updatedOrder.total?.toString() || '0'),
+              },
+              status: 'pending',
+              orderType: 'delivery' as const,
+              estimatedReadyTime: updatedOrder.estimatedDelivery || new Date(),
+              deliveryAddress: updatedOrder.deliveryAddress ? {
+                street: updatedOrder.deliveryAddress,
+                city: updatedOrder.deliveryCity || '',
+                zipCode: updatedOrder.deliveryZip || '',
+                state: '',
+              } : undefined,
+              items: updatedOrder.items.map((item: any) => ({
+                id: item.id,
+                menuItem: item.menuItem,
+                quantity: item.quantity,
+                subtotal: item.subtotal,
+                specialInstructions: item.specialInstructions,
+              })),
+              contactPreference: ['email'] as any,
+              notifications: [],
+            };
+
+            // Send "Order Received" status update (NOT confirmation - that's for chef)
+            await notificationManager.sendStatusUpdate(
+              notificationOrder as any,
+              'pending', // This triggers "Order Placed" message, not "Order Confirmed"
+              { via: ['email'] }
+            );
+
+            logger.info('Order Received email sent to customer', {
+              orderId: order.id,
+              orderNumber: order.orderNumber,
+              customerEmail: updatedOrder.customerEmail?.substring(0, 3) + '***',
+            });
+          } catch (emailError) {
+            logger.error('Failed to send Order Received email (order still finalized)', {
+              orderId: order.id,
+              error: emailError instanceof Error ? emailError.message : String(emailError),
+            });
+          }
+        } else {
+          // NOT FINALIZED: Just broadcast modification update (still in review window)
+          await broadcastOrderUpdate(order.id, updatedOrder.status, {
+            modificationType: 'item_update',
+            newItemCount: validItems.length,
+            totalChanged: pricing.total !== order.total,
+            newTotal: pricing.total,
+            awaitingConfirmation: true, // Order still needs customer to click Confirm
+          });
+          logger.info('Order modification broadcasted - still awaiting customer confirmation', {
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+            status: updatedOrder.status,
+          });
+        }
       } catch (broadcastError) {
         logger.error('Failed to broadcast order update', {
           orderId: order.id,
@@ -379,13 +477,26 @@ export async function POST(request: NextRequest) {
       lastModifiedAt: updatedOrder.lastModifiedAt?.toISOString(),
     };
     
-    return NextResponse.json({
-      success: true,
-      order: formattedOrder,
-      timeRemaining, // in milliseconds
-      awaitingConfirmation: true, // Order still needs chef approval
-      message: `Order updated! You have ${Math.ceil(timeRemaining / 1000 / 60)} minutes to make more changes. Your order is awaiting kitchen confirmation.`,
-    });
+    // Different response based on whether order was finalized
+    if (wasFinalized) {
+      return NextResponse.json({
+        success: true,
+        order: formattedOrder,
+        timeRemaining: 0,
+        awaitingConfirmation: false, // Order sent to kitchen!
+        finalized: true,
+        message: 'Your order has been sent to the kitchen! You\'ll be notified when the chef confirms it.',
+      });
+    } else {
+      return NextResponse.json({
+        success: true,
+        order: formattedOrder,
+        timeRemaining, // in milliseconds
+        awaitingConfirmation: true, // Still needs customer to click Confirm
+        finalized: false,
+        message: `Order updated! You have ${Math.ceil(timeRemaining / 1000 / 60)} minutes to make more changes. Click "Confirm & Send to Kitchen" when ready.`,
+      });
+    }
     
   } catch (error) {
     logger.error('Error modifying order', {

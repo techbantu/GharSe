@@ -101,27 +101,16 @@ export async function POST(request: NextRequest) {
       });
     }
     
-    // DISABLED AUTO-FINALIZATION: Order stays in PENDING_CONFIRMATION until chef manually confirms
-    // Orders should only be confirmed by the chef in the Kitchen Display System
-    logger.warn('Finalize endpoint called but auto-confirmation is disabled', {
-      orderId: order.id,
-      orderNumber: order.orderNumber,
-    });
-    
-    return NextResponse.json({
-      success: true,
-      message: 'Order awaiting kitchen confirmation. Chef will review and confirm.',
-      order,
-      note: 'Auto-confirmation disabled - requires manual chef approval'
-    });
-    
-    /* COMMENTED OUT - NO AUTO-CONFIRMATION
+    // ENABLED: Customer confirms order → Move to PENDING → Broadcast to kitchen
+    // This is the ONLY way orders become visible to the kitchen
+
     // Update order status to PENDING (visible to kitchen)
     const finalizedOrder = await (prisma.order.update as any)({
       where: { id: data.orderId },
       data: {
         status: 'PENDING',
-        confirmedAt: new Date(), // Mark when order was confirmed/finalized
+        // Note: confirmedAt will be set when CHEF confirms, not customer
+        // This is customer confirmation to send to kitchen
       },
       include: {
         items: {
@@ -131,8 +120,8 @@ export async function POST(request: NextRequest) {
         },
       },
     });
-    
-    logger.info('Order finalized successfully', {
+
+    logger.info('Order finalized by customer - NOW visible to kitchen', {
       orderId: finalizedOrder.id,
       orderNumber: finalizedOrder.orderNumber,
       oldStatus: 'PENDING_CONFIRMATION',
@@ -140,8 +129,8 @@ export async function POST(request: NextRequest) {
       itemCount: finalizedOrder.items.length,
       total: finalizedOrder.total,
     });
-    
-    // Broadcast to kitchen via WebSocket
+
+    // Broadcast to kitchen via WebSocket - THIS is when chef first sees the order
     try {
       await broadcastNewOrderToAdmin({
         id: finalizedOrder.id,
@@ -152,9 +141,9 @@ export async function POST(request: NextRequest) {
           phone: finalizedOrder.customerPhone,
         },
         pricing: {
-          total: finalizedOrder.total,
+          total: parseFloat(finalizedOrder.total?.toString() || '0'),
         },
-        status: finalizedOrder.status,
+        status: 'pending', // Frontend expects lowercase
         createdAt: finalizedOrder.createdAt,
         items: finalizedOrder.items.map((item: any) => ({
           menuItem: {
@@ -163,25 +152,24 @@ export async function POST(request: NextRequest) {
           quantity: item.quantity,
         })),
       });
-      
-      logger.info('Order broadcasted to kitchen', {
+
+      logger.info('Order broadcasted to kitchen - Chef can now see it', {
         orderId: finalizedOrder.id,
         orderNumber: finalizedOrder.orderNumber,
       });
     } catch (wsError) {
-      // Don't fail finalization if WebSocket fails
-      logger.error('Failed to broadcast to kitchen (order still finalized)', {
+      // Don't fail finalization if WebSocket fails - kitchen will still poll
+      logger.error('Failed to broadcast to kitchen (order still finalized, kitchen will poll)', {
         orderId: finalizedOrder.id,
         error: wsError instanceof Error ? wsError.message : String(wsError),
       });
     }
-    
+
     return NextResponse.json({
       success: true,
-      message: 'Order has been sent to the kitchen',
+      message: 'Order confirmed and sent to kitchen!',
       order: finalizedOrder,
     });
-    */
     
   } catch (error) {
     logger.error('Order finalization failed', {
