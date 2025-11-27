@@ -19,12 +19,16 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Calendar, Clock, AlertCircle, CheckCircle2, Zap, MapPin, ChefHat, Truck } from 'lucide-react';
-import { format, addDays, startOfDay, isToday, isTomorrow } from 'date-fns';
+import { format, addDays, startOfDay } from 'date-fns';
 import { format as formatTz } from 'date-fns-tz';
 import {
   getUserRegion,
   generateTimeSlots,
-  getAvailableDeliveryDates,
+  getAvailableDeliveryDatesForBrowser,
+  isTodayInBrowserTz,
+  isTomorrowInBrowserTz,
+  formatForBrowser,
+  getBrowserTimezone,
   type RegionConfig,
   type TimeSlot,
 } from '@/lib/timezone-service';
@@ -101,7 +105,8 @@ export const DeliveryTimeSlotPicker: React.FC<DeliveryTimeSlotPickerProps> = ({
   // ===== COMPUTED VALUES =====
 
   const availableDates = useMemo(() => {
-    return getAvailableDeliveryDates(userRegion);
+    // Use browser timezone for date display (customer sees dates in THEIR timezone)
+    return getAvailableDeliveryDatesForBrowser(userRegion);
   }, [userRegion]);
 
   const availableTimeSlots = useMemo(() => {
@@ -165,9 +170,10 @@ export const DeliveryTimeSlotPicker: React.FC<DeliveryTimeSlotPickerProps> = ({
   // ===== HELPER FUNCTIONS =====
 
   const getDateLabel = (date: Date): string => {
-    if (isToday(date)) return 'Today';
-    if (isTomorrow(date)) return 'Tomorrow';
-    return format(date, 'MMM d');
+    // Use browser timezone-aware comparison for "Today" and "Tomorrow"
+    if (isTodayInBrowserTz(date)) return 'Today';
+    if (isTomorrowInBrowserTz(date)) return 'Tomorrow';
+    return formatForBrowser(date, 'MMM d');
   };
 
   const getSlotsAvailableForDate = (date: Date): number => {
@@ -207,13 +213,13 @@ export const DeliveryTimeSlotPicker: React.FC<DeliveryTimeSlotPickerProps> = ({
             Delivering to: {userRegion.name}
           </h4>
           <p style={{ fontSize: '13px', color: '#1e40af', margin: 0, lineHeight: 1.5 }}>
-            All times shown in <strong>{userRegion.timezone}</strong> timezone. Business hours:{' '}
+            All times shown in <strong>your local timezone</strong> ({getBrowserTimezone()}). Business hours:{' '}
             <strong>{userRegion.businessHours.openTime.hour}:00 AM - {userRegion.businessHours.closeTime.hour}:00 PM</strong>
           </p>
         </div>
         {lastUpdateTime && (
           <div style={{ fontSize: '11px', color: '#3b82f6', whiteSpace: 'nowrap' }}>
-            Updated {format(lastUpdateTime, 'h:mm a')}
+            Updated {formatForBrowser(lastUpdateTime, 'h:mm a')}
           </div>
         )}
       </div>

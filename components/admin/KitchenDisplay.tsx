@@ -249,6 +249,50 @@ const KitchenDisplay: React.FC<KitchenOrdersProps> = ({
                   order.paymentMethod?.toLowerCase().includes('gpay') || 
                   order.paymentMethod?.toLowerCase().includes('phonepe');
     
+    // Check if scheduled order and calculate time remaining
+    const isScheduled = order.scheduledDeliveryAt || order.scheduledWindowStart;
+    const scheduledTime = isScheduled 
+      ? new Date(order.scheduledWindowStart || order.scheduledDeliveryAt || 0)
+      : null;
+    
+    // Calculate minutes remaining until delivery
+    const getTimeRemaining = () => {
+      if (!scheduledTime) return null;
+      const now = new Date();
+      const diffMs = scheduledTime.getTime() - now.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      return diffMins;
+    };
+    
+    const timeRemaining = getTimeRemaining();
+    
+    // Format time remaining for display
+    const formatTimeRemaining = (mins: number | null) => {
+      if (mins === null) return null;
+      if (mins < 0) {
+        const overdue = Math.abs(mins);
+        if (overdue < 60) return `${overdue}m overdue!`;
+        const hours = Math.floor(overdue / 60);
+        const minutes = overdue % 60;
+        return `${hours}h ${minutes}m overdue!`;
+      }
+      if (mins < 60) return `${mins}m left`;
+      const hours = Math.floor(mins / 60);
+      const minutes = mins % 60;
+      return minutes > 0 ? `${hours}h ${minutes}m left` : `${hours}h left`;
+    };
+    
+    // Urgency based on time remaining
+    const getUrgencyColor = () => {
+      if (timeRemaining === null) return null;
+      if (timeRemaining < 0) return '#EF4444'; // Red - overdue
+      if (timeRemaining <= 30) return '#EF4444'; // Red - urgent
+      if (timeRemaining <= 60) return '#F97316'; // Orange - soon
+      return '#10B981'; // Green - plenty of time
+    };
+    
+    const urgencyColor = getUrgencyColor();
+    
     // Column-specific styles
     const columnStyles = {
       new: { accent: '#3B82F6', bg: '#EFF6FF', border: '#93C5FD' },
@@ -329,6 +373,49 @@ const KitchenDisplay: React.FC<KitchenOrdersProps> = ({
             {formatForRestaurant(order.createdAt, 'h:mm a')}
               </span>
             </div>
+        
+        {/* Scheduled Delivery Banner - Shows time remaining */}
+        {isScheduled && scheduledTime && (
+          <div style={{
+            background: urgencyColor ? `${urgencyColor}15` : '#F0FDF4',
+            padding: '6px 10px',
+            borderBottom: `2px solid ${urgencyColor || '#10B981'}`,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '14px' }}>🕐</span>
+              <div>
+                <div style={{ 
+                  fontSize: '11px', 
+                  fontWeight: 700, 
+                  color: urgencyColor || '#059669'
+                }}>
+                  {formatForRestaurant(scheduledTime, 'h:mm a')}
+                </div>
+                <div style={{ 
+                  fontSize: '9px', 
+                  color: '#6B7280'
+                }}>
+                  {formatForRestaurant(scheduledTime, 'EEE, MMM d')}
+                </div>
+              </div>
+            </div>
+            <div style={{
+              fontSize: '10px',
+              fontWeight: 700,
+              padding: '3px 8px',
+              borderRadius: '4px',
+              background: urgencyColor || '#10B981',
+              color: 'white',
+              whiteSpace: 'nowrap'
+            }}>
+              {formatTimeRemaining(timeRemaining)}
+            </div>
+          </div>
+        )}
             
         {/* Body - Customer + Items */}
         <div style={{ padding: '8px 10px' }}>

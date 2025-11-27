@@ -1,17 +1,21 @@
 /**
- * NEW FILE: Product Detail Modal
+ * ProductDetailModal - Unified Product Detail View
  * 
- * Purpose: Shows beautiful product details in an interactive modal when items are clicked
- * Features: Full product info, images, reviews, add to cart functionality
+ * DESIGN PRINCIPLES:
+ * 1. ONE consistent layout for ALL items (available or not)
+ * 2. Structure: Image → Name → Description → Stats → Price → Action
+ * 3. Top-left: Dietary icons (Veg, Vegan, Gluten-free, Spicy)
+ * 4. Top-right: Close button (ALWAYS visible, high z-index)
+ * 5. Available items: Quantity selector + Add to Cart
+ * 6. Unavailable items: Same layout, disabled "Currently Unavailable" button
  * 
- * IMPORTANT: Items marked as unavailable (isAvailable=false) cannot be ordered.
- * The modal shows "Currently Unavailable" and disables all ordering controls.
+ * NO conditional layouts. NO missing elements. ONE unified template.
  */
 
 'use client';
 
-import React, { useState } from 'react';
-import { X, Plus, Minus, Star, Flame, Leaf, WheatOff, Clock, Utensils, Scale, Ban } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Plus, Minus, Clock, Flame, Utensils, Leaf, WheatOff, Star, Ban } from 'lucide-react';
 import { MenuItem } from '@/types';
 import { useCart } from '@/context/CartContext';
 
@@ -27,97 +31,157 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   onClose,
 }) => {
   const [quantity, setQuantity] = useState(1);
-  const [isFavorite, setIsFavorite] = useState(false);
   const { addItem } = useCart();
 
+  // Reset quantity when modal opens with a new item
+  useEffect(() => {
+    if (isOpen) {
+      setQuantity(1);
+    }
+  }, [isOpen, item?.id]);
+
+  // Don't render if not open or no item
   if (!isOpen || !item) return null;
 
-  // Check if item is available for ordering
-  // isAvailable=false means "Out of Stock" (temporarily unavailable)
-  const isItemAvailable = item.isAvailable !== false;
-  
-  // Also check inventory if tracking is enabled
-  const hasStock = !item.inventoryEnabled || 
-                   item.inventory === null || 
-                   item.inventory === undefined || 
-                   item.inventory > 0;
-  
-  // Item can be ordered only if available AND has stock
-  const canOrder = isItemAvailable && hasStock;
+  // Determine if item can be ordered
+  const isAvailable = item.isAvailable !== false;
+  const hasInventory = !item.inventoryEnabled || 
+                       item.inventory === null || 
+                       item.inventory === undefined || 
+                       item.inventory > 0;
+  const canOrder = isAvailable && hasInventory;
 
+  // Handle add to cart
   const handleAddToCart = () => {
-    // CRITICAL: Prevent ordering unavailable items
     if (!canOrder) return;
-    
     addItem(item, quantity);
     setQuantity(1);
     onClose();
   };
 
+  // Handle quantity changes
+  const decrementQuantity = () => setQuantity(Math.max(1, quantity - 1));
+  const incrementQuantity = () => setQuantity(Math.min(10, quantity + 1));
+
+  // Build dietary badges array (only show icons that apply)
+  const dietaryBadges: { icon: React.ReactNode; title: string; color: string }[] = [];
+  
+  if (item.isVegetarian) {
+    dietaryBadges.push({
+      icon: <Leaf size={16} />,
+      title: 'Vegetarian',
+      color: '#10b981'
+    });
+  }
+  if (item.isVegan) {
+    dietaryBadges.push({
+      icon: <Leaf size={16} fill="currentColor" />,
+      title: 'Vegan',
+      color: '#059669'
+    });
+  }
+  if (item.isGlutenFree) {
+    dietaryBadges.push({
+      icon: <WheatOff size={16} />,
+      title: 'Gluten Free',
+      color: '#d97706'
+    });
+  }
+  if (item.spicyLevel && item.spicyLevel > 0) {
+    dietaryBadges.push({
+      icon: <Flame size={16} fill="currentColor" />,
+      title: `Spicy Level ${item.spicyLevel}`,
+      color: '#ef4444'
+    });
+  }
+  if (item.isPopular) {
+    dietaryBadges.push({
+      icon: <Star size={16} fill="currentColor" />,
+      title: 'Popular',
+      color: '#f59e0b'
+    });
+  }
+
   return (
     <>
-      {/* Backdrop */}
+      {/* Backdrop - Click to close */}
       <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 animate-fade-in"
         onClick={onClose}
+        style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          backdropFilter: 'blur(4px)',
+          zIndex: 9998,
+        }}
       />
 
-      {/* Modal - Compact Vertical Card */}
-      <div 
-        className="fixed inset-0 z-50 flex items-center justify-center"
-        style={{ padding: '16px' }}
+      {/* Modal Container */}
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px',
+          zIndex: 9999,
+          pointerEvents: 'none',
+        }}
       >
-        <div 
-          className="bg-white rounded-2xl shadow-2xl overflow-hidden"
-          style={{
-            width: '100%',
-            maxWidth: '420px',
-            maxHeight: '90vh',
-            overflowY: 'auto'
-          }}
+        {/* Modal Card */}
+        <div
           onClick={(e) => e.stopPropagation()}
+          style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '20px',
+            width: '100%',
+            maxWidth: '400px',
+            maxHeight: '85vh',
+            overflow: 'hidden',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            display: 'flex',
+            flexDirection: 'column',
+            pointerEvents: 'auto',
+          }}
         >
-          {/* Image Section - Square, Clean */}
-          <div 
-            className="relative"
+          {/* ============================================ */}
+          {/* IMAGE SECTION */}
+          {/* ============================================ */}
+          <div
             style={{
+              position: 'relative',
               width: '100%',
-              height: '320px',
-              backgroundColor: '#f9fafb',
-              overflow: 'hidden'
+              height: '280px',
+              backgroundColor: '#f3f4f6',
+              flexShrink: 0,
             }}
           >
+            {/* Product Image */}
             <img
-              src={item.image}
+              src={item.image || '/images/placeholder-food.jpg'}
               alt={item.name}
               style={{
                 width: '100%',
                 height: '100%',
                 objectFit: 'cover',
-                objectPosition: item.imagePosition 
-                  ? `${50 + item.imagePosition.x}% ${50 + item.imagePosition.y}%`
-                  : 'center center',
-                transform: item.imagePosition 
-                  ? `scale(${item.imagePosition.scale})` 
-                  : 'scale(1)',
-                display: 'block'
               }}
               onError={(e) => {
-                e.currentTarget.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='320'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23FF6B35;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%23F77F00;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='420' height='320' fill='url(%23grad)'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='24' fill='white' font-family='system-ui' font-weight='600'%3E${encodeURIComponent(item.name)}%3C/text%3E%3C/svg%3E`;
+                e.currentTarget.src = '/images/placeholder-food.jpg';
               }}
             />
 
-            {/* Close Button - Top Right */}
+            {/* CLOSE BUTTON - Top Right - ALWAYS visible */}
             <button
               onClick={onClose}
+              aria-label="Close"
               style={{
                 position: 'absolute',
                 top: '12px',
                 right: '12px',
-                width: '36px',
-                height: '36px',
-                background: 'rgba(255, 255, 255, 0.95)',
-                backdropFilter: 'blur(8px)',
+                width: '40px',
+                height: '40px',
+                backgroundColor: 'rgba(255, 255, 255, 0.95)',
                 border: 'none',
                 borderRadius: '50%',
                 display: 'flex',
@@ -125,379 +189,341 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 justifyContent: 'center',
                 cursor: 'pointer',
                 boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = '#ffffff';
-                e.currentTarget.style.transform = 'scale(1.1)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.95)';
-                e.currentTarget.style.transform = 'scale(1)';
+                zIndex: 20, // Always on top
               }}
             >
-              <X size={20} style={{ color: '#374151' }} />
+              <X size={20} color="#374151" />
             </button>
 
-            {/* OUT OF STOCK OVERLAY - Shows when item is unavailable */}
+            {/* DIETARY BADGES - Top Left */}
+            {dietaryBadges.length > 0 && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '12px',
+                  left: '12px',
+                  display: 'flex',
+                  gap: '8px',
+                  flexWrap: 'wrap',
+                  maxWidth: 'calc(100% - 70px)', // Leave room for close button
+                  zIndex: 10,
+                }}
+              >
+                {dietaryBadges.map((badge, index) => (
+                  <div
+                    key={index}
+                    title={badge.title}
+                    style={{
+                      width: '36px',
+                      height: '36px',
+                      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.12)',
+                      color: badge.color,
+                    }}
+                  >
+                    {badge.icon}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* UNAVAILABLE OVERLAY - Only shows when item cannot be ordered */}
             {!canOrder && (
               <div
                 style={{
                   position: 'absolute',
                   inset: 0,
-                  background: 'rgba(0, 0, 0, 0.7)',
-                  backdropFilter: 'blur(4px)',
+                  backgroundColor: 'rgba(0, 0, 0, 0.65)',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  zIndex: 5,
+                  zIndex: 15, // Above image, below close button
                 }}
               >
                 <div
                   style={{
-                    width: '64px',
-                    height: '64px',
-                    background: '#dc2626',
+                    width: '56px',
+                    height: '56px',
+                    backgroundColor: '#dc2626',
                     borderRadius: '50%',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     marginBottom: '12px',
-                    boxShadow: '0 4px 12px rgba(220, 38, 38, 0.4)',
                   }}
                 >
-                  <Ban size={32} style={{ color: '#ffffff' }} />
+                  <Ban size={28} color="#ffffff" />
                 </div>
                 <span
                   style={{
                     color: '#ffffff',
-                    fontSize: '18px',
+                    fontSize: '16px',
                     fontWeight: 700,
-                    textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
                   }}
                 >
                   Currently Unavailable
                 </span>
               </div>
             )}
-
-            {/* Icon Badges - Top Left, Circular */}
-            <div 
-              style={{
-                position: 'absolute',
-                top: '12px',
-                left: '12px',
-                display: 'flex',
-                gap: '8px',
-                flexWrap: 'wrap',
-                zIndex: 6,
-              }}
-            >
-              {item.isVegetarian && (
-                <div
-                  style={{
-                    width: '36px',
-                    height: '36px',
-                    background: 'rgba(255, 255, 255, 0.95)',
-                    backdropFilter: 'blur(8px)',
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)'
-                  }}
-                  title="Vegetarian"
-                >
-                  <Leaf size={18} style={{ color: '#10b981' }} />
-                </div>
-              )}
-              {item.spicyLevel && item.spicyLevel > 0 && (
-                <div
-                  style={{
-                    width: '36px',
-                    height: '36px',
-                    background: 'rgba(255, 255, 255, 0.95)',
-                    backdropFilter: 'blur(8px)',
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)'
-                  }}
-                  title="Spicy"
-                >
-                  <Flame size={18} style={{ color: '#f97316' }} fill="#f97316" />
-                </div>
-              )}
-              {item.isPopular && (
-                <div
-                  style={{
-                    width: '36px',
-                    height: '36px',
-                    background: 'rgba(255, 255, 255, 0.95)',
-                    backdropFilter: 'blur(8px)',
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)'
-                  }}
-                  title="Popular"
-                >
-                  <Star size={18} style={{ color: '#fbbf24' }} fill="#fbbf24" />
-                </div>
-              )}
-              {item.isVegan && (
-                <div
-                  style={{
-                    width: '36px',
-                    height: '36px',
-                    background: 'rgba(255, 255, 255, 0.95)',
-                    backdropFilter: 'blur(8px)',
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)'
-                  }}
-                  title="Vegan"
-                >
-                  <Leaf size={18} className="text-green-800" fill="currentColor" />
-                </div>
-              )}
-              {item.isGlutenFree && (
-                <div
-                  style={{
-                    width: '36px',
-                    height: '36px',
-                    background: 'rgba(255, 255, 255, 0.95)',
-                    backdropFilter: 'blur(8px)',
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)'
-                  }}
-                  title="Gluten Free"
-                >
-                  <WheatOff size={18} className="text-amber-600" />
-                </div>
-              )}
-            </div>
           </div>
 
-          {/* Content Section */}
-          <div style={{ padding: '20px' }}>
-            {/* Title */}
-            <h2 style={{
-              fontSize: '24px',
-              fontWeight: 800,
-              color: '#1f2937',
-              marginBottom: '12px',
-              lineHeight: '1.2'
-            }}>
+          {/* ============================================ */}
+          {/* CONTENT SECTION */}
+          {/* ============================================ */}
+          <div
+            style={{
+              padding: '20px',
+              overflowY: 'auto',
+              flex: 1,
+            }}
+          >
+            {/* Product Name */}
+            <h2
+              style={{
+                fontSize: '22px',
+                fontWeight: 800,
+                color: '#1f2937',
+                margin: '0 0 8px 0',
+                lineHeight: 1.2,
+              }}
+            >
               {item.name}
             </h2>
 
             {/* Description */}
-            <p style={{
-              fontSize: '14px',
-              color: '#6b7280',
-              lineHeight: '1.6',
-              marginBottom: '16px'
-            }}>
+            <p
+              style={{
+                fontSize: '14px',
+                color: '#6b7280',
+                margin: '0 0 16px 0',
+                lineHeight: 1.5,
+              }}
+            >
               {item.description}
             </p>
 
-            {/* Key Stats Row */}
-            <div className="flex items-center gap-4 mb-4 text-sm text-gray-600">
+            {/* Stats Row - Prep Time, Calories, Serving Size */}
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '8px',
+                marginBottom: '16px',
+              }}
+            >
               {item.preparationTime && (
-                <div className="flex items-center gap-1.5 bg-orange-50 px-2.5 py-1 rounded-lg border border-orange-100">
-                  <Clock size={14} className="text-orange-500" />
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 12px',
+                    backgroundColor: '#fff7ed',
+                    borderRadius: '8px',
+                    border: '1px solid #fed7aa',
+                    fontSize: '13px',
+                    color: '#c2410c',
+                  }}
+                >
+                  <Clock size={14} />
                   <span>{item.preparationTime} mins</span>
                 </div>
               )}
               {item.calories && (
-                <div className="flex items-center gap-1.5 bg-green-50 px-2.5 py-1 rounded-lg border border-green-100">
-                  <Flame size={14} className="text-green-500" />
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 12px',
+                    backgroundColor: '#f0fdf4',
+                    borderRadius: '8px',
+                    border: '1px solid #bbf7d0',
+                    fontSize: '13px',
+                    color: '#16a34a',
+                  }}
+                >
+                  <Flame size={14} />
                   <span>{item.calories} kcal</span>
                 </div>
               )}
               {item.servingSize && (
-                <div className="flex items-center gap-1.5 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-100">
-                  <Utensils size={14} className="text-blue-500" />
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 12px',
+                    backgroundColor: '#eff6ff',
+                    borderRadius: '8px',
+                    border: '1px solid #bfdbfe',
+                    fontSize: '13px',
+                    color: '#2563eb',
+                  }}
+                >
+                  <Utensils size={14} />
                   <span>{item.servingSize}</span>
                 </div>
               )}
             </div>
 
             {/* Price */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'baseline',
-              gap: '12px',
-              marginBottom: '20px'
-            }}>
-              <span style={{
-                fontSize: '32px',
-                fontWeight: 900,
-                color: '#f97316'
-              }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'baseline',
+                gap: '10px',
+                marginBottom: '20px',
+              }}
+            >
+              <span
+                style={{
+                  fontSize: '28px',
+                  fontWeight: 900,
+                  color: '#ea580c',
+                }}
+              >
                 ₹{item.price}
               </span>
               {item.originalPrice && item.originalPrice > item.price && (
-                <span style={{
-                  fontSize: '18px',
-                  color: '#9ca3af',
-                  textDecoration: 'line-through'
-                }}>
+                <span
+                  style={{
+                    fontSize: '16px',
+                    color: '#9ca3af',
+                    textDecoration: 'line-through',
+                  }}
+                >
                   ₹{item.originalPrice}
                 </span>
               )}
             </div>
 
-            {/* Quantity Selector & Add to Cart - OR Unavailable Message */}
-            {canOrder ? (
-              <div style={{
+            {/* ============================================ */}
+            {/* ACTION SECTION - Same structure, different state */}
+            {/* ============================================ */}
+            <div
+              style={{
                 display: 'flex',
                 gap: '12px',
-                marginBottom: '16px'
-              }}>
-                {/* Quantity Selector */}
-                <div style={{
+                marginBottom: '16px',
+              }}
+            >
+              {/* Quantity Selector - Always same structure */}
+              <div
+                style={{
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'space-between',
-                  background: '#f3f4f6',
+                  backgroundColor: canOrder ? '#f3f4f6' : '#f9fafb',
                   borderRadius: '12px',
-                  padding: '8px 12px',
-                  minWidth: '120px'
-                }}>
-                  <button
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    style={{
-                      width: '32px',
-                      height: '32px',
-                      background: 'transparent',
-                      border: 'none',
-                      borderRadius: '8px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = '#e5e7eb';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'transparent';
-                    }}
-                  >
-                    <Minus size={18} style={{ color: '#374151' }} />
-                  </button>
-                  <span style={{
-                    fontSize: '18px',
-                    fontWeight: 700,
-                    color: '#1f2937',
-                    minWidth: '24px',
-                    textAlign: 'center'
-                  }}>
-                    {quantity}
-                  </span>
-                  <button
-                    onClick={() => setQuantity(quantity + 1)}
-                    style={{
-                      width: '32px',
-                      height: '32px',
-                      background: 'transparent',
-                      border: 'none',
-                      borderRadius: '8px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = '#e5e7eb';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'transparent';
-                    }}
-                  >
-                    <Plus size={18} style={{ color: '#374151' }} />
-                  </button>
-                </div>
-
-                {/* Add to Cart Button */}
+                  padding: '6px',
+                  opacity: canOrder ? 1 : 0.5,
+                }}
+              >
                 <button
-                  onClick={handleAddToCart}
+                  onClick={decrementQuantity}
+                  disabled={!canOrder || quantity <= 1}
                   style={{
-                    flex: 1,
-                    background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
-                    color: '#ffffff',
-                    fontWeight: 700,
-                    fontSize: '16px',
-                    padding: '12px 24px',
-                    borderRadius: '12px',
+                    width: '36px',
+                    height: '36px',
+                    backgroundColor: 'transparent',
                     border: 'none',
-                    cursor: 'pointer',
+                    borderRadius: '8px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '8px',
-                    boxShadow: '0 4px 12px rgba(249, 115, 22, 0.3)',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(249, 115, 22, 0.4)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(249, 115, 22, 0.3)';
+                    cursor: canOrder ? 'pointer' : 'not-allowed',
+                    opacity: quantity <= 1 ? 0.4 : 1,
                   }}
                 >
-                  <Plus size={20} />
-                  <span>Add to Cart</span>
+                  <Minus size={18} color="#374151" />
+                </button>
+                <span
+                  style={{
+                    minWidth: '32px',
+                    textAlign: 'center',
+                    fontSize: '18px',
+                    fontWeight: 700,
+                    color: '#1f2937',
+                  }}
+                >
+                  {quantity}
+                </span>
+                <button
+                  onClick={incrementQuantity}
+                  disabled={!canOrder || quantity >= 10}
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: canOrder ? 'pointer' : 'not-allowed',
+                    opacity: quantity >= 10 ? 0.4 : 1,
+                  }}
+                >
+                  <Plus size={18} color="#374151" />
                 </button>
               </div>
-            ) : (
-              /* UNAVAILABLE STATE - No ordering allowed */
-              <div style={{
-                marginBottom: '16px',
-                padding: '16px',
-                background: '#fef2f2',
-                border: '2px solid #fecaca',
-                borderRadius: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '10px',
-              }}>
-                <Ban size={20} style={{ color: '#dc2626' }} />
-                <span style={{
-                  color: '#dc2626',
-                  fontWeight: 700,
-                  fontSize: '16px',
-                }}>
-                  Currently Unavailable
-                </span>
-              </div>
-            )}
 
-            {/* Additional Info - Compact */}
-            <div style={{
-              padding: '12px 16px',
-              background: '#f0f9ff',
-              border: '1px solid #bae6fd',
-              borderRadius: '12px',
-              fontSize: '12px',
-              color: '#0369a1',
-              lineHeight: '1.5'
-            }}>
+              {/* Add to Cart / Unavailable Button */}
+              <button
+                onClick={canOrder ? handleAddToCart : undefined}
+                disabled={!canOrder}
+                style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  padding: '14px 20px',
+                  borderRadius: '12px',
+                  border: canOrder ? 'none' : '2px solid #fecaca',
+                  backgroundColor: canOrder 
+                    ? '#ea580c' 
+                    : '#fef2f2',
+                  color: canOrder ? '#ffffff' : '#dc2626',
+                  fontSize: '16px',
+                  fontWeight: 700,
+                  cursor: canOrder ? 'pointer' : 'not-allowed',
+                  boxShadow: canOrder 
+                    ? '0 4px 12px rgba(234, 88, 12, 0.3)' 
+                    : 'none',
+                }}
+              >
+                {canOrder ? (
+                  <>
+                    <Plus size={20} />
+                    <span>Add to Cart</span>
+                  </>
+                ) : (
+                  <>
+                    <Ban size={18} />
+                    <span>Currently Unavailable</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Footer Info */}
+            <div
+              style={{
+                padding: '12px 16px',
+                backgroundColor: '#f0f9ff',
+                borderRadius: '10px',
+                border: '1px solid #bae6fd',
+                fontSize: '12px',
+                color: '#0369a1',
+                lineHeight: 1.5,
+              }}
+            >
               ✓ Fresh ingredients • ✓ Home-cooked • ✓ Authentic recipes • ✓ Free delivery over ₹499
             </div>
           </div>

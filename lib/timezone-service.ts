@@ -19,7 +19,7 @@
  */
 
 import { format, toZonedTime, fromZonedTime } from 'date-fns-tz';
-import { addMinutes, isAfter, startOfDay } from 'date-fns';
+import { addMinutes, isAfter, startOfDay, isSameDay, addDays } from 'date-fns';
 
 // ===== REGION CONFIGURATION (Multi-Country Support) =====
 
@@ -566,5 +566,84 @@ export function formatPrepAndDeliveryTime(prepMinutes: number, deliveryMinutes: 
 export function formatTotalTime(prepMinutes: number, deliveryMinutes: number): string {
   const total = prepMinutes + deliveryMinutes;
   return `${formatMinutesToHuman(total)} total`;
+}
+
+// ===== BROWSER TIMEZONE HELPERS =====
+
+/**
+ * Get the user's browser timezone
+ * This is the timezone the user's device is set to
+ */
+export function getBrowserTimezone(): string {
+  if (typeof window === 'undefined') {
+    // Server-side: return UTC or default
+    return 'UTC';
+  }
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+  } catch {
+    return 'UTC';
+  }
+}
+
+/**
+ * Get current date in browser's timezone
+ * Use this for "Today", "Tomorrow" calculations on the client
+ */
+export function getTodayInBrowserTimezone(): Date {
+  const now = new Date();
+  const browserTz = getBrowserTimezone();
+  return toZonedTime(now, browserTz);
+}
+
+/**
+ * Check if a date is "today" in the browser's timezone
+ * Use this instead of date-fns isToday() for timezone-aware comparison
+ */
+export function isTodayInBrowserTz(date: Date): boolean {
+  const todayInBrowser = getTodayInBrowserTimezone();
+  const dateInBrowser = toZonedTime(date, getBrowserTimezone());
+  return isSameDay(todayInBrowser, dateInBrowser);
+}
+
+/**
+ * Check if a date is "tomorrow" in the browser's timezone
+ * Use this instead of date-fns isTomorrow() for timezone-aware comparison
+ */
+export function isTomorrowInBrowserTz(date: Date): boolean {
+  const todayInBrowser = getTodayInBrowserTimezone();
+  const tomorrowInBrowser = addDays(todayInBrowser, 1);
+  const dateInBrowser = toZonedTime(date, getBrowserTimezone());
+  return isSameDay(tomorrowInBrowser, dateInBrowser);
+}
+
+/**
+ * Format a date for display in the user's browser timezone
+ * Use this for customer-facing date displays
+ */
+export function formatForBrowser(utcDate: Date | string, formatString: string = 'PPpp'): string {
+  const browserTz = getBrowserTimezone();
+  const dateObj = typeof utcDate === 'string' ? new Date(utcDate) : utcDate;
+  const zonedDate = toZonedTime(dateObj, browserTz);
+  return format(zonedDate, formatString, { timeZone: browserTz });
+}
+
+/**
+ * Get available delivery dates in the user's browser timezone
+ * Use this for the date picker on the customer-facing checkout
+ */
+export function getAvailableDeliveryDatesForBrowser(regionConfig: RegionConfig): Date[] {
+  const browserTz = getBrowserTimezone();
+  const now = new Date();
+  const nowInBrowser = toZonedTime(now, browserTz);
+  const dates: Date[] = [];
+
+  for (let i = 0; i <= regionConfig.maxAdvanceDays; i++) {
+    const date = startOfDay(nowInBrowser);
+    date.setDate(date.getDate() + i);
+    dates.push(date);
+  }
+
+  return dates;
 }
 
