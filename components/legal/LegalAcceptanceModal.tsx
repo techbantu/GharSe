@@ -185,28 +185,26 @@ export default function LegalAcceptanceModal() {
       inset: 0,
       zIndex: 9999,
       display: 'flex',
-      alignItems: 'center',
+      alignItems: 'flex-start',
       justifyContent: 'center',
       backgroundColor: 'rgba(0, 0, 0, 0.8)',
       backdropFilter: 'blur(4px)',
+      overflow: 'auto',
+      WebkitOverflowScrolling: 'touch',
+      padding: '16px',
     }}>
       <div style={{
         position: 'relative',
         width: '100%',
         maxWidth: '672px',
-        maxHeight: '90vh',
-        overflowY: 'auto',
-        WebkitOverflowScrolling: 'touch',
         backgroundColor: 'white',
         borderRadius: '16px',
         boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-        margin: '16px',
-        touchAction: 'pan-y',
+        marginTop: '16px',
+        marginBottom: '16px',
       }}>
         {/* Header */}
         <div style={{
-          position: 'sticky',
-          top: 0,
           background: 'linear-gradient(to right, #DC2626, #EA580C)',
           color: 'white',
           padding: '24px',
@@ -529,8 +527,6 @@ export default function LegalAcceptanceModal() {
 
         {/* Footer with Accept Button */}
         <div style={{
-          position: 'sticky',
-          bottom: 0,
           backgroundColor: '#F9FAFB',
           borderTop: '1px solid #E5E7EB',
           padding: '24px',
