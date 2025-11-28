@@ -51,6 +51,9 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@capacitor/cli": "^7.4.4",
+    "@capacitor/core": "^7.4.4",
+    "@capacitor/ios": "^7.4.4",
     "@hookform/resolvers": "^5.2.2",
     "@prisma/client": "6.18.0",
     "@prisma/extension-accelerate": "^2.0.2",
