@@ -293,22 +293,27 @@ export default function LegalAcceptanceModal() {
               alignItems: 'flex-start',
               gap: '12px',
               padding: '16px',
-              border: '2px solid #E5E7EB',
+              border: `2px solid ${acceptedDocs.terms ? '#DC2626' : '#E5E7EB'}`,
               borderRadius: '8px',
               cursor: 'pointer',
               transition: 'border-color 0.2s',
+              WebkitTapHighlightColor: 'transparent',
+              touchAction: 'manipulation',
             }}
-            onMouseEnter={(e) => e.currentTarget.style.borderColor = '#DC2626'}
-            onMouseLeave={(e) => e.currentTarget.style.borderColor = '#E5E7EB'}
+            onClick={() => setAcceptedDocs(prev => ({ ...prev, terms: !prev.terms }))}
             >
               <input
                 type="checkbox"
                 checked={acceptedDocs.terms}
-                onChange={(e) => setAcceptedDocs(prev => ({ ...prev, terms: e.target.checked }))}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  setAcceptedDocs(prev => ({ ...prev, terms: e.target.checked }));
+                }}
                 style={{
                   marginTop: '4px',
-                  width: '20px',
-                  height: '20px',
+                  width: '24px',
+                  height: '24px',
+                  minWidth: '24px',
                   accentColor: '#DC2626',
                   cursor: 'pointer',
                 }}
@@ -343,22 +348,27 @@ export default function LegalAcceptanceModal() {
               alignItems: 'flex-start',
               gap: '12px',
               padding: '16px',
-              border: '2px solid #E5E7EB',
+              border: `2px solid ${acceptedDocs.privacy ? '#DC2626' : '#E5E7EB'}`,
               borderRadius: '8px',
               cursor: 'pointer',
               transition: 'border-color 0.2s',
+              WebkitTapHighlightColor: 'transparent',
+              touchAction: 'manipulation',
             }}
-            onMouseEnter={(e) => e.currentTarget.style.borderColor = '#DC2626'}
-            onMouseLeave={(e) => e.currentTarget.style.borderColor = '#E5E7EB'}
+            onClick={() => setAcceptedDocs(prev => ({ ...prev, privacy: !prev.privacy }))}
             >
               <input
                 type="checkbox"
                 checked={acceptedDocs.privacy}
-                onChange={(e) => setAcceptedDocs(prev => ({ ...prev, privacy: e.target.checked }))}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  setAcceptedDocs(prev => ({ ...prev, privacy: e.target.checked }));
+                }}
                 style={{
                   marginTop: '4px',
-                  width: '20px',
-                  height: '20px',
+                  width: '24px',
+                  height: '24px',
+                  minWidth: '24px',
                   accentColor: '#DC2626',
                   cursor: 'pointer',
                 }}
@@ -393,22 +403,27 @@ export default function LegalAcceptanceModal() {
               alignItems: 'flex-start',
               gap: '12px',
               padding: '16px',
-              border: '2px solid #E5E7EB',
+              border: `2px solid ${acceptedDocs.refund ? '#DC2626' : '#E5E7EB'}`,
               borderRadius: '8px',
               cursor: 'pointer',
               transition: 'border-color 0.2s',
+              WebkitTapHighlightColor: 'transparent',
+              touchAction: 'manipulation',
             }}
-            onMouseEnter={(e) => e.currentTarget.style.borderColor = '#DC2626'}
-            onMouseLeave={(e) => e.currentTarget.style.borderColor = '#E5E7EB'}
+            onClick={() => setAcceptedDocs(prev => ({ ...prev, refund: !prev.refund }))}
             >
               <input
                 type="checkbox"
                 checked={acceptedDocs.refund}
-                onChange={(e) => setAcceptedDocs(prev => ({ ...prev, refund: e.target.checked }))}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  setAcceptedDocs(prev => ({ ...prev, refund: e.target.checked }));
+                }}
                 style={{
                   marginTop: '4px',
-                  width: '20px',
-                  height: '20px',
+                  width: '24px',
+                  height: '24px',
+                  minWidth: '24px',
                   accentColor: '#DC2626',
                   cursor: 'pointer',
                 }}
@@ -443,22 +458,27 @@ export default function LegalAcceptanceModal() {
               alignItems: 'flex-start',
               gap: '12px',
               padding: '16px',
-              border: '2px solid #E5E7EB',
+              border: `2px solid ${acceptedDocs.foodSafety ? '#DC2626' : '#E5E7EB'}`,
               borderRadius: '8px',
               cursor: 'pointer',
               transition: 'border-color 0.2s',
+              WebkitTapHighlightColor: 'transparent',
+              touchAction: 'manipulation',
             }}
-            onMouseEnter={(e) => e.currentTarget.style.borderColor = '#DC2626'}
-            onMouseLeave={(e) => e.currentTarget.style.borderColor = '#E5E7EB'}
+            onClick={() => setAcceptedDocs(prev => ({ ...prev, foodSafety: !prev.foodSafety }))}
             >
               <input
                 type="checkbox"
                 checked={acceptedDocs.foodSafety}
-                onChange={(e) => setAcceptedDocs(prev => ({ ...prev, foodSafety: e.target.checked }))}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  setAcceptedDocs(prev => ({ ...prev, foodSafety: e.target.checked }));
+                }}
                 style={{
                   marginTop: '4px',
-                  width: '20px',
-                  height: '20px',
+                  width: '24px',
+                  height: '24px',
+                  minWidth: '24px',
                   accentColor: '#DC2626',
                   cursor: 'pointer',
                 }}
@@ -534,16 +554,8 @@ export default function LegalAcceptanceModal() {
               color: allDocsAccepted && !isAccepting ? 'white' : '#9CA3AF',
               border: 'none',
               boxShadow: allDocsAccepted && !isAccepting ? '0 10px 15px -3px rgba(220, 38, 38, 0.3)' : 'none',
-            }}
-            onMouseEnter={(e) => {
-              if (allDocsAccepted && !isAccepting) {
-                e.currentTarget.style.boxShadow = '0 20px 25px -5px rgba(220, 38, 38, 0.4)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (allDocsAccepted && !isAccepting) {
-                e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(220, 38, 38, 0.3)';
-              }
+              WebkitTapHighlightColor: 'transparent',
+              touchAction: 'manipulation',
             }}
           >
             {isAccepting ? (
