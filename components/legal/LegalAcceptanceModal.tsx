@@ -196,10 +196,12 @@ export default function LegalAcceptanceModal() {
         maxWidth: '672px',
         maxHeight: '90vh',
         overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
         backgroundColor: 'white',
         borderRadius: '16px',
         boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
         margin: '16px',
+        touchAction: 'pan-y',
       }}>
         {/* Header */}
         <div style={{
