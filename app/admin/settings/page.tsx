@@ -25,12 +25,9 @@ export default function SettingsPage() {
   });
 
   const [payment, setPayment] = useState({
-    bankName: 'HDFC Bank',
-    accountNumber: '•••• •••• 1234',
-    ifsc: 'HDFC0001234',
-    upiId: 'business@upi',
-    settlementPeriod: 'T+1 days',
-    autoPayout: 'Enabled'
+    phonePeUpiId: '',
+    paytmUpiId: '',
+    googlePayUpiId: '',
   });
 
   // Modal visibility state
@@ -137,18 +134,38 @@ export default function SettingsPage() {
     }
   };
 
-  const handleUpdatePayment = async (data: { bankName: string; accountNumber: string; ifsc: string; upiId: string }) => {
-    // TODO: API Call
-    console.log('Updating payment:', data);
-    setPayment(prev => ({
-      ...prev,
-      bankName: data.bankName,
-      accountNumber: data.accountNumber,
-      ifsc: data.ifsc,
-      upiId: data.upiId
-    }));
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+  const handleUpdatePayment = async (data: { phonePeUpiId: string; paytmUpiId: string; googlePayUpiId: string }) => {
+    try {
+      // Call API to update payment settings with QR code generation
+      const chefSlug = 'bantus-kitchen'; // Default chef slug
+      const response = await fetch(`/api/chefs/${chefSlug}/payment-settings`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phonePeUpiId: data.phonePeUpiId || null,
+          paytmUpiId: data.paytmUpiId || null,
+          googlePayUpiId: data.googlePayUpiId || null,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to update payment settings');
+      }
+
+      // Update local state
+      setPayment({
+        phonePeUpiId: data.phonePeUpiId,
+        paytmUpiId: data.paytmUpiId,
+        googlePayUpiId: data.googlePayUpiId,
+      });
+
+      console.log('Payment settings updated, QR codes generated');
+    } catch (error: any) {
+      console.error('Failed to update payment settings:', error);
+      throw error;
+    }
   };
 
   const handleUpdateNotifications = async (data: any) => {
@@ -194,13 +211,12 @@ export default function SettingsPage() {
     {
       title: 'Payment',
       icon: <CreditCard size={20} />,
-      description: 'Payment and billing settings',
+      description: 'UPI payment settings for customer checkout',
       onEdit: () => setIsPaymentModalOpen(true),
       items: [
-        { label: 'Bank Account', value: `${payment.bankName} - ${payment.accountNumber.slice(-4)}` },
-        { label: 'UPI ID', value: payment.upiId },
-        { label: 'Settlement', value: payment.settlementPeriod },
-        { label: 'Auto-payout', value: payment.autoPayout }
+        { label: 'PhonePe UPI', value: payment.phonePeUpiId || 'Not configured' },
+        { label: 'Paytm UPI', value: payment.paytmUpiId || 'Not configured' },
+        { label: 'Google Pay UPI', value: payment.googlePayUpiId || 'Not configured' }
       ]
     }
   ];

@@ -14,7 +14,7 @@
  * THIS COMPETES WITH NATIVE APPS - 80% OF MARKET ON MOBILE
  */
 
-const CACHE_VERSION = 'gharse-v1.0.1';
+const CACHE_VERSION = 'gharse-v1.0.8';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const API_CACHE = `${CACHE_VERSION}-api`;
 const IMAGE_CACHE = `${CACHE_VERSION}-images`;

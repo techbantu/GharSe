@@ -421,11 +421,13 @@ const JourneyTimeline: React.FC<JourneyTimelineProps> = ({ orders, onReorder }) 
                   </span>
                 </div>
 
-                {/* Action Buttons Row - Compact */}
+                {/* Action Buttons Row - Responsive */}
                 <div style={{
                   display: 'flex',
-                  gap: '0.375rem',
+                  gap: '0.25rem',
                   marginTop: '0.125rem',
+                  width: '100%',
+                  minWidth: 0,
                 }}>
                   {/* Details Button */}
                   <button
@@ -434,20 +436,23 @@ const JourneyTimeline: React.FC<JourneyTimelineProps> = ({ orders, onReorder }) 
                       toggleExpanded(uniqueKey);
                     }}
                     style={{
-                      flex: 1,
-                      padding: '0.375rem 0.625rem',
+                      flex: '1 1 0',
+                      minWidth: 0,
+                      padding: '0.375rem 0.375rem',
                       border: '1.5px solid #E5E7EB',
                       borderRadius: '0.5rem',
                       fontWeight: 600,
-                      fontSize: '0.75rem',
+                      fontSize: '0.6875rem',
                       color: '#374151',
                       background: '#ffffff',
                       transition: 'all 0.2s ease',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      gap: '0.25rem',
+                      gap: '0.125rem',
                       cursor: 'pointer',
+                      overflow: 'hidden',
+                      whiteSpace: 'nowrap',
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.borderColor = '#D1D5DB';
@@ -458,8 +463,8 @@ const JourneyTimeline: React.FC<JourneyTimelineProps> = ({ orders, onReorder }) 
                       e.currentTarget.style.backgroundColor = '#ffffff';
                     }}
                   >
-                    {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                    <span>{isExpanded ? 'Hide' : 'Details'}</span>
+                    {isExpanded ? <ChevronUp size={12} style={{ flexShrink: 0 }} /> : <ChevronDown size={12} style={{ flexShrink: 0 }} />}
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{isExpanded ? 'Hide' : 'Details'}</span>
                   </button>
 
                   {/* Reorder Button - Show for completed orders */}
@@ -470,21 +475,24 @@ const JourneyTimeline: React.FC<JourneyTimelineProps> = ({ orders, onReorder }) 
                         onReorder(order.id);
                       }}
                       style={{
-                        flex: 1,
-                        padding: '0.375rem 0.625rem',
+                        flex: '1 1 0',
+                        minWidth: 0,
+                        padding: '0.375rem 0.375rem',
                         background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
                         borderRadius: '0.5rem',
                         fontWeight: 600,
-                        fontSize: '0.75rem',
+                        fontSize: '0.6875rem',
                         color: '#ffffff',
                         border: 'none',
                         transition: 'all 0.2s ease',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: '0.25rem',
+                        gap: '0.125rem',
                         cursor: 'pointer',
                         boxShadow: '0 2px 8px rgba(249, 115, 22, 0.3)',
+                        overflow: 'hidden',
+                        whiteSpace: 'nowrap',
                       }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.boxShadow = '0 4px 12px rgba(249, 115, 22, 0.4)';
@@ -495,8 +503,8 @@ const JourneyTimeline: React.FC<JourneyTimelineProps> = ({ orders, onReorder }) 
                         e.currentTarget.style.transform = 'translateY(0)';
                       }}
                     >
-                      <RotateCcw size={14} />
-                      <span>Reorder</span>
+                      <RotateCcw size={12} style={{ flexShrink: 0 }} />
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>Reorder</span>
                     </button>
                   )}
                 </div>

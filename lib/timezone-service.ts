@@ -19,7 +19,7 @@
  */
 
 import { format, toZonedTime, fromZonedTime } from 'date-fns-tz';
-import { addMinutes, isAfter, startOfDay, isSameDay, addDays } from 'date-fns';
+import { addMinutes, isAfter, startOfDay, addDays } from 'date-fns';
 
 // ===== REGION CONFIGURATION (Multi-Country Support) =====
 
@@ -339,22 +339,28 @@ export function generateTimeSlots(
 ): TimeSlot[] {
   const slots: TimeSlot[] = [];
   const minimumDeliveryTime = getMinimumDeliveryTime(regionConfig);
-  const dateStart = startOfDay(date);
 
   const { openTime, closeTime } = regionConfig.businessHours;
   const slotDuration = regionConfig.deliveryWindowMinutes;
 
-  // Generate slots from open to close time
-  // FIX: Generate timestamps in the target timezone, not server timezone
-  const dateStr = format(date, 'yyyy-MM-dd');
+  // CRITICAL: Business hours are ALWAYS in RESTAURANT timezone (India)
+  // We generate slots for when the kitchen is open (10 AM - 10 PM India time)
+  // Then DISPLAY those times in the user's timezone
+  const restaurantTz = RESTAURANT_TIMEZONE; // Always Asia/Kolkata
+  const userTz = regionConfig.timezone; // User's timezone for display
+
+  // Get the date string in restaurant timezone
+  const dateInRestaurant = toZonedTime(date, restaurantTz);
+  const dateStr = format(dateInRestaurant, 'yyyy-MM-dd');
 
   for (let hour = openTime.hour; hour < closeTime.hour; hour++) {
     for (let minute = 0; minute < 60; minute += slotDuration) {
-      // Construct time string (e.g., "2025-11-23 10:00")
+      // Construct time string in RESTAURANT timezone (India)
+      // e.g., "2025-11-28 10:00" means 10:00 AM India time
       const timeStr = `${dateStr} ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-      
-      // Convert to absolute UTC timestamp representing that local time
-      const slotStart = fromZonedTime(timeStr, regionConfig.timezone);
+
+      // Convert India time to UTC (absolute timestamp)
+      const slotStart = fromZonedTime(timeStr, restaurantTz);
       const slotEnd = addMinutes(slotStart, slotDuration);
 
       // Skip slots that are too soon (before minimum lead time)
@@ -362,9 +368,9 @@ export function generateTimeSlots(
         continue;
       }
 
-      // FIX: Use consistent padded format yyyy-MM-dd-HH-mm and anchor to logical date (not UTC date)
+      // Slot ID is based on restaurant time (for database consistency)
       const slotId = `${dateStr}-${hour.toString().padStart(2, '0')}-${minute.toString().padStart(2, '0')}`;
-      
+
       // Check real-time availability (if provided)
       const bookedCount = bookedSlotsMap?.get(slotId) || 0;
       const maxSlots = 10; // Max 10 concurrent deliveries per slot (configurable)
@@ -375,8 +381,8 @@ export function generateTimeSlots(
         date,
         startTime: slotStart,
         endTime: slotEnd,
-        // FIX: Format labels in the target timezone, not server timezone
-        label: `${format(slotStart, 'h:mm a', { timeZone: regionConfig.timezone })} - ${format(slotEnd, 'h:mm a', { timeZone: regionConfig.timezone })}`,
+        // DISPLAY in user's timezone (so US user sees their local time)
+        label: `${format(slotStart, 'h:mm a', { timeZone: userTz })} - ${format(slotEnd, 'h:mm a', { timeZone: userTz })}`,
         sublabel: getSlotSublabel(slotStart, regionConfig),
         isAvailable,
         bookedSlots: bookedCount,
@@ -637,29 +643,67 @@ export function getTodayInBrowserTimezone(): Date {
 }
 
 /**
- * Check if a date is "today" in the browser's timezone
- * Use this instead of date-fns isToday() for timezone-aware comparison
+ * Check if a date is "today" in the USER's browser timezone
+ *
+ * "Today" should reflect the user's local date, not India's date.
+ * A US user on Thursday should see "Today" as Thursday, not Friday (India time).
  */
 export function isTodayInBrowserTz(date: Date): boolean {
-  const todayInBrowser = getTodayInBrowserTimezone();
-  const dateInBrowser = toZonedTime(date, getBrowserTimezone());
-  return isSameDay(todayInBrowser, dateInBrowser);
+  const browserTz = getBrowserTimezone();
+  const now = new Date();
+
+  // Get the current date components in browser's timezone
+  const nowInBrowser = toZonedTime(now, browserTz);
+  const todayYear = nowInBrowser.getFullYear();
+  const todayMonth = nowInBrowser.getMonth();
+  const todayDay = nowInBrowser.getDate();
+
+  // Get the date components of the input date (which was created in browser local time)
+  const dateYear = date.getFullYear();
+  const dateMonth = date.getMonth();
+  const dateDay = date.getDate();
+
+  // Compare year, month, and day
+  return todayYear === dateYear && todayMonth === dateMonth && todayDay === dateDay;
 }
 
 /**
- * Check if a date is "tomorrow" in the browser's timezone
- * Use this instead of date-fns isTomorrow() for timezone-aware comparison
+ * Check if a date is "tomorrow" in the USER's browser timezone
+ *
+ * "Tomorrow" should reflect the user's local date, not India's date.
  */
 export function isTomorrowInBrowserTz(date: Date): boolean {
-  const todayInBrowser = getTodayInBrowserTimezone();
-  const tomorrowInBrowser = addDays(todayInBrowser, 1);
-  const dateInBrowser = toZonedTime(date, getBrowserTimezone());
-  return isSameDay(tomorrowInBrowser, dateInBrowser);
+  const browserTz = getBrowserTimezone();
+  const now = new Date();
+
+  // Get the current date components in browser's timezone
+  const nowInBrowser = toZonedTime(now, browserTz);
+
+  // Add one day to get tomorrow's date
+  const tomorrowDate = new Date(
+    nowInBrowser.getFullYear(),
+    nowInBrowser.getMonth(),
+    nowInBrowser.getDate() + 1
+  );
+
+  // Get the date components of the input date (which was created in browser local time)
+  const dateYear = date.getFullYear();
+  const dateMonth = date.getMonth();
+  const dateDay = date.getDate();
+
+  // Compare year, month, and day
+  return (
+    tomorrowDate.getFullYear() === dateYear &&
+    tomorrowDate.getMonth() === dateMonth &&
+    tomorrowDate.getDate() === dateDay
+  );
 }
 
 /**
  * Format a date for display in the user's browser timezone
- * Use this for customer-facing date displays
+ *
+ * Times are displayed in the user's local timezone so they know
+ * what time it is for THEM when the delivery will arrive.
  */
 export function formatForBrowser(utcDate: Date | string, formatString: string = 'PPpp'): string {
   const browserTz = getBrowserTimezone();
@@ -669,19 +713,42 @@ export function formatForBrowser(utcDate: Date | string, formatString: string = 
 }
 
 /**
- * Get available delivery dates in the user's browser timezone
- * Use this for the date picker on the customer-facing checkout
+ * Get available delivery dates starting from the USER's current date
+ *
+ * Dates should start from the user's "today" (in their timezone).
+ * A US user on Thursday should see dates starting from Thursday, not Friday.
+ *
+ * The delivery slots within each date are still based on kitchen hours (India),
+ * but the date labels should match the user's local calendar.
  */
 export function getAvailableDeliveryDatesForBrowser(regionConfig: RegionConfig): Date[] {
+  // Use USER's browser timezone to determine "today" for the date picker
   const browserTz = getBrowserTimezone();
   const now = new Date();
+
+  // Get current time in browser's timezone to extract the LOCAL date
   const nowInBrowser = toZonedTime(now, browserTz);
+
+  // Extract the LOCAL date (year, month, day) in the browser's timezone
+  const browserYear = nowInBrowser.getFullYear();
+  const browserMonth = nowInBrowser.getMonth();
+  const browserDay = nowInBrowser.getDate();
+
+  console.log(`[Timezone] Browser timezone: ${browserTz}`);
+  console.log(`[Timezone] Now (UTC): ${now.toISOString()}`);
+  console.log(`[Timezone] Now in browser TZ: ${browserYear}-${browserMonth + 1}-${browserDay}`);
+
   const dates: Date[] = [];
 
   for (let i = 0; i <= regionConfig.maxAdvanceDays; i++) {
-    const date = startOfDay(nowInBrowser);
-    date.setDate(date.getDate() + i);
+    // Create a new date starting from browser's "today"
+    // This creates a date at midnight LOCAL time for that day
+    const date = new Date(browserYear, browserMonth, browserDay + i, 0, 0, 0, 0);
     dates.push(date);
+
+    if (i < 3) {
+      console.log(`[Timezone] Date ${i}: ${format(date, 'yyyy-MM-dd EEEE')}`);
+    }
   }
 
   return dates;

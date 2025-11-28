@@ -44,6 +44,17 @@ interface KitchenOrdersProps {
   refreshInterval?: number;
 }
 
+// Cancellation reasons for chef to select
+const CANCELLATION_REASONS = [
+  { id: 'out-of-stock', label: 'Item(s) Out of Stock', icon: '📦' },
+  { id: 'kitchen-closed', label: 'Kitchen Closed', icon: '🚫' },
+  { id: 'too-busy', label: 'Too Busy Right Now', icon: '⏰' },
+  { id: 'ingredient-unavailable', label: 'Ingredient Unavailable', icon: '🥬' },
+  { id: 'equipment-issue', label: 'Equipment Issue', icon: '🔧' },
+  { id: 'customer-request', label: 'Customer Requested', icon: '📞' },
+  { id: 'other', label: 'Other Reason', icon: '💬' },
+];
+
 const KitchenDisplay: React.FC<KitchenOrdersProps> = ({
   autoRefresh = true,
   refreshInterval = 5000,
@@ -58,6 +69,14 @@ const KitchenDisplay: React.FC<KitchenOrdersProps> = ({
   const prevOrderIdsRef = useRef<Set<string>>(new Set());
   const audioUnlockedRef = useRef(false);
   const region = getRestaurantRegion();
+
+  // Cancellation modal state
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
+  const [cancellingOrderNumber, setCancellingOrderNumber] = useState<string>('');
+  const [selectedReason, setSelectedReason] = useState<string>('');
+  const [customReason, setCustomReason] = useState('');
+  const [isCancelling, setIsCancelling] = useState(false);
 
   // Fetch orders from API
   const fetchOrders = async () => {
@@ -231,13 +250,68 @@ const KitchenDisplay: React.FC<KitchenOrdersProps> = ({
   // Mark as picked up (remove from display)
   const handlePickedUp = async (orderId: string) => {
     setOrders(currentOrders => currentOrders.filter(o => o.id !== orderId));
-    
+
     fetch(`/api/orders/${orderId}/status`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify({ status: 'out-for-delivery' }),
     }).catch(err => console.error(err));
+  };
+
+  // Open cancel modal
+  const openCancelModal = (orderId: string, orderNumber: string) => {
+    setCancellingOrderId(orderId);
+    setCancellingOrderNumber(orderNumber);
+    setSelectedReason('');
+    setCustomReason('');
+    setCancelModalOpen(true);
+  };
+
+  // Handle order cancellation with reason
+  const handleCancelOrder = async () => {
+    if (!cancellingOrderId || !selectedReason) return;
+
+    const reason = selectedReason === 'other'
+      ? customReason || 'Other reason'
+      : CANCELLATION_REASONS.find(r => r.id === selectedReason)?.label || selectedReason;
+
+    setIsCancelling(true);
+    const previousOrders = [...orders];
+
+    // Optimistic update
+    setOrders(currentOrders =>
+      currentOrders.map(order =>
+        order.id === cancellingOrderId
+          ? { ...order, status: 'cancelled' as any, rejectionReason: reason }
+          : order
+      )
+    );
+
+    try {
+      const response = await fetch(`/api/orders/${cancellingOrderId}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          status: 'cancelled',
+          rejectionReason: reason
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to cancel order');
+      }
+
+      // Close modal and refresh
+      setCancelModalOpen(false);
+      setTimeout(() => fetchOrders(), 500);
+    } catch {
+      setOrders(previousOrders);
+      alert('Failed to cancel order. Please try again.');
+    } finally {
+      setIsCancelling(false);
+    }
   };
 
   // Group orders by status
@@ -566,22 +640,22 @@ const KitchenDisplay: React.FC<KitchenOrdersProps> = ({
 
         {/* Cancel option for non-ready and non-cancelled orders */}
         {column !== 'ready' && column !== 'cancelled' && (
-              <button
-                onClick={() => updateOrderStatus(order.id, 'cancelled')}
-                style={{
-                  width: '100%',
+          <button
+            onClick={() => openCancelModal(order.id, order.orderNumber)}
+            style={{
+              width: '100%',
               padding: '4px',
               background: '#FEF2F2',
               color: '#DC2626',
-                  border: 'none',
+              border: 'none',
               fontSize: '10px',
-                  fontWeight: 600,
+              fontWeight: 600,
               cursor: 'pointer',
               borderTop: '1px solid #FECACA',
-                }}
-              >
+            }}
+          >
             ✕ Cancel
-              </button>
+          </button>
         )}
         {/* Show cancellation reason for cancelled orders */}
         {column === 'cancelled' && (
@@ -984,7 +1058,7 @@ const KitchenDisplay: React.FC<KitchenOrdersProps> = ({
             </span>
             Active Orders
               </div>
-        <div style={{ 
+        <div style={{
             background: 'white',
             borderRadius: '8px',
             padding: '6px 12px',
@@ -1000,6 +1074,190 @@ const KitchenDisplay: React.FC<KitchenOrdersProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Cancellation Reason Modal */}
+      {cancelModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10001,
+            padding: '20px'
+          }}
+          onClick={() => !isCancelling && setCancelModalOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'white',
+              borderRadius: '16px',
+              width: '100%',
+              maxWidth: '400px',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              overflow: 'hidden'
+            }}
+          >
+            {/* Modal Header */}
+            <div style={{
+              background: 'linear-gradient(135deg, #DC2626 0%, #B91C1C 100%)',
+              padding: '16px 20px',
+              color: 'white'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <XCircle size={24} />
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700 }}>Cancel Order</h3>
+                    <p style={{ margin: 0, fontSize: '12px', opacity: 0.9 }}>#{cancellingOrderNumber}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setCancelModalOpen(false)}
+                  disabled={isCancelling}
+                  style={{
+                    background: 'rgba(255,255,255,0.2)',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: '32px',
+                    height: '32px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    color: 'white'
+                  }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div style={{ padding: '20px' }}>
+              <p style={{ fontSize: '14px', color: '#4B5563', marginBottom: '16px' }}>
+                Please select a reason for cancellation. The customer will be notified.
+              </p>
+
+              {/* Reason Selection */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {CANCELLATION_REASONS.map((reason) => (
+                  <button
+                    key={reason.id}
+                    onClick={() => setSelectedReason(reason.id)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      padding: '12px 14px',
+                      border: selectedReason === reason.id ? '2px solid #DC2626' : '2px solid #E5E7EB',
+                      borderRadius: '10px',
+                      background: selectedReason === reason.id ? '#FEF2F2' : 'white',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <span style={{ fontSize: '20px' }}>{reason.icon}</span>
+                    <span style={{
+                      fontSize: '14px',
+                      fontWeight: selectedReason === reason.id ? 600 : 500,
+                      color: selectedReason === reason.id ? '#DC2626' : '#374151'
+                    }}>
+                      {reason.label}
+                    </span>
+                    {selectedReason === reason.id && (
+                      <CheckCircle size={18} style={{ marginLeft: 'auto', color: '#DC2626' }} />
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              {/* Custom reason input */}
+              {selectedReason === 'other' && (
+                <div style={{ marginTop: '12px' }}>
+                  <input
+                    type="text"
+                    placeholder="Enter reason..."
+                    value={customReason}
+                    onChange={(e) => setCustomReason(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '12px 14px',
+                      border: '2px solid #E5E7EB',
+                      borderRadius: '10px',
+                      fontSize: '14px',
+                      outline: 'none'
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = '#DC2626'}
+                    onBlur={(e) => e.target.style.borderColor = '#E5E7EB'}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div style={{
+              padding: '16px 20px',
+              borderTop: '1px solid #E5E7EB',
+              display: 'flex',
+              gap: '12px'
+            }}>
+              <button
+                onClick={() => setCancelModalOpen(false)}
+                disabled={isCancelling}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  border: '2px solid #E5E7EB',
+                  borderRadius: '10px',
+                  background: 'white',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  color: '#4B5563',
+                  cursor: 'pointer'
+                }}
+              >
+                Keep Order
+              </button>
+              <button
+                onClick={handleCancelOrder}
+                disabled={!selectedReason || isCancelling || (selectedReason === 'other' && !customReason.trim())}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  border: 'none',
+                  borderRadius: '10px',
+                  background: !selectedReason || isCancelling ? '#FCA5A5' : '#DC2626',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  color: 'white',
+                  cursor: !selectedReason || isCancelling ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px'
+                }}
+              >
+                {isCancelling ? (
+                  <>
+                    <RefreshCw size={16} className="animate-spin" />
+                    Cancelling...
+                  </>
+                ) : (
+                  <>
+                    <XCircle size={16} />
+                    Cancel Order
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

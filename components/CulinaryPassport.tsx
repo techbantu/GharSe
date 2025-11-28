@@ -28,6 +28,15 @@ import {
   ChefHat,
   Crown,
   X,
+  Flame,
+  TreePalm,
+  Store,
+  Leaf,
+  Fish,
+  Castle,
+  UtensilsCrossed,
+  Soup,
+  HelpCircle,
 } from 'lucide-react';
 
 interface CulinaryPassportProps {
@@ -74,7 +83,7 @@ const RANK_CONFIG: Record<string, { color: string; bgColor: string; Icon: React.
   },
 };
 
-// Sample regions data - in a real app this would come from your database
+// Sample regions data - using Lucide icons instead of emojis
 const SAMPLE_REGIONS = [
   {
     id: 'north-indian',
@@ -82,7 +91,7 @@ const SAMPLE_REGIONS = [
     description: 'Rich flavors of Punjab, Delhi, and Rajasthan',
     dishes: ['Butter Chicken', 'Paneer Tikka', 'Dal Makhani'],
     color: '#DC2626',
-    icon: '🕉️',
+    Icon: Flame,
     discovered: true,
   },
   {
@@ -91,7 +100,7 @@ const SAMPLE_REGIONS = [
     description: 'Spicy coastal cuisine with coconut and rice',
     dishes: ['Masala Dosa', 'Idli Sambar', 'Hyderabadi Biryani'],
     color: '#EA580C',
-    icon: '🌴',
+    Icon: TreePalm,
     discovered: true,
   },
   {
@@ -100,7 +109,7 @@ const SAMPLE_REGIONS = [
     description: 'Authentic street-side delicacies',
     dishes: ['Pani Puri', 'Vada Pav', 'Chole Bhature'],
     color: '#F97316',
-    icon: '🏪',
+    Icon: Store,
     discovered: true,
   },
   {
@@ -109,7 +118,7 @@ const SAMPLE_REGIONS = [
     description: 'Sweet and savory vegetarian cuisine',
     dishes: ['Dhokla', 'Thepla', 'Undhiyu'],
     color: '#F59E0B',
-    icon: '🥥',
+    Icon: Leaf,
     discovered: true,
   },
   {
@@ -118,7 +127,7 @@ const SAMPLE_REGIONS = [
     description: 'Fish and rice based coastal flavors',
     dishes: ['Shorshe Ilish', 'Mishti Doi', 'Ras Malai'],
     color: '#10B981',
-    icon: '🐟',
+    Icon: Fish,
     discovered: true,
   },
   {
@@ -127,7 +136,25 @@ const SAMPLE_REGIONS = [
     description: 'Spicy desert cuisine with royal heritage',
     dishes: ['Dal Baati Churma', 'Laal Maas', 'Ghewar'],
     color: '#8B5CF6',
-    icon: '🏰',
+    Icon: Castle,
+    discovered: false,
+  },
+  {
+    id: 'mughlai',
+    name: 'Mughlai',
+    description: 'Royal court cuisine with rich gravies',
+    dishes: ['Biryani', 'Korma', 'Kebabs'],
+    color: '#7C3AED',
+    Icon: UtensilsCrossed,
+    discovered: false,
+  },
+  {
+    id: 'coastal',
+    name: 'Coastal',
+    description: 'Fresh seafood and coconut-based dishes',
+    dishes: ['Fish Curry', 'Prawn Masala', 'Crab Fry'],
+    color: '#0891B2',
+    Icon: Soup,
     discovered: false,
   },
 ];
@@ -221,34 +248,34 @@ const CulinaryPassport: React.FC<CulinaryPassportProps> = ({
           flex: 1,
         }} className="passport-grid">
           {/* Compact Header Row */}
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
+          <div className="header-row" style={{
+            display: 'flex',
+            justifyContent: 'space-between',
             alignItems: 'center',
-            gap: '1rem',
+            gap: '0.5rem',
             flexWrap: 'wrap',
           }}>
-            {/* Left: Name & Rank */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <div style={{
+            {/* Left: Name & Badge */}
+            <div className="header-left" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div className="explorer-badge" style={{
                 display: 'inline-block',
-                padding: '0.375rem 0.875rem',
+                padding: '0.25rem 0.5rem',
                 backgroundColor: 'rgba(255, 255, 255, 0.2)',
                 backdropFilter: 'blur(15px)',
                 WebkitBackdropFilter: 'blur(15px)',
                 borderRadius: '9999px',
                 border: '1px solid rgba(255, 255, 255, 0.3)',
               }}>
-                <p style={{
+                <p className="explorer-text" style={{
                   color: 'rgba(255, 255, 255, 0.9)',
-                  fontSize: '0.75rem',
+                  fontSize: '0.625rem',
                   fontWeight: 500,
                   margin: 0,
                 }}>Culinary Explorer</p>
               </div>
-              
-              <h2 style={{
-                fontSize: '1.25rem',
+
+              <h2 className="customer-name" style={{
+                fontSize: '1rem',
                 fontWeight: 700,
                 color: '#fff',
                 margin: 0,
@@ -258,24 +285,24 @@ const CulinaryPassport: React.FC<CulinaryPassportProps> = ({
             </div>
 
             {/* Right: Compact Rank Badge */}
-            <div style={{
+            <div className="rank-badge" style={{
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.5rem 1rem',
+              gap: '0.375rem',
+              padding: '0.375rem 0.625rem',
               backgroundColor: 'rgba(255, 255, 255, 0.2)',
               backdropFilter: 'blur(15px)',
               WebkitBackdropFilter: 'blur(15px)',
-              borderRadius: '0.75rem',
+              borderRadius: '0.5rem',
               border: '1px solid rgba(255, 255, 255, 0.3)',
             }}>
               {(() => {
                 const IconComponent = rankConfig.Icon;
-                return <IconComponent size={20} className={rankConfig.color} />;
+                return <IconComponent size={16} className={`rank-icon ${rankConfig.color}`} />;
               })()}
               <div>
-                <p style={{
-                  fontSize: '0.625rem',
+                <p className="rank-label" style={{
+                  fontSize: '0.5rem',
                   color: '#6b7280',
                   fontWeight: 500,
                   textTransform: 'uppercase',
@@ -284,8 +311,8 @@ const CulinaryPassport: React.FC<CulinaryPassportProps> = ({
                 }}>
                   RANK
                 </p>
-                <p className={rankConfig.color} style={{
-                  fontSize: '1rem',
+                <p className={`rank-name ${rankConfig.color}`} style={{
+                  fontSize: '0.875rem',
                   fontWeight: 700,
                   margin: 0,
                 }}>
@@ -293,132 +320,154 @@ const CulinaryPassport: React.FC<CulinaryPassportProps> = ({
                 </p>
               </div>
               {rankConfig.nextRank && (
-                <div style={{
-                  marginLeft: '0.25rem',
+                <div className="next-rank" style={{
+                  marginLeft: '0.125rem',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.125rem',
-                  fontSize: '0.625rem',
+                  fontSize: '0.5rem',
                   color: '#6b7280',
                 }}>
-                  <TrendingUp size={10} />
+                  <TrendingUp size={8} />
                   <span>→{rankConfig.nextRank}</span>
                 </div>
               )}
             </div>
           </div>
 
-            {/* Quick Stats */}
+            {/* Quick Stats - Horizontal Row on Mobile */}
             <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-              gap: '1rem',
-            }}>
-              <div style={{
+              display: 'flex',
+              gap: '0.5rem',
+              justifyContent: 'space-between',
+            }} className="stats-row">
+              <div className="stat-card" style={{
+                flex: 1,
                 backgroundColor: 'rgba(255, 255, 255, 0.2)',
                 backdropFilter: 'blur(15px)',
                 WebkitBackdropFilter: 'blur(15px)',
-                borderRadius: '0.5rem',
-                padding: '0.625rem 0.875rem',
+                borderRadius: '0.75rem',
+                padding: '0.75rem 0.5rem',
                 border: '1px solid rgba(255, 255, 255, 0.3)',
                 display: 'flex',
+                flexDirection: 'column',
                 alignItems: 'center',
-                gap: '0.5rem',
+                justifyContent: 'center',
+                gap: '0.125rem',
               }}>
-                <Compass size={14} style={{ color: 'rgba(255, 255, 255, 0.9)' }} />
-                <div>
-                  <p style={{
-                    color: 'rgba(255, 255, 255, 0.7)',
-                    fontSize: '0.625rem',
-                    margin: 0,
-                  }}>Orders</p>
-                  <p style={{
-                    fontSize: '1.125rem',
-                    fontWeight: 700,
-                    color: '#fff',
-                    margin: 0,
-                  }}>{totalOrders}</p>
-                </div>
+                <Compass size={18} className="stat-icon" style={{ color: 'rgba(255, 255, 255, 0.9)' }} />
+                <p className="stat-label" style={{
+                  color: 'rgba(255, 255, 255, 0.7)',
+                  fontSize: '0.625rem',
+                  fontWeight: 500,
+                  margin: 0,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.02em',
+                }}>Orders</p>
+                <p className="stat-value" style={{
+                  fontSize: '1.5rem',
+                  fontWeight: 700,
+                  color: '#fff',
+                  margin: 0,
+                  lineHeight: 1,
+                }}>{totalOrders}</p>
               </div>
 
-              <div style={{
+              <div className="stat-card" style={{
+                flex: 1,
                 backgroundColor: 'rgba(255, 255, 255, 0.2)',
                 backdropFilter: 'blur(15px)',
                 WebkitBackdropFilter: 'blur(15px)',
-                borderRadius: '0.5rem',
-                padding: '0.625rem 0.875rem',
+                borderRadius: '0.75rem',
+                padding: '0.75rem 0.5rem',
                 border: '1px solid rgba(255, 255, 255, 0.3)',
                 display: 'flex',
+                flexDirection: 'column',
                 alignItems: 'center',
-                gap: '0.5rem',
+                justifyContent: 'center',
+                gap: '0.125rem',
               }}>
-                <Star size={14} style={{ color: 'rgba(255, 255, 255, 0.9)' }} />
-                <div>
-                  <p style={{
-                    color: 'rgba(255, 255, 255, 0.7)',
-                    fontSize: '0.625rem',
-                    margin: 0,
-                  }}>Dishes</p>
-                  <p style={{
-                    fontSize: '1.125rem',
-                    fontWeight: 700,
-                    color: '#fff',
-                    margin: 0,
-                  }}>{dishesDiscovered}</p>
-                </div>
+                <Star size={18} className="stat-icon" style={{ color: 'rgba(255, 255, 255, 0.9)' }} />
+                <p className="stat-label" style={{
+                  color: 'rgba(255, 255, 255, 0.7)',
+                  fontSize: '0.625rem',
+                  fontWeight: 500,
+                  margin: 0,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.02em',
+                }}>Dishes</p>
+                <p className="stat-value" style={{
+                  fontSize: '1.5rem',
+                  fontWeight: 700,
+                  color: '#fff',
+                  margin: 0,
+                  lineHeight: 1,
+                }}>{dishesDiscovered}</p>
               </div>
 
               <div
+                className="stat-card"
                 onClick={() => setShowRegionsModal(true)}
                 style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                backdropFilter: 'blur(15px)',
-                WebkitBackdropFilter: 'blur(15px)',
-                borderRadius: '0.5rem',
-                padding: '0.625rem 0.875rem',
-                border: '1px solid rgba(255, 255, 255, 0.3)',
+                  flex: 1,
+                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                  backdropFilter: 'blur(15px)',
+                  WebkitBackdropFilter: 'blur(15px)',
+                  borderRadius: '0.75rem',
+                  padding: '0.75rem 0.5rem',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
                   display: 'flex',
+                  flexDirection: 'column',
                   alignItems: 'center',
-                  gap: '0.5rem',
+                  justifyContent: 'center',
+                  gap: '0.125rem',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.25)';
-                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
                   e.currentTarget.style.transform = 'translateY(0)';
                 }}
               >
-                <MapPin size={14} style={{ color: 'rgba(255, 255, 255, 0.9)' }} />
-                <div>
-                  <p style={{
-                    color: 'rgba(255, 255, 255, 0.7)',
-                    fontSize: '0.625rem',
-                    margin: 0,
-                  }}>Regions</p>
-                  <p style={{
-                    fontSize: '1.125rem',
-                    fontWeight: 700,
-                    color: '#fff',
-                    margin: 0,
-                  }}>{categoriesExplored}</p>
-                </div>
+                <MapPin size={18} className="stat-icon" style={{ color: 'rgba(255, 255, 255, 0.9)' }} />
+                <p className="stat-label" style={{
+                  color: 'rgba(255, 255, 255, 0.7)',
+                  fontSize: '0.625rem',
+                  fontWeight: 500,
+                  margin: 0,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.02em',
+                }}>Regions</p>
+                <p className="stat-value" style={{
+                  fontSize: '1.5rem',
+                  fontWeight: 700,
+                  color: '#fff',
+                  margin: 0,
+                  lineHeight: 1,
+                }}>{categoriesExplored}</p>
               </div>
             </div>
 
-            {/* Compact Stamps & Progress */}
-            <div style={{
+            {/* Flavor Passport Progress - Compact on Mobile */}
+            <div className="passport-progress" style={{
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              backdropFilter: 'blur(15px)',
+              WebkitBackdropFilter: 'blur(15px)',
+              borderRadius: '0.75rem',
+              padding: '0.75rem 1rem',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              gap: '1rem',
-              flexWrap: 'wrap',
+              gap: '0.75rem',
+              marginTop: 'auto',
             }}>
-              {/* Stamps Preview */}
-              <div style={{
+              {/* Left: Stamps Preview */}
+              <div className="stamps-container" style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.5rem',
@@ -426,17 +475,18 @@ const CulinaryPassport: React.FC<CulinaryPassportProps> = ({
                 <div style={{
                   display: 'flex',
                 }}>
-                  {[...Array(Math.min(totalOrders, 5))].map((_, i) => (
+                  {[...Array(Math.min(totalOrders, 3))].map((_, i) => (
                     <div
                       key={i}
+                      className="stamp"
                       style={{
-                        width: '1.75rem',
-                        height: '1.75rem',
+                        width: '1.5rem',
+                        height: '1.5rem',
                         borderRadius: '50%',
-                        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                        backgroundColor: 'rgba(255, 255, 255, 0.25)',
                         backdropFilter: 'blur(15px)',
                         WebkitBackdropFilter: 'blur(15px)',
-                        border: '1.5px solid #fff',
+                        border: '2px solid #fff',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -450,51 +500,46 @@ const CulinaryPassport: React.FC<CulinaryPassportProps> = ({
                     </div>
                   ))}
                 </div>
-                {totalOrders > 5 && (
-                  <p style={{
-                    color: 'rgba(255, 255, 255, 0.8)',
+                {totalOrders > 3 && (
+                  <p className="more-stamps" style={{
+                    color: 'rgba(255, 255, 255, 0.9)',
                     fontSize: '0.75rem',
-                    fontWeight: 500,
+                    fontWeight: 600,
                     margin: 0,
                   }}>
-                    +{totalOrders - 5} more stamps
+                    +{totalOrders - 3}
                   </p>
                 )}
               </div>
 
-              {/* Compact Progress Bar */}
+              {/* Right: Progress Info - Compact */}
               <div style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                backdropFilter: 'blur(15px)',
-                WebkitBackdropFilter: 'blur(15px)',
-                borderRadius: '0.5rem',
-                padding: '0.5rem 0.875rem',
-                border: '1px solid rgba(255, 255, 255, 0.3)',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.75rem',
+                gap: '0.5rem',
               }}>
-                <Sparkles size={16} style={{ color: '#fcd34d' }} />
+                <Sparkles size={20} className="sparkle-icon" style={{ color: '#fcd34d' }} />
                 <div>
-                  <p style={{
+                  <p className="passport-label" style={{
                     color: 'rgba(255, 255, 255, 0.7)',
                     fontSize: '0.625rem',
                     margin: 0,
                   }}>Flavor Passport</p>
-                  <p style={{
+                  <p className="passport-percentage" style={{
                     fontSize: '1.125rem',
                     fontWeight: 700,
                     color: '#fff',
                     margin: 0,
+                    lineHeight: 1.1,
                   }}>{explorationPercentage}% Explored</p>
-                  <p style={{
+                  <p className="passport-count" style={{
                     color: 'rgba(255, 255, 255, 0.7)',
                     fontSize: '0.625rem',
                     margin: 0,
                   }}>{dishesDiscovered} of {totalDishes} dishes</p>
+                </div>
               </div>
             </div>
-          </div>
         </div>
       </div>
 
@@ -583,7 +628,9 @@ const CulinaryPassport: React.FC<CulinaryPassportProps> = ({
                 display: 'grid',
                 gap: '1rem',
               }}>
-                {SAMPLE_REGIONS.slice(0, categoriesExplored).map((region, index) => (
+                {SAMPLE_REGIONS.slice(0, categoriesExplored).map((region, index) => {
+                  const RegionIcon = region.Icon;
+                  return (
                   <div
                     key={region.id}
                     className="region-card"
@@ -621,10 +668,9 @@ const CulinaryPassport: React.FC<CulinaryPassportProps> = ({
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontSize: '1.25rem',
                       flexShrink: 0,
                     }}>
-                      {region.icon}
+                      <RegionIcon size={24} color="white" />
                     </div>
 
                     {/* Region Details */}
@@ -705,10 +751,13 @@ const CulinaryPassport: React.FC<CulinaryPassportProps> = ({
                       </div>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
 
                 {/* Show undiscovered regions if any */}
-                {SAMPLE_REGIONS.slice(categoriesExplored).map((region, index) => (
+                {SAMPLE_REGIONS.slice(categoriesExplored).map((region, index) => {
+                  const RegionIcon = region.Icon;
+                  return (
                   <div
                     key={region.id}
                     style={{
@@ -732,10 +781,9 @@ const CulinaryPassport: React.FC<CulinaryPassportProps> = ({
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontSize: '1.25rem',
                       flexShrink: 0,
                     }}>
-                      ❓
+                      <RegionIcon size={24} color="#9CA3AF" />
                     </div>
 
                     {/* Region Details */}
@@ -768,7 +816,8 @@ const CulinaryPassport: React.FC<CulinaryPassportProps> = ({
                       </span>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -796,45 +845,181 @@ const CulinaryPassport: React.FC<CulinaryPassportProps> = ({
           }
         }
         
-        /* Mobile First - Compact Design */
+        /* Mobile First - Compact Horizontal Layout */
         @media (max-width: 767px) {
           .passport-content {
-            padding: 0.875rem !important;
+            padding: 0.75rem !important;
           }
           .passport-grid {
-            gap: 0.75rem !important;
+            gap: 0.375rem !important;
           }
-          .passport-name {
-            font-size: 1.125rem !important;
-            line-height: 1.2 !important;
+          .header-row {
+            gap: 0.375rem !important;
+            margin-bottom: 0.125rem !important;
+          }
+          .explorer-badge {
+            padding: 0.125rem 0.375rem !important;
+          }
+          .explorer-text {
+            font-size: 0.5rem !important;
+          }
+          .customer-name {
+            font-size: 0.875rem !important;
+          }
+          .rank-badge {
+            padding: 0.25rem 0.5rem !important;
+            gap: 0.25rem !important;
+          }
+          .rank-icon {
+            width: 14px !important;
+            height: 14px !important;
+          }
+          .rank-label {
+            font-size: 0.4rem !important;
+          }
+          .rank-name {
+            font-size: 0.75rem !important;
+          }
+          .next-rank {
+            font-size: 0.4rem !important;
+            display: none !important;
+          }
+          .stats-row {
+            gap: 0.375rem !important;
+          }
+          .stat-card {
+            padding: 0.5rem 0.25rem !important;
+            border-radius: 0.5rem !important;
+          }
+          .stat-icon {
+            width: 16px !important;
+            height: 16px !important;
+          }
+          .stat-label {
+            font-size: 0.5rem !important;
           }
           .stat-value {
             font-size: 1.25rem !important;
           }
-          .stat-label {
+          .passport-progress {
+            padding: 0.5rem 0.75rem !important;
+          }
+          .stamp {
+            width: 1.25rem !important;
+            height: 1.25rem !important;
+            font-size: 0.5rem !important;
+          }
+          .sparkle-icon {
+            width: 16px !important;
+            height: 16px !important;
+          }
+          .passport-label {
+            font-size: 0.5rem !important;
+          }
+          .passport-percentage {
+            font-size: 1rem !important;
+          }
+          .passport-count {
+            font-size: 0.5rem !important;
+          }
+          .more-stamps {
             font-size: 0.625rem !important;
           }
         }
-        
-        /* Responsive Design - Desktop */
+
+        /* Responsive Design - Tablet */
         @media (min-width: 768px) {
           .passport-content {
-            padding: 1rem !important;
+            padding: 1.25rem !important;
           }
           .passport-grid {
-            grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+            gap: 1rem !important;
           }
-          .passport-name {
+          .header-row {
+            gap: 1rem !important;
+          }
+          .explorer-badge {
+            padding: 0.375rem 0.875rem !important;
+          }
+          .explorer-text {
+            font-size: 0.75rem !important;
+          }
+          .customer-name {
             font-size: 1.25rem !important;
           }
-        }
-        
-        @media (min-width: 1024px) {
-          .passport-content {
+          .rank-badge {
+            padding: 0.5rem 1rem !important;
+            gap: 0.5rem !important;
+          }
+          .rank-icon {
+            width: 20px !important;
+            height: 20px !important;
+          }
+          .rank-label {
+            font-size: 0.625rem !important;
+          }
+          .rank-name {
+            font-size: 1rem !important;
+          }
+          .next-rank {
+            display: flex !important;
+            font-size: 0.625rem !important;
+          }
+          .stats-row {
+            gap: 0.75rem !important;
+          }
+          .stat-card {
             padding: 1rem !important;
           }
+          .stat-value {
+            font-size: 2rem !important;
+          }
+          .stat-label {
+            font-size: 0.75rem !important;
+          }
+          .passport-progress {
+            padding: 1rem 1.25rem !important;
+          }
+          .stamp {
+            width: 2rem !important;
+            height: 2rem !important;
+            font-size: 0.75rem !important;
+          }
+          .passport-percentage {
+            font-size: 1.5rem !important;
+          }
+          .passport-label,
+          .passport-count {
+            font-size: 0.75rem !important;
+          }
+        }
+
+        /* Desktop - Larger Stats */
+        @media (min-width: 1024px) {
+          .passport-content {
+            padding: 1.5rem !important;
+          }
           .passport-name {
-            font-size: 1.25rem !important;
+            font-size: 1.375rem !important;
+          }
+          .stats-row {
+            gap: 1rem !important;
+          }
+          .stat-card {
+            padding: 1.25rem !important;
+          }
+          .stat-value {
+            font-size: 2.25rem !important;
+          }
+          .passport-progress {
+            padding: 1rem 1.5rem !important;
+          }
+          .stamp {
+            width: 2.25rem !important;
+            height: 2.25rem !important;
+          }
+          .passport-percentage {
+            font-size: 1.75rem !important;
           }
         }
 

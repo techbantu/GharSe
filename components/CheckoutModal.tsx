@@ -79,6 +79,16 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
   const [selectedUPIApp, setSelectedUPIApp] = useState<string>('');
   const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
   const [upiVerificationError, setUpiVerificationError] = useState<string>('');
+
+  // Chef Payment Settings (QR codes)
+  const [chefPaymentSettings, setChefPaymentSettings] = useState<{
+    phonePeUpiId: string | null;
+    paytmUpiId: string | null;
+    googlePayUpiId: string | null;
+    phonePeQrCode: string | null;
+    paytmQrCode: string | null;
+    googlePayQrCode: string | null;
+  } | null>(null);
   
   // Notification status state
   const [notificationStatus, setNotificationStatus] = useState<{
@@ -150,31 +160,76 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
       setTimeRemaining(null);
     }
   }, [isOpen]);
+
+  // Fetch chef payment settings when modal opens
+  useEffect(() => {
+    const fetchChefPaymentSettings = async () => {
+      try {
+        // For now using default chef slug - in multi-chef mode, get from cart context
+        const chefSlug = 'bantus-kitchen';
+        const response = await fetch(`/api/chefs/${chefSlug}/payment-settings`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setChefPaymentSettings(data.data);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch chef payment settings:', error);
+      }
+    };
+
+    if (isOpen) {
+      fetchChefPaymentSettings();
+    }
+  }, [isOpen]);
   
-  // Poll order status when in confirmation step
+  // Poll order status when in pending or confirmation step
   useEffect(() => {
     let statusPollInterval: NodeJS.Timeout | null = null;
-    
-    // Only poll if we're in confirmation step and have an orderId
-    if (step === 'confirmation' && orderId) {
+
+    // Poll if we're in pending OR confirmation step and have an orderId
+    if ((step === 'pending' || step === 'confirmation') && orderId) {
       const pollOrderStatus = async () => {
         try {
           const response = await fetch(`/api/orders/${orderId}`, {
             credentials: 'include',
           });
-          
+
           if (response.ok) {
             const data = await response.json();
             if (data.success && data.order) {
               const newStatus = data.order.status;
               console.log('[CheckoutModal] Polled order status:', newStatus);
-              
+
+              // Handle order cancellation by kitchen
+              if (newStatus === 'cancelled' && orderStatus !== 'cancelled') {
+                const rejectionReason = data.order.rejectionReason || 'Order cancelled by kitchen';
+                console.log('[CheckoutModal] Order CANCELLED by kitchen. Reason:', rejectionReason);
+
+                // Show cancellation toast with reason
+                toast.error(
+                  'Order Cancelled',
+                  `Your order has been cancelled by the kitchen. Reason: ${rejectionReason}`
+                );
+
+                // Update state
+                setOrderStatus('cancelled');
+                setCurrentOrder(data.order);
+
+                // Close modal after showing message
+                setTimeout(() => {
+                  handleClose();
+                }, 3000);
+                return;
+              }
+
               // Update status if changed
               if (newStatus !== orderStatus) {
                 setOrderStatus(newStatus);
                 console.log('[CheckoutModal] Order status updated to:', newStatus);
               }
-              
+
               // Update the current order
               setCurrentOrder(data.order);
             }
@@ -186,18 +241,18 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
       
       // Poll immediately on mount
       pollOrderStatus();
-      
-      // Then poll every 5 seconds
-      statusPollInterval = setInterval(pollOrderStatus, 5000);
+
+      // Then poll every 3 seconds for faster updates
+      statusPollInterval = setInterval(pollOrderStatus, 3000);
     }
-    
+
     // Cleanup
     return () => {
       if (statusPollInterval) {
         clearInterval(statusPollInterval);
       }
     };
-  }, [step, orderId, orderStatus]);
+  }, [step, orderId]); // Removed orderStatus to prevent unnecessary re-renders
   
   // Handle input changes with character filtering
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -634,13 +689,20 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
       // GENIUS: If UPI payment was selected, show UPI verification modal
       if (formData.paymentMethod === 'upi') {
         console.log('[CheckoutModal] UPI payment selected, showing payment modal');
+        // Get the correct UPI ID based on selected payment method from chef settings
+        const selectedApp = formData.paymentMethodDetails;
+        let dynamicUpiId = null;
+        if (selectedApp === 'phonepe') dynamicUpiId = chefPaymentSettings?.phonePeUpiId;
+        else if (selectedApp === 'paytm') dynamicUpiId = chefPaymentSettings?.paytmUpiId;
+        else if (selectedApp === 'gpay') dynamicUpiId = chefPaymentSettings?.googlePayUpiId;
+
         setUPIPaymentData({
-          upiId: process.env.NEXT_PUBLIC_UPI_MERCHANT_ID || 'bantuskitchen@paytm',
+          upiId: dynamicUpiId || 'Not configured',
           amount: order.pricing.total,
           orderId: order.id,
           orderNumber: order.orderNumber,
         });
-        setSelectedUPIApp(formData.paymentMethodDetails || '');
+        setSelectedUPIApp(selectedApp || '');
         setShowUPIPaymentModal(true);
       }
       
@@ -1972,7 +2034,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                           </span>
                         </div>
                         <span style={{ fontSize: '0.75rem', color: '#6B7280', marginTop: '2px' }}>
-                          PhonePe • Google Pay • Paytm • BHIM
+                          PhonePe • Google Pay • Paytm
                         </span>
                       </div>
                     </label>
@@ -1998,37 +2060,38 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                           <Zap size={14} /> Select your UPI app:
                         </p>
                         <div style={{
-                          display: 'grid',
-                          gridTemplateColumns: 'repeat(2, 1fr)',
-                          gap: '8px'
+                          display: 'flex',
+                          gap: '6px',
+                          flexWrap: 'nowrap'
                         }}>
                           {[
-                            { id: 'gpay', name: 'Google Pay', color: '#4285F4', bg: '#EBF4FF' },
                             { id: 'phonepe', name: 'PhonePe', color: '#5F259F', bg: '#F3E8FF' },
                             { id: 'paytm', name: 'Paytm', color: '#00BAF2', bg: '#E0F7FF' },
-                            { id: 'bhim', name: 'BHIM UPI', color: '#00695C', bg: '#E0F2F1' },
+                            { id: 'gpay', name: 'GPay', color: '#4285F4', bg: '#EBF4FF' },
                           ].map((app) => (
                             <button
                               key={app.id}
                               type="button"
                               onClick={() => setFormData(prev => ({ ...prev, paymentMethodDetails: app.id }))}
                               style={{
-                                padding: '12px',
-                                borderRadius: '10px',
+                                flex: 1,
+                                padding: '8px 4px',
+                                borderRadius: '8px',
                                 border: `2px solid ${formData.paymentMethodDetails === app.id ? app.color : '#E5E7EB'}`,
                                 background: formData.paymentMethodDetails === app.id ? app.bg : 'white',
                                 cursor: 'pointer',
                                 transition: 'all 0.2s',
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: '10px',
+                                justifyContent: 'center',
+                                gap: '4px',
                                 fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif'
                               }}
                             >
                               {/* Colored Circle Icon */}
                               <div style={{
-                                width: '24px',
-                                height: '24px',
+                                width: '18px',
+                                height: '18px',
                                 borderRadius: '50%',
                                 backgroundColor: app.color,
                                 display: 'flex',
@@ -2036,83 +2099,96 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                                 justifyContent: 'center',
                                 color: 'white',
                                 fontWeight: 700,
-                                fontSize: '0.75rem'
+                                fontSize: '0.625rem',
+                                flexShrink: 0
                               }}>
                                 {app.name.charAt(0)}
                               </div>
-                              <span style={{ fontWeight: 600, fontSize: '0.875rem', color: formData.paymentMethodDetails === app.id ? app.color : '#374151' }}>
+                              <span style={{ fontWeight: 600, fontSize: '0.6875rem', color: formData.paymentMethodDetails === app.id ? app.color : '#374151' }}>
                                 {app.name}
                               </span>
                             </button>
                           ))}
                         </div>
                         
-                        {/* QR Code Display - Shows when UPI app is selected */}
+                        {/* QR Code Display - Centered & Compact */}
                         {formData.paymentMethodDetails && (
                           <div style={{
-                            marginTop: '16px',
-                            padding: '16px',
+                            marginTop: '8px',
+                            padding: '12px',
                             background: 'white',
-                            borderRadius: '12px',
-                            border: '2px solid #C4B5FD',
-                            textAlign: 'center'
+                            borderRadius: '10px',
+                            border: '1px solid #DDD6FE',
+                            textAlign: 'center',
+                            maxWidth: '200px',
+                            margin: '8px auto 0'
                           }}>
-                            <p style={{
-                              fontSize: '0.75rem',
-                              fontWeight: 600,
-                              color: '#5B21B6',
-                              marginBottom: '12px',
-                              textTransform: 'uppercase',
-                              letterSpacing: '0.5px'
-                            }}>
-                              Scan QR Code to Pay
-                            </p>
-                            
-                            {/* QR Code Placeholder */}
-                            <div style={{
-                              width: '140px',
-                              height: '140px',
-                              margin: '0 auto 12px',
-                              background: 'linear-gradient(135deg, #8B5CF6 0%, #5B21B6 100%)',
-                              borderRadius: '16px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              color: 'white',
-                              fontSize: '3rem'
-                            }}>
-                              📱
-                            </div>
-                            
-                            {/* UPI ID Display */}
-                            <div style={{
-                              background: '#F5F3FF',
-                              padding: '10px 16px',
-                              borderRadius: '8px',
-                              display: 'inline-block'
-                            }}>
-                              <p style={{ fontSize: '0.6875rem', color: '#6B7280', marginBottom: '2px', margin: 0 }}>
-                                UPI ID
-                              </p>
-                              <p style={{
-                                fontSize: '0.875rem',
-                                fontWeight: 700,
-                                color: '#5B21B6',
-                                fontFamily: 'monospace',
-                                margin: 0
-                              }}>
-                                bantuskitchen@paytm
-                              </p>
-                            </div>
-                            
-                            <p style={{
-                              fontSize: '0.6875rem',
-                              color: '#9CA3AF',
-                              marginTop: '8px',
-                              margin: '8px 0 0 0'
-                            }}>
-                              Or pay directly using UPI ID above
-                            </p>
+                            {/* Dynamic QR Code from Chef Settings */}
+                            {(() => {
+                              const qrCode = formData.paymentMethodDetails === 'phonepe' ? chefPaymentSettings?.phonePeQrCode :
+                                             formData.paymentMethodDetails === 'paytm' ? chefPaymentSettings?.paytmQrCode :
+                                             formData.paymentMethodDetails === 'gpay' ? chefPaymentSettings?.googlePayQrCode : null;
+                              const upiId = formData.paymentMethodDetails === 'phonepe' ? chefPaymentSettings?.phonePeUpiId :
+                                            formData.paymentMethodDetails === 'paytm' ? chefPaymentSettings?.paytmUpiId :
+                                            formData.paymentMethodDetails === 'gpay' ? chefPaymentSettings?.googlePayUpiId : null;
+
+                              if (qrCode) {
+                                // Scale the SVG QR code to 120px
+                                const scaledQr = qrCode.replace(
+                                  /width="[^"]*"/,
+                                  'width="120"'
+                                ).replace(
+                                  /height="[^"]*"/,
+                                  'height="120"'
+                                );
+                                return (
+                                  <>
+                                    <p style={{ fontSize: '0.625rem', fontWeight: 600, color: '#5B21B6', margin: '0 0 8px 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                      Scan to Pay
+                                    </p>
+                                    <div
+                                      style={{
+                                        width: '120px',
+                                        height: '120px',
+                                        margin: '0 auto 8px',
+                                        border: '2px solid #E5E7EB',
+                                        borderRadius: '8px',
+                                        overflow: 'hidden',
+                                        background: 'white'
+                                      }}
+                                      dangerouslySetInnerHTML={{ __html: scaledQr }}
+                                    />
+                                    {upiId && (
+                                      <div style={{
+                                        background: '#F5F3FF',
+                                        padding: '6px 10px',
+                                        borderRadius: '6px'
+                                      }}>
+                                        <p style={{ fontSize: '0.5rem', color: '#6B7280', margin: '0 0 2px 0' }}>UPI ID</p>
+                                        <p style={{
+                                          fontSize: '0.6875rem',
+                                          fontWeight: 700,
+                                          color: '#5B21B6',
+                                          fontFamily: 'monospace',
+                                          margin: 0
+                                        }}>
+                                          {upiId}
+                                        </p>
+                                      </div>
+                                    )}
+                                  </>
+                                );
+                              }
+
+                              // Fallback if chef hasn't configured this payment method
+                              return (
+                                <div style={{ padding: '10px', background: '#FEF3C7', borderRadius: '6px', border: '1px solid #FCD34D' }}>
+                                  <p style={{ fontSize: '0.75rem', color: '#92400E', margin: 0 }}>
+                                    Not configured
+                                  </p>
+                                </div>
+                              );
+                            })()}
                           </div>
                         )}
                         
@@ -3765,23 +3841,32 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                   gap: '10px'
                 }}>
                   {[
-                    { id: 'gpay', name: 'Google Pay', icon: '🔵', color: '#4285F4' },
                     { id: 'phonepe', name: 'PhonePe', icon: '💜', color: '#5F259F' },
                     { id: 'paytm', name: 'Paytm', icon: '🔷', color: '#00BAF2' },
-                    { id: 'bhim', name: 'BHIM', icon: '🇮🇳', color: '#00695C' },
-                  ].map((app) => (
+                    { id: 'gpay', name: 'Google Pay', icon: '🔵', color: '#4285F4' },
+                  ].map((app) => {
+                    // Get UPI ID from chef settings based on selected app
+                    const getUpiId = () => {
+                      if (app.id === 'phonepe') return chefPaymentSettings?.phonePeUpiId;
+                      if (app.id === 'paytm') return chefPaymentSettings?.paytmUpiId;
+                      if (app.id === 'gpay') return chefPaymentSettings?.googlePayUpiId;
+                      return upiPaymentData?.upiId;
+                    };
+                    const upiId = getUpiId() || upiPaymentData?.upiId || '';
+
+                    return (
                     <button
                       key={app.id}
                       type="button"
                       onClick={() => {
                         setSelectedUPIApp(app.id);
-                        // Create UPI intent URL
+                        // Create UPI intent URL with chef's UPI ID
                         const params = new URLSearchParams({
-                          pa: upiPaymentData.upiId,
+                          pa: upiId,
                           pn: "Bantu's Kitchen",
-                          am: upiPaymentData.amount.toFixed(2),
+                          am: upiPaymentData?.amount.toFixed(2) || '0',
                           cu: 'INR',
-                          tn: `Order ${upiPaymentData.orderNumber}`,
+                          tn: `Order ${upiPaymentData?.orderNumber || ''}`,
                           tr: `BK${Date.now()}`,
                         });
                         const intentUrl = `upi://pay?${params.toString()}`;
@@ -3811,7 +3896,8 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose }) => {
                         {app.name}
                       </span>
                     </button>
-                  ))}
+                  );
+                  })}
                 </div>
               </div>
               

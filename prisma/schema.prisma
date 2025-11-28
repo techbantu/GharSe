@@ -56,6 +56,14 @@ model Chef {
   preparationBuffer Int     @default(10) // extra minutes buffer
   minOrderAmount    Float   @default(199)
 
+  // UPI Payment Settings (for direct customer payments)
+  phonePeUpiId    String? // Chef's PhonePe UPI ID
+  paytmUpiId      String? // Chef's Paytm UPI ID
+  googlePayUpiId  String? // Chef's Google Pay UPI ID
+  phonePeQrCode   String? @db.Text // Auto-generated QR SVG for PhonePe
+  paytmQrCode     String? @db.Text // Auto-generated QR SVG for Paytm
+  googlePayQrCode String? @db.Text // Auto-generated QR SVG for Google Pay
+
   // Relations
   menuItems MenuItem[]
   orders    Order[]

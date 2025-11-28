@@ -1,29 +1,72 @@
-import React, { useState } from 'react';
-import { X, Save, CreditCard, Building, IndianRupee } from 'lucide-react';
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { Save, Smartphone, QrCode, CheckCircle } from 'lucide-react';
+import Modal from '@/components/ui/Modal';
+
+interface PaymentFormData {
+  phonePeUpiId: string;
+  paytmUpiId: string;
+  googlePayUpiId: string;
+}
 
 interface EditPaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (data: { bankName: string; accountNumber: string; ifsc: string; upiId: string }) => Promise<void>;
+  onSave: (data: PaymentFormData) => Promise<void>;
+  initialData?: Partial<PaymentFormData>;
 }
 
-export default function EditPaymentModal({ isOpen, onClose, onSave }: EditPaymentModalProps) {
-  const [formData, setFormData] = useState({
-    bankName: '',
-    accountNumber: '',
-    ifsc: '',
-    upiId: '',
+export default function EditPaymentModal({ isOpen, onClose, onSave, initialData }: EditPaymentModalProps) {
+  const [formData, setFormData] = useState<PaymentFormData>({
+    phonePeUpiId: '',
+    paytmUpiId: '',
+    googlePayUpiId: '',
   });
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    if (isOpen && initialData) {
+      setFormData({
+        phonePeUpiId: initialData.phonePeUpiId || '',
+        paytmUpiId: initialData.paytmUpiId || '',
+        googlePayUpiId: initialData.googlePayUpiId || '',
+      });
+    }
+    if (isOpen) {
+      setSuccess(false);
+    }
+  }, [isOpen, initialData]);
+
+  const validateUpiId = (upiId: string): boolean => {
+    if (!upiId) return true;
+    return /^[a-zA-Z0-9._-]+@[a-zA-Z0-9]+$/.test(upiId);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!validateUpiId(formData.phonePeUpiId)) {
+      alert('Invalid PhonePe UPI ID format');
+      return;
+    }
+    if (!validateUpiId(formData.paytmUpiId)) {
+      alert('Invalid Paytm UPI ID format');
+      return;
+    }
+    if (!validateUpiId(formData.googlePayUpiId)) {
+      alert('Invalid Google Pay UPI ID format');
+      return;
+    }
+
     setLoading(true);
     try {
       await onSave(formData);
-      onClose();
+      setSuccess(true);
+      setTimeout(() => {
+        onClose();
+      }, 1500);
     } catch (error) {
       console.error('Failed to update payment settings:', error);
       alert('Failed to update payment settings');
@@ -32,98 +75,105 @@ export default function EditPaymentModal({ isOpen, onClose, onSave }: EditPaymen
     }
   };
 
+  const hasInvalidUpi =
+    !!(formData.phonePeUpiId && !validateUpiId(formData.phonePeUpiId)) ||
+    !!(formData.paytmUpiId && !validateUpiId(formData.paytmUpiId)) ||
+    !!(formData.googlePayUpiId && !validateUpiId(formData.googlePayUpiId));
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white dark:bg-neutral-900 rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-neutral-200 dark:border-neutral-800">
-        <div className="p-6 border-b border-neutral-200 dark:border-neutral-800 flex justify-between items-center">
-          <h2 className="text-xl font-bold text-neutral-900 dark:text-white">Payment Settings</h2>
-          <button onClick={onClose} className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-colors">
-            <X className="w-5 h-5 text-neutral-500" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Bank Name</label>
-            <div className="relative">
-              <Building className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
-              <input
-                type="text"
-                value={formData.bankName}
-                onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
-                className="w-full pl-10 pr-4 py-2 rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                placeholder="e.g. HDFC Bank"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Account Number</label>
-            <div className="relative">
-              <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
-              <input
-                type="text"
-                value={formData.accountNumber}
-                onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value })}
-                className="w-full pl-10 pr-4 py-2 rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-neutral-700 dark:text-neutral-300">IFSC Code</label>
-            <div className="relative">
-              <Building className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
-              <input
-                type="text"
-                value={formData.ifsc}
-                onChange={(e) => setFormData({ ...formData, ifsc: e.target.value })}
-                className="w-full pl-10 pr-4 py-2 rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                placeholder="e.g. HDFC0001234"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-neutral-700 dark:text-neutral-300">UPI ID</label>
-            <div className="relative">
-              <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
-              <input
-                type="text"
-                value={formData.upiId}
-                onChange={(e) => setFormData({ ...formData, upiId: e.target.value })}
-                className="w-full pl-10 pr-4 py-2 rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                placeholder="e.g. business@upi"
-              />
-            </div>
-          </div>
-
-          <div className="pt-4 flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors"
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Payment Settings"
+      subtitle="Configure UPI IDs for customer payments"
+      size="lg"
+    >
+      {success ? (
+        <Modal.Success
+          title="Saved Successfully!"
+          message="QR codes have been generated automatically."
+          icon={<CheckCircle size={32} style={{ color: '#059669' }} />}
+        />
+      ) : (
+        <form onSubmit={handleSubmit}>
+          <Modal.Body>
+            {/* UPI Payment Methods Section */}
+            <Modal.Section
+              title="UPI Payment Methods"
+              icon={<Smartphone size={16} />}
+              badge={
+                <span className="text-xs flex items-center gap-1" style={{ color: '#FF6B35' }}>
+                  <QrCode size={12} />
+                  QR codes auto-generated
+                </span>
+              }
+              description="Enter your UPI IDs below. QR codes will be generated automatically for customer checkout."
             >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-4 py-2 text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              {/* PhonePe */}
+              <Modal.Field
+                label={<Modal.UpiBadge type="phonepe">PhonePe UPI ID</Modal.UpiBadge>}
+                error={formData.phonePeUpiId && !validateUpiId(formData.phonePeUpiId) ? 'Invalid UPI ID format' : undefined}
+              >
+                <Modal.Input
+                  type="text"
+                  value={formData.phonePeUpiId}
+                  onChange={(e) => setFormData({ ...formData, phonePeUpiId: e.target.value.toLowerCase() })}
+                  placeholder="yourname@ybl"
+                  hasError={!!(formData.phonePeUpiId && !validateUpiId(formData.phonePeUpiId))}
+                />
+              </Modal.Field>
+
+              {/* Paytm */}
+              <Modal.Field
+                label={<Modal.UpiBadge type="paytm">Paytm UPI ID</Modal.UpiBadge>}
+                error={formData.paytmUpiId && !validateUpiId(formData.paytmUpiId) ? 'Invalid UPI ID format' : undefined}
+              >
+                <Modal.Input
+                  type="text"
+                  value={formData.paytmUpiId}
+                  onChange={(e) => setFormData({ ...formData, paytmUpiId: e.target.value.toLowerCase() })}
+                  placeholder="yourname@paytm"
+                  hasError={!!(formData.paytmUpiId && !validateUpiId(formData.paytmUpiId))}
+                />
+              </Modal.Field>
+
+              {/* Google Pay */}
+              <Modal.Field
+                label={<Modal.UpiBadge type="gpay">Google Pay UPI ID</Modal.UpiBadge>}
+                error={formData.googlePayUpiId && !validateUpiId(formData.googlePayUpiId) ? 'Invalid UPI ID format' : undefined}
+              >
+                <Modal.Input
+                  type="text"
+                  value={formData.googlePayUpiId}
+                  onChange={(e) => setFormData({ ...formData, googlePayUpiId: e.target.value.toLowerCase() })}
+                  placeholder="yourname@okicici"
+                  hasError={!!(formData.googlePayUpiId && !validateUpiId(formData.googlePayUpiId))}
+                />
+              </Modal.Field>
+            </Modal.Section>
+
+            {/* Help Text */}
+            <Modal.InfoBox title="How it works:" variant="info">
+              <ul style={{ listStyle: 'disc', paddingLeft: '1rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                <li>Enter your UPI ID for each payment app</li>
+                <li>Click Save - QR codes are generated automatically</li>
+                <li>Customers will see these QR codes at checkout</li>
+              </ul>
+            </Modal.InfoBox>
+          </Modal.Body>
+
+          <Modal.Footer>
+            <Modal.CancelButton onClick={onClose} />
+            <Modal.SubmitButton
+              loading={loading}
+              disabled={hasInvalidUpi}
+              icon={<Save size={16} />}
             >
-              {loading ? (
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : (
-                <Save className="w-4 h-4" />
-              )}
-              Save Details
-            </button>
-          </div>
+              Save & Generate QR
+            </Modal.SubmitButton>
+          </Modal.Footer>
         </form>
-      </div>
-    </div>
+      )}
+    </Modal>
   );
 }

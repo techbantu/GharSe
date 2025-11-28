@@ -18,28 +18,28 @@ const AboutSection: React.FC = () => {
     {
       icon: Heart,
       title: 'Made with Love',
-      description: 'Every dish is prepared with the same care and attention as cooking for our own family.',
+      description: 'Cooked like family, served with care.',
       color: 'text-red-500',
       bgColor: 'bg-red-100',
     },
     {
       icon: Users,
       title: 'Family Recipes',
-      description: 'Traditional recipes passed down through generations, preserving authentic flavors.',
+      description: 'Generations of authentic flavor.',
       color: 'text-blue-500',
       bgColor: 'bg-blue-100',
     },
     {
       icon: Award,
       title: 'Quality Ingredients',
-      description: 'Fresh, premium ingredients sourced daily to ensure the best taste and nutrition.',
+      description: 'Fresh daily, premium always.',
       color: 'text-green-500',
       bgColor: 'bg-green-100',
     },
     {
       icon: Truck,
       title: 'Personal Delivery',
-      description: 'Family-run delivery service ensuring your food arrives fresh and with a smile.',
+      description: 'Fresh to your door, with a smile.',
       color: 'text-primary-500',
       bgColor: 'bg-orange-100',
     },
@@ -48,25 +48,96 @@ const AboutSection: React.FC = () => {
   return (
     <>
       <style>{`
-        /* Mobile: 2 columns for features */
+        /* Mobile: 2 columns for features - compact cards */
         [data-about-features] {
           grid-template-columns: repeat(2, 1fr) !important;
+          gap: 0.5rem !important;
         }
-        
-        /* Tablet: 2 columns */
+
+        /* Mobile: compact card styling */
+        .about-feature-card {
+          padding: 0.75rem 0.5rem !important;
+          min-height: 110px !important;
+          border-radius: 0.75rem !important;
+        }
+        .about-feature-icon {
+          width: 2.25rem !important;
+          height: 2.25rem !important;
+          margin-bottom: 0.375rem !important;
+        }
+        .about-feature-icon svg {
+          width: 16px !important;
+          height: 16px !important;
+        }
+        .about-feature-title {
+          font-size: 0.75rem !important;
+          margin-bottom: 0.1875rem !important;
+        }
+        .about-feature-desc {
+          font-size: 0.625rem !important;
+          line-height: 1.3 !important;
+        }
+
+        /* Tablet: 2 columns, slightly larger */
         @media (min-width: 768px) {
           [data-about-features] {
             grid-template-columns: repeat(2, 1fr) !important;
+            gap: 1rem !important;
+          }
+          .about-feature-card {
+            padding: 1.25rem 1rem !important;
+            min-height: 140px !important;
+            border-radius: 1rem !important;
+          }
+          .about-feature-icon {
+            width: 3rem !important;
+            height: 3rem !important;
+            margin-bottom: 0.75rem !important;
+          }
+          .about-feature-icon svg {
+            width: 20px !important;
+            height: 20px !important;
+          }
+          .about-feature-title {
+            font-size: 0.9375rem !important;
+            margin-bottom: 0.375rem !important;
+          }
+          .about-feature-desc {
+            font-size: 0.8125rem !important;
+            line-height: 1.5 !important;
           }
         }
-        
-        /* Desktop: 4 columns */
+
+        /* Desktop: 4 columns, full size */
         @media (min-width: 1024px) {
           [data-about-main] {
             grid-template-columns: repeat(2, 1fr) !important;
           }
           [data-about-features] {
             grid-template-columns: repeat(4, 1fr) !important;
+            gap: 1.5rem !important;
+          }
+          .about-feature-card {
+            padding: 1.5rem 1rem !important;
+            min-height: auto !important;
+            border-radius: 1.25rem !important;
+          }
+          .about-feature-icon {
+            width: 3.5rem !important;
+            height: 3.5rem !important;
+            margin-bottom: 1rem !important;
+          }
+          .about-feature-icon svg {
+            width: 24px !important;
+            height: 24px !important;
+          }
+          .about-feature-title {
+            font-size: 1rem !important;
+            margin-bottom: 0.5rem !important;
+          }
+          .about-feature-desc {
+            font-size: 0.8125rem !important;
+            line-height: 1.5 !important;
           }
         }
       `}</style>
@@ -268,12 +339,12 @@ const AboutSection: React.FC = () => {
             return (
               <div
                 key={index}
-                className="group animate-slide-up"
-                style={{ 
+                className="group animate-slide-up about-feature-card"
+                style={{
                   animationDelay: `${index * 80}ms`,
                   background: 'white',
-                  borderRadius: '1.25rem',
-                  padding: '1.5rem 1rem',
+                  borderRadius: '0.875rem',
+                  padding: '0.875rem 0.625rem',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
@@ -282,7 +353,8 @@ const AboutSection: React.FC = () => {
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   cursor: 'default',
                   position: 'relative',
-                  overflow: 'hidden'
+                  overflow: 'hidden',
+                  minHeight: '120px'
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = 'translateY(-4px)';
@@ -295,48 +367,50 @@ const AboutSection: React.FC = () => {
                   e.currentTarget.style.borderColor = 'rgba(0, 0, 0, 0.04)';
                 }}
               >
-                {/* Premium Icon Container */}
-                <div 
-                  style={{ 
-                    width: '3.5rem',
-                    height: '3.5rem',
+                {/* Compact Icon Container */}
+                <div
+                  className="about-feature-icon"
+                  style={{
+                    width: '2.5rem',
+                    height: '2.5rem',
                     background: iconGradient,
-                    borderRadius: '1rem',
+                    borderRadius: '0.625rem',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    marginBottom: '1rem',
+                    marginBottom: '0.5rem',
                     transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)'
+                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)',
+                    flexShrink: 0
                   }}
-                  className="group-hover:scale-110"
                 >
-                  <Icon className={feature.color} size={24} strokeWidth={2} />
+                  <Icon className={feature.color} size={18} strokeWidth={2} />
                 </div>
-                
+
                 {/* Title */}
-                <h3 style={{
-                  fontSize: '1rem',
+                <h3 className="about-feature-title" style={{
+                  fontSize: '0.8125rem',
                   fontWeight: 700,
                   color: '#1d1d1f',
-                  marginBottom: '0.5rem',
+                  marginBottom: '0.25rem',
                   textAlign: 'center',
                   fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif',
                   letterSpacing: '-0.02em',
-                  lineHeight: '1.3'
+                  lineHeight: '1.2'
                 }}>
                   {feature.title}
                 </h3>
-                
+
                 {/* Description */}
-                <p style={{
-                  fontSize: '0.8125rem',
+                <p className="about-feature-desc" style={{
+                  fontSize: '0.6875rem',
                   color: '#6B7280',
-                  lineHeight: '1.5',
+                  lineHeight: '1.35',
                   textAlign: 'center',
                   fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif',
                   letterSpacing: '-0.01em',
-                  fontWeight: 400
+                  fontWeight: 400,
+                  margin: 0
                 }}>
                   {feature.description}
                 </p>

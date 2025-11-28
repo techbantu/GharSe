@@ -180,6 +180,40 @@ export const aiChatFunctions = {
       sessionId: z.string().describe('User session ID from chat context'),
     }),
   },
+
+  // ===== GENIUS 10/10 FUNCTIONS =====
+
+  searchAllergyFree: {
+    name: 'searchAllergyFree',
+    description: 'CRITICAL: Search for allergy-safe menu items. Use when user mentions ANY allergy (peanut, nut, dairy, egg, shellfish, wheat, soy, fish). Returns items with safety confidence levels.',
+    parameters: z.object({
+      allergens: z.array(z.string()).describe('List of allergens to avoid (e.g., ["peanut", "dairy"])'),
+      category: z.string().optional().describe('Optional category filter'),
+    }),
+  },
+
+  getSmartCombo: {
+    name: 'getSmartCombo',
+    description: 'Get intelligent meal combo suggestions based on a main dish. Returns complementary items (bread with curry, rice with gravy, drinks with spicy food). Use when user orders a main dish to suggest pairings.',
+    parameters: z.object({
+      mainItemId: z.string().describe('The main dish item ID'),
+      budget: z.number().optional().describe('Optional budget limit in rupees'),
+      isVegetarian: z.boolean().optional().describe('Filter combos for vegetarian'),
+    }),
+  },
+
+  getDecisionHelper: {
+    name: 'getDecisionHelper',
+    description: 'Help indecisive customers choose. Returns curated recommendations based on preferences. Use when user says "help me decide", "what should I get", "I don\'t know what to order".',
+    parameters: z.object({
+      preferences: z.object({
+        isVegetarian: z.boolean().optional(),
+        spiceLevel: z.enum(['mild', 'medium', 'hot']).optional(),
+        mealType: z.enum(['light', 'heavy', 'balanced']).optional(),
+        budget: z.enum(['low', 'medium', 'high']).optional(),
+      }).optional().describe('User preferences if known'),
+    }),
+  },
 };
 
 // ===== FUNCTION IMPLEMENTATIONS =====
@@ -194,25 +228,43 @@ export async function searchMenuItems(params: z.infer<typeof aiChatFunctions.sea
       isAvailable: true,
     };
 
+    // Track if this is a health-focused query (for sorting later)
+    let isHealthQuery = false;
+    let maxCaloriesForHealth = 400; // Default max calories for "healthy" items
+
     // Text search - SQLite compatible (case-insensitive by default with LIKE)
     if (params.query) {
       const searchTerm = params.query.toLowerCase().trim();
-      
+
       // GENIUS FIX: Handle dessert/desserts query variations
       // If user searches for "dessert" or "desserts", also search by category
       const dessertKeywords = ['dessert', 'desserts', 'sweet', 'sweets'];
       const isDessertQuery = dessertKeywords.some(keyword => searchTerm.includes(keyword));
-      
-      if (isDessertQuery && !params.category) {
+
+      // GENIUS FIX: Handle health/healthy/nutritious queries
+      // Map "healthy" searches to low-calorie, vegetarian options
+      const healthKeywords = ['healthy', 'health', 'nutritious', 'light', 'low calorie', 'low-calorie', 'diet', 'fitness', 'lean', 'wholesome'];
+      isHealthQuery = healthKeywords.some(keyword => searchTerm.includes(keyword));
+
+      if (isHealthQuery) {
+        // For healthy queries, filter by calories and prefer vegetarian
+        where.calories = { lte: maxCaloriesForHealth };
+        // Don't add text search for "healthy" since it won't match anything
+        // Instead, return items sorted by calories
+        console.log('[AI Chat] Health query detected - filtering by calories <= 400');
+      } else if (isDessertQuery && !params.category) {
         // Add category filter for desserts
         where.category = { contains: 'Desserts' };
       }
-      
-      where.OR = [
-        { name: { contains: searchTerm } },
-        { description: { contains: searchTerm } },
-        { ingredients: { contains: searchTerm } },
-      ];
+
+      // Only add text search if it's not a health query (health isn't in menu item names)
+      if (!isHealthQuery) {
+        where.OR = [
+          { name: { contains: searchTerm } },
+          { description: { contains: searchTerm } },
+          { ingredients: { contains: searchTerm } },
+        ];
+      }
     }
 
     // Category filter - SQLite compatible with case-insensitive matching
@@ -262,10 +314,10 @@ export async function searchMenuItems(params: z.infer<typeof aiChatFunctions.sea
     const items = await prisma.menuItem.findMany({
       where,
       take: 10,
-      orderBy: [
-        { isPopular: 'desc' },
-        { name: 'asc' },
-      ],
+      // For health queries, sort by lowest calories first; otherwise by popularity
+      orderBy: isHealthQuery
+        ? [{ calories: 'asc' }, { isVegetarian: 'desc' }, { name: 'asc' }]
+        : [{ isPopular: 'desc' }, { name: 'asc' }],
       select: {
         id: true,
         name: true,
@@ -288,14 +340,45 @@ export async function searchMenuItems(params: z.infer<typeof aiChatFunctions.sea
       },
     });
 
+    // CRITICAL: Tell AI WHY there are no results (menu existence vs stock vs filter)
+    // This helps AI give correct response - not "out of stock" for menu gaps
+    const dietaryFilterUsed = params.isVegetarian || params.isVegan || params.isGlutenFree;
+    const categoryFilterUsed = !!params.category;
+    const filterDescription = [
+      params.isVegetarian && 'vegetarian',
+      params.isVegan && 'vegan',
+      params.isGlutenFree && 'gluten-free',
+      params.category && params.category,
+      isHealthQuery && 'healthy/low-calorie',
+    ].filter(Boolean).join(', ');
+
     return {
       success: true,
       itemsFound: items.length,
+      // GENIUS: Explicitly tell AI if this is a menu existence issue vs stock issue
+      menuExistenceNote: items.length === 0 && (dietaryFilterUsed || categoryFilterUsed || isHealthQuery)
+        ? `IMPORTANT: No ${filterDescription} items exist on our menu. This is a MENU gap, NOT a stock issue. Do NOT say "out of stock" or "fresh out" - say "We don't have ${filterDescription} dishes on our menu yet" and offer alternatives.`
+        : null,
+      // Flag for AI to know this was a health-focused search
+      isHealthSearch: isHealthQuery,
+      healthSearchNote: isHealthQuery
+        ? items.length > 0
+          ? `Showing ${items.length} healthy options under 400 calories, sorted by lowest calories first`
+          : `No items under 400 calories found. Suggest showing popular or vegetarian items instead.`
+        : undefined,
       items: items.map(item => {
         // Check if item is in stock
         const isInStock = !item.inventoryEnabled || item.inventory === null || item.inventory === undefined || item.inventory > 0;
         const stockCount = item.inventoryEnabled && item.inventory !== null && item.inventory !== undefined ? item.inventory : null;
-        
+
+        // Calculate health score for display (lower calories = healthier)
+        const calorieScore = item.calories
+          ? item.calories <= 200 ? 'Very Light'
+            : item.calories <= 300 ? 'Light'
+            : item.calories <= 400 ? 'Moderate'
+            : 'Hearty'
+          : 'Unknown';
+
         return {
           ...item,
           priceFormatted: `₹${item.price}`,
@@ -306,10 +389,13 @@ export async function searchMenuItems(params: z.infer<typeof aiChatFunctions.sea
             item.isGlutenFree && 'Gluten-Free',
           ].filter(Boolean).join(', ') || 'None',
           spicyLevelText: ['Mild', 'Medium', 'Medium-Hot', 'Hot', 'Very Hot', 'Extreme'][item.spicyLevel] || 'Not Spicy',
+          // Health info
+          caloriesFormatted: item.calories ? `${item.calories} cal` : 'N/A',
+          calorieScore,
           // NEW: Inventory info
           isInStock,
           stockCount,
-          stockMessage: !isInStock 
+          stockMessage: !isInStock
             ? (item.outOfStockMessage || 'Out of stock - Check back later!')
             : stockCount !== null && stockCount <= 3
             ? `Only ${stockCount} left!`
@@ -785,6 +871,13 @@ export async function executeAIFunction(functionName: string, params: any) {
         return await removeItemFromCart(params);
       case 'proceedToCheckout':
         return await proceedToCheckout(params);
+      // GENIUS 10/10 functions
+      case 'searchAllergyFree':
+        return await searchAllergyFree(params);
+      case 'getSmartCombo':
+        return await getSmartCombo(params);
+      case 'getDecisionHelper':
+        return await getDecisionHelper(params);
       default:
         return {
           success: false,
@@ -1278,6 +1371,450 @@ export async function proceedToCheckout(params: z.infer<typeof aiChatFunctions.p
     return {
       success: false,
       error: 'Failed to proceed to checkout. Please try again.',
+    };
+  }
+}
+
+// ===== GENIUS 10/10 FUNCTION IMPLEMENTATIONS =====
+
+/**
+ * ALLERGEN MAP - Maps allergens to ingredients that contain them
+ * This is CRITICAL for food safety
+ */
+const ALLERGEN_INGREDIENTS: Record<string, string[]> = {
+  peanut: ['peanut', 'groundnut', 'arachis', 'goober'],
+  nut: ['almond', 'cashew', 'walnut', 'pistachio', 'hazelnut', 'pecan', 'macadamia', 'chestnut', 'pine nut', 'brazil nut'],
+  dairy: ['milk', 'cream', 'butter', 'ghee', 'cheese', 'paneer', 'yogurt', 'curd', 'dahi', 'khoya', 'mawa', 'whey', 'casein', 'lactose', 'malai'],
+  egg: ['egg', 'mayonnaise', 'meringue', 'albumin'],
+  shellfish: ['shrimp', 'prawn', 'crab', 'lobster', 'crayfish', 'scallop', 'clam', 'mussel', 'oyster'],
+  wheat: ['wheat', 'flour', 'maida', 'atta', 'bread', 'naan', 'roti', 'paratha', 'chapati', 'semolina', 'suji', 'rava'],
+  gluten: ['wheat', 'barley', 'rye', 'flour', 'maida', 'atta', 'bread', 'naan', 'semolina'],
+  soy: ['soy', 'soya', 'tofu', 'edamame', 'miso', 'tempeh'],
+  fish: ['fish', 'anchovy', 'salmon', 'tuna', 'cod', 'sardine', 'mackerel'],
+  sesame: ['sesame', 'tahini', 'til'],
+};
+
+/**
+ * Search Allergy-Free Items
+ * CRITICAL SAFETY FUNCTION: Helps users with allergies find safe food
+ */
+export async function searchAllergyFree(params: z.infer<typeof aiChatFunctions.searchAllergyFree.parameters>) {
+  try {
+    const { allergens, category } = params;
+
+    // Get all available menu items
+    const where: any = { isAvailable: true };
+    if (category) {
+      where.category = { contains: category };
+    }
+
+    const allItems = await prisma.menuItem.findMany({
+      where,
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        price: true,
+        category: true,
+        ingredients: true,
+        isVegetarian: true,
+        isVegan: true,
+        isGlutenFree: true,
+        image: true,
+      },
+    });
+
+    // Build list of ingredients to avoid
+    const ingredientsToAvoid: string[] = [];
+    for (const allergen of allergens) {
+      const lowerAllergen = allergen.toLowerCase();
+      if (ALLERGEN_INGREDIENTS[lowerAllergen]) {
+        ingredientsToAvoid.push(...ALLERGEN_INGREDIENTS[lowerAllergen]);
+      } else {
+        // If allergen not in map, use it directly
+        ingredientsToAvoid.push(lowerAllergen);
+      }
+    }
+
+    // Filter items
+    const safeItems: Array<{
+      item: any;
+      safetyLevel: 'HIGH' | 'MEDIUM' | 'VERIFY';
+      reason: string;
+    }> = [];
+
+    const unsafeItems: Array<{
+      item: any;
+      reason: string;
+    }> = [];
+
+    for (const item of allItems) {
+      const ingredientsLower = (item.ingredients || '').toLowerCase();
+      const nameLower = item.name.toLowerCase();
+      const descLower = (item.description || '').toLowerCase();
+
+      // Check if any allergen ingredient is present
+      let foundAllergen: string | null = null;
+      for (const ingredient of ingredientsToAvoid) {
+        if (ingredientsLower.includes(ingredient) ||
+            nameLower.includes(ingredient) ||
+            descLower.includes(ingredient)) {
+          foundAllergen = ingredient;
+          break;
+        }
+      }
+
+      if (foundAllergen) {
+        unsafeItems.push({
+          item,
+          reason: `Contains ${foundAllergen}`,
+        });
+      } else {
+        // Determine safety level
+        let safetyLevel: 'HIGH' | 'MEDIUM' | 'VERIFY' = 'MEDIUM';
+        let reason = 'No known allergens detected';
+
+        // Check for explicit flags
+        if (allergens.includes('gluten') && item.isGlutenFree) {
+          safetyLevel = 'HIGH';
+          reason = 'Marked as gluten-free';
+        } else if (allergens.includes('dairy') && item.isVegan) {
+          safetyLevel = 'HIGH';
+          reason = 'Vegan (no dairy)';
+        } else if (!item.ingredients || item.ingredients.trim() === '') {
+          safetyLevel = 'VERIFY';
+          reason = 'Ingredients not listed - please verify with kitchen';
+        }
+
+        safeItems.push({
+          item,
+          safetyLevel,
+          reason,
+        });
+      }
+    }
+
+    // Sort: HIGH safety first, then MEDIUM, then VERIFY
+    safeItems.sort((a, b) => {
+      const order = { 'HIGH': 0, 'MEDIUM': 1, 'VERIFY': 2 };
+      return order[a.safetyLevel] - order[b.safetyLevel];
+    });
+
+    return {
+      success: true,
+      allergensChecked: allergens,
+      safeItemsCount: safeItems.length,
+      // CRITICAL: Always include safety warning
+      safetyWarning: 'IMPORTANT: For severe allergies, always call +91 90104 60964 to confirm with our kitchen. Cross-contamination may occur.',
+      safeItems: safeItems.slice(0, 10).map(({ item, safetyLevel, reason }) => ({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        priceFormatted: `₹${item.price}`,
+        category: item.category,
+        safetyLevel,
+        safetyReason: reason,
+        image: item.image,
+      })),
+      unsafeItemsCount: unsafeItems.length,
+      // Show first few unsafe items so AI knows what to avoid mentioning
+      unsafeItems: unsafeItems.slice(0, 5).map(({ item, reason }) => ({
+        name: item.name,
+        reason,
+      })),
+    };
+  } catch (error) {
+    console.error('Error searching allergy-free items:', error);
+    return {
+      success: false,
+      error: 'Failed to search for allergy-safe items',
+      safetyWarning: 'For allergy concerns, please call +91 90104 60964 directly.',
+    };
+  }
+}
+
+/**
+ * PAIRING MAP - Smart food combinations
+ */
+const PAIRING_RULES: Record<string, { categories: string[]; items: string[]; reason: string }[]> = {
+  // Curries pair with breads and rice
+  'Main Course': [
+    { categories: ['Rice & Breads'], items: [], reason: 'Every curry needs a carb companion!' },
+    { categories: ['Beverages'], items: ['Lassi', 'Chaas'], reason: 'Cool drink to balance the spice' },
+  ],
+  // Biryanis are complete but pair with raita
+  'Biryani': [
+    { categories: [], items: ['Raita', 'Mirchi Ka Salan'], reason: 'Traditional biryani accompaniment' },
+    { categories: ['Beverages'], items: [], reason: 'Something to sip' },
+  ],
+  // Appetizers lead to mains
+  'Appetizers': [
+    { categories: ['Main Course'], items: [], reason: 'Start light, go big!' },
+  ],
+  // Breads go with everything gravy
+  'Rice & Breads': [
+    { categories: ['Main Course'], items: [], reason: 'Bread needs a dip!' },
+  ],
+};
+
+/**
+ * Get Smart Combo Suggestions
+ * GENIUS: Suggests perfect food pairings
+ */
+export async function getSmartCombo(params: z.infer<typeof aiChatFunctions.getSmartCombo.parameters>) {
+  try {
+    const { mainItemId, budget, isVegetarian } = params;
+
+    // Get the main item
+    const mainItem = await prisma.menuItem.findUnique({
+      where: { id: mainItemId },
+      select: {
+        id: true,
+        name: true,
+        price: true,
+        category: true,
+        isVegetarian: true,
+        spicyLevel: true,
+      },
+    });
+
+    if (!mainItem) {
+      return {
+        success: false,
+        error: 'Main item not found',
+      };
+    }
+
+    // Determine pairing rules based on category
+    const rules = PAIRING_RULES[mainItem.category] || PAIRING_RULES['Main Course'];
+
+    // Build suggestions
+    const suggestions: Array<{
+      item: any;
+      reason: string;
+      comboPrice: number;
+    }> = [];
+
+    for (const rule of rules) {
+      // Find items matching this rule
+      const where: any = {
+        isAvailable: true,
+        id: { not: mainItemId }, // Don't suggest the same item
+      };
+
+      // Apply vegetarian filter if main item is veg or user wants veg
+      if (mainItem.isVegetarian || isVegetarian) {
+        where.isVegetarian = true;
+      }
+
+      // Apply budget filter
+      if (budget) {
+        const remainingBudget = budget - mainItem.price;
+        if (remainingBudget > 0) {
+          where.price = { lte: remainingBudget };
+        }
+      }
+
+      // Category or specific item filter
+      if (rule.categories.length > 0) {
+        where.category = { in: rule.categories };
+      } else if (rule.items.length > 0) {
+        where.name = { in: rule.items };
+      }
+
+      const matchingItems = await prisma.menuItem.findMany({
+        where,
+        take: 3,
+        orderBy: { isPopular: 'desc' },
+        select: {
+          id: true,
+          name: true,
+          price: true,
+          category: true,
+          image: true,
+        },
+      });
+
+      for (const item of matchingItems) {
+        suggestions.push({
+          item,
+          reason: rule.reason,
+          comboPrice: mainItem.price + item.price,
+        });
+      }
+    }
+
+    // Calculate combo deals
+    const comboSuggestions = suggestions.slice(0, 5).map(s => ({
+      id: s.item.id,
+      name: s.item.name,
+      price: s.item.price,
+      priceFormatted: `₹${s.item.price}`,
+      category: s.item.category,
+      image: s.item.image,
+      pairingReason: s.reason,
+      comboTotal: s.comboPrice,
+      comboTotalFormatted: `₹${s.comboPrice}`,
+      // Check if combo qualifies for free delivery
+      freeDelivery: s.comboPrice >= 499,
+    }));
+
+    return {
+      success: true,
+      mainItem: {
+        name: mainItem.name,
+        price: mainItem.price,
+        priceFormatted: `₹${mainItem.price}`,
+        category: mainItem.category,
+      },
+      suggestions: comboSuggestions,
+      comboTip: comboSuggestions.some(s => s.freeDelivery)
+        ? 'Add any of these for FREE DELIVERY!'
+        : `Add ₹${499 - mainItem.price} more for free delivery`,
+    };
+  } catch (error) {
+    console.error('Error getting smart combo:', error);
+    return {
+      success: false,
+      error: 'Failed to get combo suggestions',
+    };
+  }
+}
+
+/**
+ * Decision Helper
+ * GENIUS: Helps indecisive customers choose
+ */
+export async function getDecisionHelper(params: z.infer<typeof aiChatFunctions.getDecisionHelper.parameters>) {
+  try {
+    const { preferences } = params;
+
+    // Build query based on preferences
+    const where: any = { isAvailable: true };
+
+    if (preferences?.isVegetarian) {
+      where.isVegetarian = true;
+    }
+
+    if (preferences?.spiceLevel) {
+      const spiceLevels = { mild: 1, medium: 2, hot: 4 };
+      where.spicyLevel = { lte: spiceLevels[preferences.spiceLevel] };
+    }
+
+    if (preferences?.mealType) {
+      const calorieRanges = {
+        light: { lte: 300 },
+        balanced: { gte: 300, lte: 500 },
+        heavy: { gte: 400 },
+      };
+      where.calories = calorieRanges[preferences.mealType];
+    }
+
+    if (preferences?.budget) {
+      const budgetRanges = {
+        low: { lte: 200 },
+        medium: { gte: 150, lte: 350 },
+        high: { gte: 300 },
+      };
+      where.price = budgetRanges[preferences.budget];
+    }
+
+    // Get matching items
+    const items = await prisma.menuItem.findMany({
+      where,
+      take: 10,
+      orderBy: [{ isPopular: 'desc' }, { name: 'asc' }],
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        price: true,
+        category: true,
+        image: true,
+        isVegetarian: true,
+        spicyLevel: true,
+        calories: true,
+        isPopular: true,
+      },
+    });
+
+    // If no preferences, get bestsellers
+    if (!preferences || Object.keys(preferences).length === 0) {
+      const bestsellers = await prisma.menuItem.findMany({
+        where: { isAvailable: true, isPopular: true },
+        take: 5,
+        orderBy: { name: 'asc' },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          price: true,
+          category: true,
+          image: true,
+          isVegetarian: true,
+          spicyLevel: true,
+        },
+      });
+
+      return {
+        success: true,
+        preferencesUsed: false,
+        message: "Not sure what you want? Here are our crowd favorites:",
+        recommendations: bestsellers.map(item => ({
+          id: item.id,
+          name: item.name,
+          description: item.description,
+          price: item.price,
+          priceFormatted: `₹${item.price}`,
+          category: item.category,
+          image: item.image,
+          whyThisItem: 'Customer favorite!',
+        })),
+        followUpQuestion: 'Want me to narrow it down? Tell me: veg or non-veg? Spicy or mild?',
+      };
+    }
+
+    // Build personalized recommendations
+    const recommendations = items.slice(0, 5).map(item => {
+      // Build reason based on preferences matched
+      const reasons: string[] = [];
+      if (preferences.isVegetarian && item.isVegetarian) reasons.push('vegetarian');
+      if (preferences.spiceLevel === 'mild' && item.spicyLevel <= 1) reasons.push('mild');
+      if (preferences.spiceLevel === 'hot' && item.spicyLevel >= 3) reasons.push('spicy');
+      if (preferences.mealType === 'light' && item.calories && item.calories <= 300) reasons.push('light');
+      if (item.isPopular) reasons.push('popular');
+
+      return {
+        id: item.id,
+        name: item.name,
+        description: item.description,
+        price: item.price,
+        priceFormatted: `₹${item.price}`,
+        category: item.category,
+        image: item.image,
+        whyThisItem: reasons.length > 0
+          ? `Matches your preference: ${reasons.join(', ')}`
+          : 'Great choice!',
+      };
+    });
+
+    return {
+      success: true,
+      preferencesUsed: true,
+      preferencesApplied: preferences,
+      message: `Based on what you like, here are my picks:`,
+      recommendations,
+      topPick: recommendations[0],
+      followUpQuestion: recommendations.length > 0
+        ? `My top pick: ${recommendations[0].name} at ₹${recommendations[0].price}. Want it?`
+        : 'Nothing matched exactly. Want me to show you our bestsellers instead?',
+    };
+  } catch (error) {
+    console.error('Error in decision helper:', error);
+    return {
+      success: false,
+      error: 'Failed to get recommendations',
+      fallback: 'Try our Butter Chicken (₹299) - 9/10 customers love it!',
     };
   }
 }

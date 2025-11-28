@@ -220,6 +220,25 @@ export const DeliveryTimeSlotPicker: React.FC<DeliveryTimeSlotPickerProps> = ({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }} className={className}>
+      {/* Responsive time slot grid styles */}
+      <style>{`
+        .time-slot-grid {
+          grid-template-columns: repeat(3, 1fr) !important;
+        }
+        @media (min-width: 480px) {
+          .time-slot-grid {
+            grid-template-columns: repeat(4, 1fr) !important;
+          }
+        }
+        @media (min-width: 768px) {
+          .time-slot-grid {
+            grid-template-columns: repeat(5, 1fr) !important;
+          }
+        }
+        .time-slot-tile {
+          min-height: 52px !important;
+        }
+      `}</style>
       {/* Region Info Banner */}
       <div
         style={{
@@ -481,12 +500,13 @@ export const DeliveryTimeSlotPicker: React.FC<DeliveryTimeSlotPickerProps> = ({
               </p>
             </div>
           ) : (
-            <div 
+            <div
+              className="time-slot-grid"
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-                gap: '8px',
-                maxHeight: '400px',
+                gridTemplateColumns: 'repeat(3, 1fr)',
+                gap: '6px',
+                maxHeight: '280px',
                 overflowY: 'auto',
                 paddingRight: '4px',
               }}
@@ -494,6 +514,9 @@ export const DeliveryTimeSlotPicker: React.FC<DeliveryTimeSlotPickerProps> = ({
               {availableTimeSlots.map((slot) => {
                 const isSelected = selectedSlot?.id === slot.id;
                 const isRecommended = recommendedSlot?.id === slot.id;
+                const slotsRemaining = slot.maxSlots && slot.bookedSlots !== undefined
+                  ? slot.maxSlots - slot.bookedSlots
+                  : null;
 
                 return (
                   <button
@@ -501,127 +524,119 @@ export const DeliveryTimeSlotPicker: React.FC<DeliveryTimeSlotPickerProps> = ({
                     type="button"
                     onClick={() => handleSlotSelect(slot)}
                     disabled={!slot.isAvailable}
-                    className="delivery-slot-button"
+                    className="delivery-slot-button time-slot-tile"
                     style={{
                       position: 'relative',
-                      padding: '0.75rem',
-                      borderRadius: '0.5rem',
+                      padding: '8px 6px',
+                      borderRadius: '8px',
                       border: isSelected ? '2px solid #f97316' : '1px solid #e5e7eb',
                       background: isSelected ? '#fff7ed' : !slot.isAvailable ? '#f9fafb' : '#ffffff',
                       cursor: !slot.isAvailable ? 'not-allowed' : 'pointer',
-                      transition: 'border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease',
-                      textAlign: 'left',
-                      boxShadow: isSelected ? '0 0 0 2px rgba(249, 115, 22, 0.2)' : 'none',
-                      transform: 'none',
-                      opacity: !slot.isAvailable ? 0.5 : 1,
+                      transition: 'all 0.15s ease',
+                      textAlign: 'center',
+                      boxShadow: isSelected ? '0 0 0 2px rgba(249, 115, 22, 0.15)' : 'none',
+                      opacity: !slot.isAvailable ? 0.4 : 1,
                       outline: 'none',
-                      outlineOffset: 0,
                       WebkitTapHighlightColor: 'transparent',
-                      boxSizing: 'border-box',
-                      minWidth: '140px',
-                      minHeight: '80px',
+                      minHeight: '52px',
                     }}
                     onMouseEnter={(e) => {
                       if (!isSelected && slot.isAvailable) {
-                        e.currentTarget.style.setProperty('border-color', '#fed7aa', 'important');
-                        e.currentTarget.style.setProperty('border-width', '1px', 'important');
+                        e.currentTarget.style.borderColor = '#fed7aa';
+                        e.currentTarget.style.background = '#fffbf5';
                       }
                     }}
                     onMouseLeave={(e) => {
                       if (!isSelected && slot.isAvailable) {
-                        e.currentTarget.style.setProperty('border-color', '#e5e7eb', 'important');
-                        e.currentTarget.style.setProperty('border-width', '1px', 'important');
+                        e.currentTarget.style.borderColor = '#e5e7eb';
+                        e.currentTarget.style.background = '#ffffff';
                       }
                     }}
-                    onFocus={(e) => {
-                      e.currentTarget.style.outline = 'none';
-                      e.currentTarget.style.outlineOffset = '0';
-                    }}
-                    onBlur={(e) => {
-                      e.currentTarget.style.outline = 'none';
-                      e.currentTarget.style.outlineOffset = '0';
-                    }}
                   >
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      {/* Time */}
-                      <div 
-                        style={{
-                          fontWeight: 700,
-                          fontSize: '14px',
-                          color: isSelected ? '#ea580c' : '#111827',
-                        }}
-                      >
-                        {formatTz(slot.startTime, 'h:mm a', { timeZone: userRegion.timezone })}
-                      </div>
-
-                      {/* Sublabel (In 2h 30m) */}
-                      <div 
-                        style={{
-                          fontSize: '11px',
-                          color: isSelected ? '#ea580c' : '#6b7280',
-                        }}
-                      >
-                        {slot.sublabel}
-                      </div>
-
-                      {/* Availability indicator */}
-                      {slot.isAvailable && slot.bookedSlots !== undefined && (
-                        <div 
-                          style={{
-                            fontSize: '10px',
-                            marginTop: '4px',
-                            color: (slot.maxSlots! - slot.bookedSlots) <= 2 ? '#dc2626' : '#10b981',
-                            fontWeight: 600,
-                          }}
-                        >
-                          {slot.maxSlots! - slot.bookedSlots} left
-                        </div>
-                      )}
-
-                      {/* Fully booked */}
-                      {!slot.isAvailable && (
-                        <div style={{ fontSize: '10px', color: '#dc2626', fontWeight: 600, marginTop: '4px' }}>
-                          Fully Booked
-                        </div>
-                      )}
+                    {/* Time - Primary */}
+                    <div
+                      style={{
+                        fontWeight: 700,
+                        fontSize: '13px',
+                        color: isSelected ? '#ea580c' : '#111827',
+                        lineHeight: 1.2,
+                      }}
+                    >
+                      {formatTz(slot.startTime, 'h:mm a', { timeZone: userRegion.timezone })}
                     </div>
 
-                    {/* Recommended badge */}
-                    {isRecommended && !isSelected && (
-                      <div 
+                    {/* Sublabel - Secondary */}
+                    <div
+                      style={{
+                        fontSize: '9px',
+                        color: isSelected ? '#ea580c' : '#9ca3af',
+                        marginTop: '2px',
+                        lineHeight: 1.1,
+                      }}
+                    >
+                      {slot.sublabel}
+                    </div>
+
+                    {/* Availability - Tertiary */}
+                    {slot.isAvailable && slotsRemaining !== null && (
+                      <div
                         style={{
-                          position: 'absolute',
-                          top: '-4px',
-                          right: '-4px',
-                          background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)',
-                          color: '#ffffff',
                           fontSize: '9px',
-                          fontWeight: 700,
-                          padding: '2px 6px',
-                          borderRadius: '9999px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '2px',
+                          marginTop: '3px',
+                          color: slotsRemaining <= 2 ? '#dc2626' : '#10b981',
+                          fontWeight: 600,
+                          lineHeight: 1,
                         }}
                       >
-                        <Zap style={{ width: '10px', height: '10px' }} />
-                        BEST
+                        {slotsRemaining} left
                       </div>
                     )}
 
-                    {/* Selected checkmark */}
-                    {isSelected && (
-                      <CheckCircle2 
+                    {/* Fully booked */}
+                    {!slot.isAvailable && (
+                      <div style={{
+                        fontSize: '8px',
+                        color: '#9ca3af',
+                        fontWeight: 500,
+                        marginTop: '3px',
+                        lineHeight: 1,
+                      }}>
+                        Full
+                      </div>
+                    )}
+
+                    {/* Recommended badge - Compact */}
+                    {isRecommended && !isSelected && slot.isAvailable && (
+                      <div
                         style={{
                           position: 'absolute',
-                          top: '8px',
-                          right: '8px',
-                          width: '20px',
-                          height: '20px',
+                          top: '-3px',
+                          right: '-3px',
+                          background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)',
+                          color: '#ffffff',
+                          fontSize: '7px',
+                          fontWeight: 700,
+                          padding: '2px 4px',
+                          borderRadius: '4px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '1px',
+                        }}
+                      >
+                        <Zap style={{ width: '8px', height: '8px' }} />
+                      </div>
+                    )}
+
+                    {/* Selected checkmark - Compact */}
+                    {isSelected && (
+                      <CheckCircle2
+                        style={{
+                          position: 'absolute',
+                          top: '3px',
+                          right: '3px',
+                          width: '14px',
+                          height: '14px',
                           color: '#f97316',
-                          backgroundColor: '#fff7ed',
-                          borderRadius: '50%',
-                          padding: '1px',
                         }}
                       />
                     )}

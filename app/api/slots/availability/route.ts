@@ -58,7 +58,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const region = REGIONS[regionId];
+    // Support 'GEO' as alias for 'IN' (geo-detected users use 'GEO' as region ID)
+    const effectiveRegionId = regionId === 'GEO' ? 'IN' : regionId;
+    const region = REGIONS[effectiveRegionId];
     if (!region) {
       return NextResponse.json(
         { error: `Invalid region: ${regionId}` },

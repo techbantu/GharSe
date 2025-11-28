@@ -802,7 +802,7 @@ function ProfilePageContent() {
             }
           }
           
-          /* Hero Grid - Responsive Layout */
+          /* Hero Grid - Responsive Layout with Equal Heights */
           .hero-grid {
             display: grid;
             grid-template-columns: 1fr;
@@ -810,11 +810,25 @@ function ProfilePageContent() {
             align-items: stretch;
             width: 100%;
           }
-          
+
+          .hero-grid > * {
+            min-height: 320px;
+          }
+
           @media (min-width: 768px) {
             .hero-grid {
               grid-template-columns: repeat(2, minmax(0, 1fr));
               gap: 2rem;
+            }
+
+            .hero-grid > * {
+              min-height: 380px;
+            }
+          }
+
+          @media (min-width: 1024px) {
+            .hero-grid > * {
+              min-height: 420px;
             }
           }
           
@@ -827,13 +841,14 @@ function ProfilePageContent() {
           
           /* Container Responsive Padding - Unified centering */
           .profile-container {
-            padding: 90px 16px 40px !important;
+            padding: 16px 16px 40px !important;
+            padding-top: 16px !important;
             width: 100%;
           }
-          
+
           @media (min-width: 640px) {
             .profile-container {
-              padding: 100px 24px 40px !important;
+              padding: 24px 24px 40px !important;
             }
           }
           
@@ -857,7 +872,7 @@ function ProfilePageContent() {
           }
         `}</style>
         
-        <div style={{ maxWidth: '1600px', margin: '0 auto', padding: '90px 16px 40px', position: 'relative', zIndex: 1 }} className="profile-container">
+        <div style={{ maxWidth: '1600px', margin: '0 auto', padding: '16px 16px 40px', position: 'relative', zIndex: 1 }} className="profile-container">
           {/* Hero Section - Culinary Passport & Taste Profile */}
           <div style={{ marginBottom: '2rem', position: 'relative', zIndex: 2 }}>
             {isLoadingProfile ? (
@@ -964,6 +979,43 @@ function ProfilePageContent() {
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Quick Action - Browse Menu CTA */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            marginBottom: '1.5rem',
+          }}>
+            <button
+              onClick={() => router.push('/#menu')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.875rem 2rem',
+                background: 'linear-gradient(135deg, #F97316 0%, #EA580C 100%)',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '2rem',
+                fontSize: '1rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                boxShadow: '0 4px 14px rgba(249, 115, 22, 0.4)',
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 6px 20px rgba(249, 115, 22, 0.5)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 14px rgba(249, 115, 22, 0.4)';
+              }}
+            >
+              <Utensils size={20} />
+              <span>Browse Menu</span>
+            </button>
           </div>
 
           {/* Tab Navigation - Instagram/Twitter Style */}

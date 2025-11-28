@@ -127,6 +127,12 @@ export default function ChefDashboard() {
               <p className="text-sm text-gray-500 mt-1">Welcome back! 👨‍🍳</p>
             </div>
             <div className="flex items-center space-x-4">
+              <a
+                href="/chef/settings/payments"
+                className="px-4 py-2 border border-orange-500 text-orange-600 rounded-lg hover:bg-orange-50 transition-colors flex items-center gap-2"
+              >
+                💳 Payment Settings
+              </a>
               <button
                 className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
                 onClick={loadDashboardData}

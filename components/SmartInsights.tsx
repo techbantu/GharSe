@@ -1,31 +1,34 @@
 /**
  * SMART INSIGHTS - Data Visualization Cards
- * 
+ *
  * Purpose: Display intelligent insights about ordering behavior
- * 
+ *
  * Features:
- * - Favorite dishes with reorder buttons
+ * - Favorite dishes with images and reorder buttons
+ * - Full favorites modal when clicking "+X more"
  * - Spending trends chart
  * - Category exploration grid
  * - Order patterns analysis
  * - Discovery score
  * - Next order prediction
- * 
+ *
  * Visual: Clean data viz with actionable insights
  */
 
 'use client';
 
-import React from 'react';
-import { 
-  Heart, 
-  TrendingUp, 
-  Compass, 
-  Calendar, 
-  BarChart3, 
-  Sparkles, 
-  LucideIcon, 
+import React, { useState } from 'react';
+import Image from 'next/image';
+import {
+  Heart,
+  TrendingUp,
+  Compass,
+  Calendar,
+  Sparkles,
+  LucideIcon,
   UtensilsCrossed,
+  X,
+  ChevronRight,
   // Category Icons
   Cookie,
   Soup,
@@ -50,7 +53,7 @@ const getIconComponent = (iconName: string): LucideIcon => {
     'star': Star,
     'utensils-crossed': UtensilsCrossed
   };
-  
+
   return iconMap[iconName] || UtensilsCrossed;
 };
 
@@ -71,9 +74,9 @@ interface CategoryExploration {
   category: string;
   orderCount: number;
   percentageOfTotal: number;
-  icon?: LucideIcon;  // Icon component
-  iconName?: string;  // Icon name for mapping
-  iconEmoji?: string; // Deprecated, kept for backward compatibility
+  icon?: LucideIcon;
+  iconName?: string;
+  iconEmoji?: string;
 }
 
 interface SmartInsightsProps {
@@ -89,6 +92,161 @@ interface SmartInsightsProps {
   onReorder: (dishId: string) => void;
 }
 
+// Favorite dish card component with image
+const FavoriteDishCard: React.FC<{
+  dish: FavoriteDish;
+  rank: number;
+  onReorder: (dishId: string) => void;
+  compact?: boolean;
+}> = ({ dish, rank, onReorder, compact = false }) => {
+  const [imageError, setImageError] = useState(false);
+  const hasValidImage = dish.image && !imageError && dish.image !== '/images/placeholder.jpg';
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: compact ? '0.75rem' : '1rem',
+        padding: compact ? '0.75rem' : '1rem',
+        backgroundColor: '#F9FAFB',
+        borderRadius: '0.75rem',
+        border: '1px solid rgba(0, 0, 0, 0.05)',
+        transition: 'all 0.2s ease',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.backgroundColor = '#F3F4F6';
+        e.currentTarget.style.transform = 'translateX(2px)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.backgroundColor = '#F9FAFB';
+        e.currentTarget.style.transform = 'translateX(0)';
+      }}
+    >
+      {/* Rank badge */}
+      <div
+        style={{
+          width: compact ? '1.75rem' : '2rem',
+          height: compact ? '1.75rem' : '2rem',
+          background: rank <= 3
+            ? 'linear-gradient(135deg, #FB923C, #EF4444)'
+            : 'linear-gradient(135deg, #9CA3AF, #6B7280)',
+          borderRadius: '50%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: 'white',
+          fontWeight: '700',
+          fontSize: compact ? '0.7rem' : '0.75rem',
+          flexShrink: 0,
+        }}
+      >
+        {rank}
+      </div>
+
+      {/* Food Image */}
+      <div
+        style={{
+          width: compact ? '3rem' : '4rem',
+          height: compact ? '3rem' : '4rem',
+          borderRadius: '0.5rem',
+          overflow: 'hidden',
+          flexShrink: 0,
+          backgroundColor: '#E5E7EB',
+          position: 'relative',
+        }}
+      >
+        {hasValidImage ? (
+          <Image
+            src={dish.image!}
+            alt={dish.dishName}
+            fill
+            sizes="64px"
+            style={{ objectFit: 'cover' }}
+            onError={() => setImageError(true)}
+          />
+        ) : (
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'linear-gradient(135deg, #FED7AA, #FDBA74)',
+            }}
+          >
+            <UtensilsCrossed size={compact ? 16 : 20} style={{ color: '#EA580C' }} />
+          </div>
+        )}
+      </div>
+
+      {/* Dish Info */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p
+          style={{
+            fontWeight: '600',
+            color: '#111827',
+            fontSize: compact ? '0.875rem' : '1rem',
+            marginBottom: '0.25rem',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {dish.dishName}
+        </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span
+            style={{
+              fontSize: '0.75rem',
+              color: '#6B7280',
+              backgroundColor: '#F3F4F6',
+              padding: '0.125rem 0.5rem',
+              borderRadius: '0.25rem',
+            }}
+          >
+            {dish.category}
+          </span>
+          <span style={{ fontSize: '0.75rem', color: '#F97316', fontWeight: '600' }}>
+            {dish.orderCount}x ordered
+          </span>
+        </div>
+      </div>
+
+      {/* Reorder Button */}
+      <button
+        onClick={() => onReorder(dish.dishId)}
+        style={{
+          padding: compact ? '0.375rem 0.75rem' : '0.5rem 1rem',
+          backgroundColor: '#F97316',
+          color: 'white',
+          fontSize: '0.75rem',
+          borderRadius: '0.5rem',
+          fontWeight: '600',
+          border: 'none',
+          cursor: 'pointer',
+          transition: 'all 0.2s ease',
+          flexShrink: 0,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.25rem',
+        }}
+        onMouseOver={(e) => {
+          e.currentTarget.style.backgroundColor = '#EA580C';
+          e.currentTarget.style.transform = 'scale(1.02)';
+        }}
+        onMouseOut={(e) => {
+          e.currentTarget.style.backgroundColor = '#F97316';
+          e.currentTarget.style.transform = 'scale(1)';
+        }}
+      >
+        Reorder
+      </button>
+    </div>
+  );
+};
+
 const SmartInsights: React.FC<SmartInsightsProps> = ({
   favoriteDishes,
   monthlySpending,
@@ -97,23 +255,26 @@ const SmartInsights: React.FC<SmartInsightsProps> = ({
   categoryExploration,
   favoriteDay,
   favoriteTime,
+  orderFrequency,
   nextOrderPrediction,
   onReorder,
 }) => {
+  const [showAllFavorites, setShowAllFavorites] = useState(false);
+
   return (
     <div style={{ marginBottom: '2rem' }}>
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: '0.75rem', 
-        marginBottom: '1.5rem' 
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.75rem',
+        marginBottom: '1.5rem'
       }}>
         <Sparkles className="text-purple-500" size={28} />
-        <h2 style={{ 
-          fontSize: '1.875rem', 
-          fontWeight: 'bold', 
+        <h2 style={{
+          fontSize: '1.875rem',
+          fontWeight: 'bold',
           color: '#111827',
-          margin: 0 
+          margin: 0
         }}>Smart Insights</h2>
       </div>
 
@@ -124,11 +285,6 @@ const SmartInsights: React.FC<SmartInsightsProps> = ({
       }} className="insights-grid">
         <style jsx>{`
           @media (min-width: 768px) {
-            .insights-grid {
-              grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-            }
-          }
-          @media (min-width: 1024px) {
             .insights-grid {
               grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
             }
@@ -152,116 +308,89 @@ const SmartInsights: React.FC<SmartInsightsProps> = ({
           e.currentTarget.style.transform = 'translateY(0)';
           e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)';
         }}>
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '0.75rem',
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
             marginBottom: '1rem'
           }}>
-            <div style={{
-              width: '2rem',
-              height: '2rem',
-              backgroundColor: '#FEF2F2',
-              borderRadius: '0.5rem',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-          }}>
-              <Heart className="text-red-500" size={16} />
-            </div>
-            <h3 style={{ 
-              fontSize: '1.125rem', 
-              fontWeight: '600',
-              color: '#111827',
-              margin: 0 
-            }}>Your Favorites</h3>
-          </div>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            {favoriteDishes.slice(0, 2).map((dish, idx) => (
-              <div key={dish.dishId} style={{
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{
+                width: '2rem',
+                height: '2rem',
+                backgroundColor: '#FEF2F2',
+                borderRadius: '0.5rem',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '0.75rem',
-                backgroundColor: '#F9FAFB',
-                borderRadius: '0.5rem',
-                border: '1px solid rgba(0, 0, 0, 0.05)',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#F3F4F6';
-                e.currentTarget.style.transform = 'translateX(2px)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#F9FAFB';
-                e.currentTarget.style.transform = 'translateX(0)';
+                justifyContent: 'center'
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1 }}>
-                  <div style={{
-                    width: '2rem',
-                    height: '2rem',
-                    background: 'linear-gradient(135deg, #FB923C, #EF4444)',
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'white',
-                    fontWeight: '600',
-                    fontSize: '0.75rem',
-                    flexShrink: 0
-                  }}>
-                    {idx + 1}
-                  </div>
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <p style={{ 
-                      fontWeight: '600', 
-                      color: '#111827', 
-                      fontSize: '0.875rem',
-                      marginBottom: '0.125rem',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap'
-                    }}>{dish.dishName}</p>
-                    <p style={{ fontSize: '0.75rem', color: '#6B7280' }}>
-                      {dish.orderCount}x ordered
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => onReorder(dish.dishId)}
-                  style={{
-                    padding: '0.375rem 0.75rem',
-                    backgroundColor: '#F97316',
-                    color: 'white',
-                    fontSize: '0.75rem',
-                    borderRadius: '0.375rem',
-                    fontWeight: '500',
-                    border: 'none',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    flexShrink: 0,
-                    marginLeft: '0.5rem'
-                  }}
-                  onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#EA580C'}
-                  onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#F97316'}
-                >
-                  Reorder
-                </button>
+                <Heart className="text-red-500" size={16} />
               </div>
+              <h3 style={{
+                fontSize: '1.125rem',
+                fontWeight: '600',
+                color: '#111827',
+                margin: 0
+              }}>Your Favorites</h3>
+            </div>
+            {favoriteDishes.length > 2 && (
+              <span style={{
+                fontSize: '0.75rem',
+                color: '#F97316',
+                fontWeight: '600',
+                backgroundColor: '#FFF7ED',
+                padding: '0.25rem 0.5rem',
+                borderRadius: '0.375rem',
+              }}>
+                {favoriteDishes.length} dishes
+              </span>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {favoriteDishes.slice(0, 2).map((dish, idx) => (
+              <FavoriteDishCard
+                key={dish.dishId}
+                dish={dish}
+                rank={idx + 1}
+                onReorder={onReorder}
+                compact
+              />
             ))}
           </div>
 
           {favoriteDishes.length > 2 && (
-            <p style={{ 
-              fontSize: '0.75rem',
-              color: '#6B7280', 
-              marginTop: '0.75rem', 
-              textAlign: 'center',
-              fontStyle: 'italic'
-            }}>
-              +{favoriteDishes.length - 2} more favorites
-            </p>
+            <button
+              onClick={() => setShowAllFavorites(true)}
+              style={{
+                width: '100%',
+                marginTop: '1rem',
+                padding: '0.75rem',
+                backgroundColor: '#FFF7ED',
+                border: '1px solid #FDBA74',
+                borderRadius: '0.5rem',
+                color: '#EA580C',
+                fontSize: '0.875rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#FFEDD5';
+                e.currentTarget.style.transform = 'translateY(-1px)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#FFF7ED';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+            >
+              <span>View all {favoriteDishes.length} favorites</span>
+              <ChevronRight size={16} />
+            </button>
           )}
         </div>
 
@@ -282,9 +411,9 @@ const SmartInsights: React.FC<SmartInsightsProps> = ({
           e.currentTarget.style.transform = 'translateY(0)';
           e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)';
         }}>
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
             gap: '0.75rem',
             marginBottom: '1rem'
           }}>
@@ -299,53 +428,53 @@ const SmartInsights: React.FC<SmartInsightsProps> = ({
           }}>
               <TrendingUp className="text-green-500" size={16} />
             </div>
-            <h3 style={{ 
-              fontSize: '1.125rem', 
+            <h3 style={{
+              fontSize: '1.125rem',
               fontWeight: '600',
               color: '#111827',
-              margin: 0 
+              margin: 0
             }}>Spending Overview</h3>
           </div>
-          
+
           {/* Metrics Row */}
           <div style={{
             display: 'flex',
             gap: '0.75rem',
             marginBottom: '1rem'
           }}>
-            <div style={{ 
+            <div style={{
               flex: 1,
-              textAlign: 'center', 
+              textAlign: 'center',
               padding: '0.75rem',
               backgroundColor: '#F0FDF4',
               borderRadius: '0.5rem',
               border: '1px solid rgba(34, 197, 94, 0.2)'
             }}>
-              <p style={{ 
+              <p style={{
                 fontSize: '0.75rem',
-                color: '#6B7280', 
+                color: '#6B7280',
                 marginBottom: '0.25rem'
               }}>Total Spent</p>
-              <p style={{ 
+              <p style={{
                 fontSize: '1.25rem',
                 fontWeight: '700',
                 color: '#16A34A'
               }}>₹{totalSpent.toFixed(0)}</p>
             </div>
-            <div style={{ 
+            <div style={{
               flex: 1,
-              textAlign: 'center', 
+              textAlign: 'center',
               padding: '0.75rem',
-              backgroundColor: '#EFF6FF', 
+              backgroundColor: '#EFF6FF',
               borderRadius: '0.5rem',
               border: '1px solid rgba(59, 130, 246, 0.2)'
             }}>
-              <p style={{ 
+              <p style={{
                 fontSize: '0.75rem',
-                color: '#6B7280', 
+                color: '#6B7280',
                 marginBottom: '0.25rem'
               }}>Avg. Order</p>
-              <p style={{ 
+              <p style={{
                 fontSize: '1.25rem',
                 fontWeight: '700',
                 color: '#2563EB'
@@ -365,8 +494,8 @@ const SmartInsights: React.FC<SmartInsightsProps> = ({
           }}>
             {monthlySpending.slice(-6).map((month, idx) => {
               const maxAmount = Math.max(...monthlySpending.map(m => m.amount));
-              const height = maxAmount > 0 ? Math.max((month.amount / maxAmount) * 100, 8) : 8; // Minimum 8% height
-              
+              const height = maxAmount > 0 ? Math.max((month.amount / maxAmount) * 100, 8) : 8;
+
               return (
                 <div key={idx} style={{
                   flex: 1,
@@ -409,9 +538,9 @@ const SmartInsights: React.FC<SmartInsightsProps> = ({
           e.currentTarget.style.transform = 'translateY(0)';
           e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)';
         }}>
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
             gap: '0.75rem',
             marginBottom: '1rem'
           }}>
@@ -426,14 +555,14 @@ const SmartInsights: React.FC<SmartInsightsProps> = ({
           }}>
               <Compass className="text-purple-500" size={16} />
             </div>
-            <h3 style={{ 
-              fontSize: '1.125rem', 
+            <h3 style={{
+              fontSize: '1.125rem',
               fontWeight: '600',
               color: '#111827',
-              margin: 0 
+              margin: 0
             }}>Category Explorer</h3>
           </div>
-          
+
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
@@ -457,14 +586,13 @@ const SmartInsights: React.FC<SmartInsightsProps> = ({
                 e.currentTarget.style.backgroundColor = '#F9FAFB';
                 e.currentTarget.style.transform = 'translateY(0)';
               }}>
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
-                  marginBottom: '0.375rem' 
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: '0.375rem'
                 }}>
                   {(() => {
-                    // Priority: icon > iconName > iconEmoji > default
                     if (category.icon) {
                       const IconComponent = category.icon;
                       return <IconComponent size={24} className="text-orange-600" />;
@@ -478,9 +606,9 @@ const SmartInsights: React.FC<SmartInsightsProps> = ({
                     }
                   })()}
                 </div>
-                <p style={{ 
+                <p style={{
                   fontSize: '0.75rem',
-                  fontWeight: '600', 
+                  fontWeight: '600',
                   color: '#111827',
                   marginBottom: '0.125rem',
                   overflow: 'hidden',
@@ -498,12 +626,12 @@ const SmartInsights: React.FC<SmartInsightsProps> = ({
               </div>
             ))}
           </div>
-          
+
           {categoryExploration.length > 3 && (
-            <p style={{ 
+            <p style={{
               fontSize: '0.75rem',
-              color: '#6B7280', 
-              marginTop: '0.75rem', 
+              color: '#6B7280',
+              marginTop: '0.75rem',
               textAlign: 'center',
               fontStyle: 'italic'
             }}>
@@ -529,9 +657,9 @@ const SmartInsights: React.FC<SmartInsightsProps> = ({
           e.currentTarget.style.transform = 'translateY(0)';
           e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)';
         }}>
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
             gap: '0.75rem',
             marginBottom: '1rem'
           }}>
@@ -546,87 +674,227 @@ const SmartInsights: React.FC<SmartInsightsProps> = ({
           }}>
               <Calendar className="text-blue-500" size={16} />
             </div>
-            <h3 style={{ 
-              fontSize: '1.125rem', 
+            <h3 style={{
+              fontSize: '1.125rem',
               fontWeight: '600',
               color: '#111827',
-              margin: 0 
+              margin: 0
             }}>Order Patterns</h3>
           </div>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            <div style={{ 
-              padding: '0.75rem',
-              backgroundColor: '#EFF6FF', 
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
+            <div style={{
+              padding: '0.5rem',
+              backgroundColor: '#EFF6FF',
               borderRadius: '0.5rem',
               border: '1px solid rgba(59, 130, 246, 0.2)',
-              transition: 'all 0.2s ease'
+              transition: 'all 0.2s ease',
+              textAlign: 'center'
             }}
             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#DBEAFE'}
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#EFF6FF'}>
-              <p style={{ 
-                fontSize: '0.75rem',
-                color: '#6B7280', 
-                marginBottom: '0.25rem',
+              <p style={{
+                fontSize: '0.625rem',
+                color: '#6B7280',
+                marginBottom: '0.125rem',
                 fontWeight: '500'
               }}>Favorite Day</p>
-              <p style={{ 
-                fontSize: '1rem',
+              <p style={{
+                fontSize: '0.75rem',
                 fontWeight: '700',
                 color: '#1E40AF'
               }}>{favoriteDay}</p>
             </div>
-            
-            <div style={{ 
-              padding: '0.75rem',
-              backgroundColor: '#F5F3FF', 
+
+            <div style={{
+              padding: '0.5rem',
+              backgroundColor: '#F5F3FF',
               borderRadius: '0.5rem',
               border: '1px solid rgba(139, 92, 246, 0.2)',
-              transition: 'all 0.2s ease'
+              transition: 'all 0.2s ease',
+              textAlign: 'center'
             }}
             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#EDE9FE'}
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#F5F3FF'}>
-              <p style={{ 
-                fontSize: '0.75rem',
-                color: '#6B7280', 
-                marginBottom: '0.25rem',
+              <p style={{
+                fontSize: '0.625rem',
+                color: '#6B7280',
+                marginBottom: '0.125rem',
                 fontWeight: '500'
               }}>Favorite Time</p>
-              <p style={{ 
-                fontSize: '1rem',
+              <p style={{
+                fontSize: '0.75rem',
                 fontWeight: '700',
                 color: '#6B21A3'
-              }}>{favoriteTime}</p>
+              }}>{favoriteTime?.replace(' (12pm-5pm)', '').replace(' (5pm-9pm)', '').replace(' (6am-12pm)', '').replace(' (9pm-6am)', '')}</p>
             </div>
-            
-            <div style={{ 
-              padding: '0.75rem',
-              backgroundColor: '#FFF7ED', 
+
+            <div style={{
+              padding: '0.5rem',
+              backgroundColor: '#FFF7ED',
               borderRadius: '0.5rem',
               border: '1px solid rgba(249, 115, 22, 0.2)',
-              transition: 'all 0.2s ease'
+              transition: 'all 0.2s ease',
+              textAlign: 'center'
             }}
             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF3C7'}
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFF7ED'}>
-              <p style={{ 
+              <p style={{
+                fontSize: '0.625rem',
+                color: '#6B7280',
+                marginBottom: '0.125rem',
+                fontWeight: '500'
+              }}>Order Frequency</p>
+              <p style={{
                 fontSize: '0.75rem',
-                color: '#6B7280', 
-                marginBottom: '0.25rem',
-                fontWeight: '500'
-              }}>Next Order Likely</p>
-              <p style={{ 
-                fontSize: '0.875rem',
                 color: '#374151',
-                lineHeight: '1.4',
-                fontWeight: '500'
-              }}>{nextOrderPrediction}</p>
+                fontWeight: '600'
+              }}>{orderFrequency}</p>
             </div>
           </div>
         </div>
       </div>
+
+      {/* All Favorites Modal */}
+      {showAllFavorites && (
+        <div
+          onClick={() => setShowAllFavorites(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '1rem',
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: 'white',
+              borderRadius: '1.5rem',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              maxWidth: '600px',
+              width: '100%',
+              maxHeight: '80vh',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: '1.5rem',
+                borderBottom: '1px solid #E5E7EB',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div
+                  style={{
+                    width: '2.5rem',
+                    height: '2.5rem',
+                    backgroundColor: '#FEF2F2',
+                    borderRadius: '0.75rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Heart className="text-red-500" size={20} />
+                </div>
+                <div>
+                  <h3
+                    style={{
+                      fontSize: '1.25rem',
+                      fontWeight: '700',
+                      color: '#111827',
+                      margin: 0,
+                    }}
+                  >
+                    Your Favorite Dishes
+                  </h3>
+                  <p style={{ fontSize: '0.875rem', color: '#6B7280', margin: 0 }}>
+                    Ranked by how often you order
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowAllFavorites(false)}
+                style={{
+                  padding: '0.5rem',
+                  border: 'none',
+                  backgroundColor: 'transparent',
+                  borderRadius: '0.5rem',
+                  cursor: 'pointer',
+                  color: '#6B7280',
+                  transition: 'all 0.2s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#F3F4F6';
+                  e.currentTarget.style.color = '#111827';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = '#6B7280';
+                }}
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div
+              style={{
+                padding: '1.5rem',
+                overflowY: 'auto',
+                flex: 1,
+              }}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {favoriteDishes.map((dish, idx) => (
+                  <FavoriteDishCard
+                    key={dish.dishId}
+                    dish={dish}
+                    rank={idx + 1}
+                    onReorder={(dishId) => {
+                      onReorder(dishId);
+                      setShowAllFavorites(false);
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div
+              style={{
+                padding: '1rem 1.5rem',
+                borderTop: '1px solid #E5E7EB',
+                backgroundColor: '#F9FAFB',
+              }}
+            >
+              <p
+                style={{
+                  fontSize: '0.75rem',
+                  color: '#6B7280',
+                  textAlign: 'center',
+                  margin: 0,
+                }}
+              >
+                Based on your order history • Updates with each order
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default SmartInsights;
-

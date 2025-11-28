@@ -504,6 +504,7 @@ function calculateFavoriteDishes(orders: any[]): FavoriteDish[] {
 
 /**
  * Analyze order patterns
+ * Uses India timezone (Asia/Kolkata) for accurate local time analysis
  */
 function analyzeOrderPatterns(orders: any[]): OrderPattern {
   if (orders.length === 0) {
@@ -517,23 +518,26 @@ function analyzeOrderPatterns(orders: any[]): OrderPattern {
     };
   }
 
-  // Analyze day of week
+  // Analyze day of week using India timezone
   const dayCount: Record<string, number> = {};
-  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
   orders.forEach((order) => {
-    const dayIndex = new Date(order.createdAt).getDay();
-    const dayName = days[dayIndex];
+    const date = new Date(order.createdAt);
+    // Convert to India timezone for accurate local time
+    const dayName = date.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'Asia/Kolkata' });
     dayCount[dayName] = (dayCount[dayName] || 0) + 1;
   });
 
   const favoriteDay = Object.entries(dayCount).sort((a, b) => b[1] - a[1])[0]?.[0] || 'Not enough data';
 
-  // Analyze time of day
+  // Analyze time of day using India timezone
   const timeCount: Record<string, number> = { Morning: 0, Afternoon: 0, Evening: 0, Night: 0 };
 
   orders.forEach((order) => {
-    const hour = new Date(order.createdAt).getHours();
+    const date = new Date(order.createdAt);
+    // Convert to India timezone for accurate local time
+    const indiaTime = new Date(date.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+    const hour = indiaTime.getHours();
     if (hour >= 5 && hour < 12) timeCount.Morning++;
     else if (hour >= 12 && hour < 17) timeCount.Afternoon++;
     else if (hour >= 17 && hour < 21) timeCount.Evening++;

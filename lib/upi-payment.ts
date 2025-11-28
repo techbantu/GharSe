@@ -24,8 +24,9 @@ import { z } from 'zod';
 
 export const UPI_CONFIG = {
   // Your UPI ID (VPA - Virtual Payment Address)
-  // Format: name@bankcode (e.g., bantuskitchen@paytm)
-  merchantUpiId: process.env.UPI_MERCHANT_ID || 'bantuskitchen@paytm',
+  // Format: name@bankcode (e.g., yourname@ybl)
+  // NOTE: This is just a fallback - actual UPI IDs come from chef payment settings
+  merchantUpiId: process.env.UPI_MERCHANT_ID || '',
   
   // Merchant/Business Name (displayed in payment apps)
   merchantName: process.env.UPI_MERCHANT_NAME || "Bantu's Kitchen",
@@ -40,12 +41,11 @@ export const UPI_CONFIG = {
   currency: 'INR',
   
   // Supported UPI Apps (for display purposes)
+  // Only PhonePe, Google Pay, and Paytm - configured via chef payment settings
   supportedApps: [
     { id: 'gpay', name: 'Google Pay', icon: '🔵', package: 'com.google.android.apps.nbu.paisa.user' },
     { id: 'phonepe', name: 'PhonePe', icon: '💜', package: 'com.phonepe.app' },
     { id: 'paytm', name: 'Paytm', icon: '🔷', package: 'net.one97.paytm' },
-    { id: 'bhim', name: 'BHIM UPI', icon: '🇮🇳', package: 'in.org.npci.upiapp' },
-    { id: 'amazonpay', name: 'Amazon Pay', icon: '📦', package: 'in.amazon.mShop.android.shopping' },
   ],
 } as const;
 
@@ -101,7 +101,7 @@ export const UTRSchema = z.string()
 export const UPIVerificationSchema = z.object({
   orderId: z.string().min(1, 'Order ID required'),
   utrNumber: UTRSchema,
-  paymentApp: z.enum(['gpay', 'phonepe', 'paytm', 'bhim', 'amazonpay', 'other']),
+  paymentApp: z.enum(['gpay', 'phonepe', 'paytm', 'other']),
   screenshotUrl: z.string().url().optional(),
   customerPhone: z.string().min(10),
   amount: z.number().positive(),

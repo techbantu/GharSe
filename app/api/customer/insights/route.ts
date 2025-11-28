@@ -298,6 +298,7 @@ function analyzeCategoryExploration(orders: any[]): CategoryExploration[] {
 
 /**
  * Analyze time patterns
+ * Uses India timezone (Asia/Kolkata) for accurate local time analysis
  */
 function analyzeTimePatterns(orders: any[]): {
   favoriteTimeOfDay: string;
@@ -322,14 +323,16 @@ function analyzeTimePatterns(orders: any[]): {
 
   // Analyze day of week
   const dayCount: Record<string, number> = {};
-  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
   orders.forEach((order: any) => {
     const date = new Date(order.createdAt);
-    const hour = date.getHours();
-    const dayName = days[date.getDay()];
 
-    // Categorize time
+    // Convert to India timezone for accurate local time analysis
+    const indiaTime = new Date(date.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+    const hour = indiaTime.getHours();
+    const dayName = indiaTime.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'Asia/Kolkata' });
+
+    // Categorize time based on India local time
     if (hour >= 6 && hour < 12) timeCount['Morning (6am-12pm)']++;
     else if (hour >= 12 && hour < 17) timeCount['Afternoon (12pm-5pm)']++;
     else if (hour >= 17 && hour < 21) timeCount['Evening (5pm-9pm)']++;

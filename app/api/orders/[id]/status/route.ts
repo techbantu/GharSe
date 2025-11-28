@@ -12,9 +12,12 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
   try {
     const body = await request.json();
-    const { status } = body;
-    
+    const { status, rejectionReason } = body;
+
     console.log(`[Order API] Updating status for order ${id} to ${status}`);
+    if (rejectionReason) {
+      console.log(`[Order API] Rejection reason: ${rejectionReason}`);
+    }
 
     if (!status) {
       return NextResponse.json(
@@ -89,6 +92,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       data: {
         status: dbStatus as any,
         ...timestampUpdates, // Set audit trail timestamps
+        // Save rejection reason if cancelling
+        ...(dbStatus === 'CANCELLED' && rejectionReason ? { rejectionReason } : {}),
       },
       include: {
         customer: true, // Include customer for notifications
@@ -176,6 +181,8 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
         orderNumber: updatedOrder.orderNumber,
         previousStatus: body.previousStatus || 'unknown',
         updatedAt: new Date().toISOString(),
+        // Include rejection reason for cancelled orders so customer sees why
+        ...(dbStatus === 'CANCELLED' && rejectionReason ? { rejectionReason } : {}),
       });
       console.log('[Order API] ✅ WebSocket broadcast successful');
     } catch (wsError) {
